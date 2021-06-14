@@ -24,8 +24,8 @@ namespace gTools
         {
             // ask for input
             var options = new List<string>(2);
-                options.Add("Part Boundries");
-                options.Add("Check for Polylines");
+            options.Add("Part Boundries");
+            options.Add("Check for Polylines");
 
             string operation = (string)Rhino.UI.Dialogs.ShowListBox("Part Operations", "Choose Operation", options);
             if (operation == null)
