@@ -1,0 +1,32 @@
+﻿customBlurbs {
+	id: int,
+	blurb: str
+}
+
+jobSlots {
+	slot: int,
+	job: str,
+	due: str,
+	description: str,
+	qty: int,
+	material: str
+}
+
+locations {
+	locName: str,
+	path: str,
+	id: int
+}
+
+oemColors {
+	colorNum: str,
+	colorName: str,
+	id: int
+}
+
+variableData {
+	userLastName: str,
+	userFirstName: str,
+	userInitials: str,
+	cutNumber: int
+}
