@@ -23,12 +23,13 @@ namespace gjTools
             SQLHelper sql = new SQLHelper();
             var rL = new List<string>();
             var rL2 = new List<string>();
-            foreach (List<object> item in sql.queryOEMColors())
+            foreach (OEMColor item in sql.queryOEMColors())
             {
-                rL.Add(item[0].ToString());
-                rL2.Add(item[1].ToString());
+                rL.Add(item.colorName);
+                rL2.Add(item.colorNum);
             }
-            Rhino.UI.Dialogs.ShowPropertyListBox("OEM Colors", "List of colors", rL, rL2);
+            
+            Rhino.UI.Dialogs.ShowPropertyListBox("OEM Colors", "List of Colors", rL, rL2);
         }
     }
 }
