@@ -41,8 +41,12 @@ namespace gjTools
         
         public List<object> queryCustomBlurbs(bool custom = false, string customCommand = "")
         {
-            string stm = "SELECT SQLITE_VERSION()";
+            string stm = "SELECT * FROM customBlurbs;";
             SQLiteDataReader r = executeQuery(stm);
+            while (r.Read())
+            {
+
+            }
             return new List<object>();
         }
 
