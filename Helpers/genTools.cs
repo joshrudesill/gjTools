@@ -34,31 +34,36 @@ class genTools {
     /// <param name="doc"></param>
     /// <param name="supressMessage"></param>
     /// <returns></returns>
-    public bool CheckPolylines(Curve obj, RhinoDoc doc,bool supressMessage=true)
+    public bool CheckPolylines(GetObject obj, RhinoDoc doc,bool supressMessage=true)
     {
         bool isPoly = true;
-        Curve[] pieces = obj.DuplicateSegments();
+        var show = new Rhino.Display.CustomDisplay(true);
 
-        foreach (Curve seg in pieces)
+        for (var i=0; i <= obj.ObjectCount - 1; i++)
         {
-            // see if it can be a polycurve
-            if (!seg.IsArc() && !seg.IsCircle() && !seg.IsLinear())
+
+            Curve[] pieces = obj.Object(i).Curve().DuplicateSegments();
+            foreach (Curve seg in pieces)
             {
-                if (!supressMessage)
+                // see if it can be a polycurve
+                if (!seg.IsArc() && !seg.IsCircle() && !seg.IsLinear())
                 {
-                    var show = new Rhino.Display.CustomDisplay(true);
                     show.AddCurve(seg, System.Drawing.Color.DarkMagenta, 5);
-                    doc.Views.Redraw();
-
-                    Rhino.UI.Dialogs.ShowMessage("Not a Polyline Object\nBad Lines are Highlighted", "Bad Lines");
-
-                    show.Dispose();
+                    isPoly = false;
                 }
-                
-                isPoly = false;
-                break;
+                else
+                {
+                    show.AddCurve(seg, System.Drawing.Color.ForestGreen, 5);
+                }
             }
         }
+
+        doc.Views.Redraw();
+        if (!supressMessage && !isPoly)
+        {
+            Rhino.UI.Dialogs.ShowMessage("Not a Polyline Object\nBad Lines are Highlighted", "Bad Lines");
+        }
+        show.Dispose();
 
         return isPoly;
     }
