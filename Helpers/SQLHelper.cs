@@ -226,7 +226,7 @@ namespace gjTools
         /// <param name="custom"></param>
         /// <param name="customCommand"></param>
         /// <returns></returns>
-        public List<CustomBlurb> queryCustomBlurbs(bool custom = false, string customCommand = "")
+        public List<CustomBlurb> queryCustomBlurbs()
         {
             List<CustomBlurb> rList = new List<CustomBlurb>();
             string stm;
@@ -254,7 +254,7 @@ namespace gjTools
         /// <param name="custom"></param>
         /// <param name="customCommand"></param>
         /// <returns></returns>
-        public List<JobSlot> queryJobSlots(bool custom = false, string customCommand = "")
+        public List<JobSlot> queryJobSlots()
         {
             var rList = new List<JobSlot>();
             string stm;
@@ -281,7 +281,7 @@ namespace gjTools
         /// <param name="custom"></param>
         /// <param name="customCommand"></param>
         /// <returns></returns>
-        public List<Location> queryLocations(bool custom = false, string customCommand = "")
+        public List<Location> queryLocations()
         {
             var rList = new List<Location>();
             string stm;
@@ -308,7 +308,7 @@ namespace gjTools
         /// <param name="custom"></param>
         /// <param name="customCommand"></param>
         /// <returns></returns>
-        public List<OEMColor> queryOEMColors(bool custom = false, string customCommand = "")
+        public List<OEMColor> queryOEMColors()
         {
             List<OEMColor> rList = new List<OEMColor>();
             string stm;
@@ -335,7 +335,7 @@ namespace gjTools
         /// <param name="custom"></param>
         /// <param name="customCommand"></param>
         /// <returns></returns>
-        public List<VariableData> queryVariableData(bool custom = false, string customCommand = "")
+        public List<VariableData> queryVariableData()
         {
             var rList = new List<VariableData>();
             string stm;

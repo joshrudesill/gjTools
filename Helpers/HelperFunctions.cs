@@ -30,6 +30,19 @@ namespace gjTools
             }
             
             Rhino.UI.Dialogs.ShowPropertyListBox("OEM Colors", "List of Colors", rL, rL2);
+            
+        }
+
+        public void addColor()
+        {
+            SQLHelper sql = new SQLHelper();
+            int c = sql.queryOEMColors().Count();
+            List<string> bsL = new List<string>{"", ""};
+            List<string> sL = new List<string> { "Color name", "Color number" };
+
+            string[] rL = Rhino.UI.Dialogs.ShowPropertyListBox("Add Color", "Add a color", sL, bsL);
+
+            sql.executeCommand(string.Format("INSERT INTO oemColors (colorNum, colorName, id) VALUES ('{0}', '{1}', '{2}');", rL[1], rL[0], c + 1));
         }
     }
 }
