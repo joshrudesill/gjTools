@@ -8,15 +8,15 @@ using System.Collections.Generic;
 
 namespace gTools
 {
-    public class partVisualizer : Command
+    public class PartVisualizer : Command
     {
-        public partVisualizer()
+        public PartVisualizer()
         {
             Instance = this;
         }
 
         ///<summary>The only instance of the MyCommand command.</summary>
-        public static partVisualizer Instance { get; private set; }
+        public static PartVisualizer Instance { get; private set; }
 
         public override string EnglishName => "partVisualizer";
 
