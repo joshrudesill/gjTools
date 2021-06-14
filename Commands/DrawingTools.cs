@@ -6,19 +6,19 @@ using Rhino.Commands;
 using System.Collections;
 using System.Collections.Generic;
 
-namespace gTools
+namespace gjTools
 {
-    public class PartVisualizer : Command
+    public class DrawingTools : Command
     {
-        public PartVisualizer()
+        public DrawingTools()
         {
             Instance = this;
         }
 
         ///<summary>The only instance of the MyCommand command.</summary>
-        public static PartVisualizer Instance { get; private set; }
+        public static DrawingTools Instance { get; private set; }
 
-        public override string EnglishName => "partVisualizer";
+        public override string EnglishName => "drawingTools";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
