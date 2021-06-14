@@ -18,7 +18,6 @@ namespace gjTools
         public void showColorPallete()
         {
             SQLHelper sql = new SQLHelper();
-
         }
     }
 }
