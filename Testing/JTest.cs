@@ -16,8 +16,8 @@ namespace gjTools
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            SQLHelper helper = new SQLHelper();
-            helper.queryLocations();
+            var h = new HelperFunctions();
+            h.showColorPallete();
             return Result.Success;
         }
     }

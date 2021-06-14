@@ -88,7 +88,7 @@ namespace gjTools
             }
             else
             {
-                stm = "SELECT * FROM customBlurbs;";
+                stm = "SELECT * FROM jobSlots;";
             }
             SQLiteDataReader r = executeQuery(stm);
             while (r.Read())
@@ -115,7 +115,7 @@ namespace gjTools
             }
             else
             {
-                stm = "SELECT * FROM customBlurbs;";
+                stm = "SELECT * FROM locations;";
             }
             SQLiteDataReader r = executeQuery(stm);
             while (r.Read())
@@ -142,7 +142,7 @@ namespace gjTools
             }
             else
             {
-                stm = "SELECT * FROM customBlurbs;";
+                stm = "SELECT * FROM oemColors;";
             }
             SQLiteDataReader r = executeQuery(stm);
             while (r.Read())
@@ -169,7 +169,7 @@ namespace gjTools
             }
             else
             {
-                stm = "SELECT * FROM customBlurbs;";
+                stm = "SELECT * FROM variableData;";
             }
             SQLiteDataReader r = executeQuery(stm);
             while (r.Read())
