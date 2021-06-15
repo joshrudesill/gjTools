@@ -11,11 +11,11 @@ namespace gjTools
     interface ISQLHelper
     {
         void testConnection(); // Test connection. For debugging only.
-        List<CustomBlurb> queryCustomBlurbs(bool custom, string customCommand = "");  // Definitions in summary. Query all items, if true is passed and a string do custom query.
-        List<JobSlot> queryJobSlots(bool custom = false, string customCommand = "");
-        List<Location> queryLocations(bool custom = false, string customCommand = "");
-        List<OEMColor> queryOEMColors(bool custom = false, string customCommand = "");
-        List<VariableData> queryVariableData(bool custom = false, string customCommand = "");
+        List<CustomBlurb> queryCustomBlurbs();  // Definitions in summary. Query all items.
+        List<JobSlot> queryJobSlots();
+        List<Location> queryLocations();
+        List<OEMColor> queryOEMColors();
+        List<VariableData> queryVariableData();
         void executeCommand(string command); // Execute non query command on database.
     }
 
@@ -220,7 +220,6 @@ namespace gjTools
 
         /// <summary>
         /// This function will return a CustomBlurb object. 
-        /// <para>Use true and a custom string as parameters for custom queries.</para>
         /// <para>---Warning: must return all columns in order!---</para>
         /// </summary>
         /// <param name="custom"></param>
@@ -230,14 +229,7 @@ namespace gjTools
         {
             List<CustomBlurb> rList = new List<CustomBlurb>();
             string stm;
-            if (custom && customCommand != "")
-            {
-                stm = customCommand;
-            } 
-            else
-            {
-                stm = "SELECT * FROM customBlurbs;";
-            }
+            stm = "SELECT * FROM customBlurbs;";
 
             SQLiteDataReader r = executeQuery(stm);
             while (r.Read())
@@ -249,7 +241,6 @@ namespace gjTools
         }
         /// <summary>
         /// This function will return a JobSlot object. 
-        /// <para>Use true and a custom string as parameters for custom queries.</para>
         /// <para>---Warning: must return all columns in order!---</para></summary>
         /// <param name="custom"></param>
         /// <param name="customCommand"></param>
@@ -258,14 +249,7 @@ namespace gjTools
         {
             var rList = new List<JobSlot>();
             string stm;
-            if (custom && customCommand != "")
-            {
-                stm = customCommand;
-            }
-            else
-            {
-                stm = "SELECT * FROM jobSlots;";
-            }
+            stm = "SELECT * FROM jobSlots;";
             SQLiteDataReader r = executeQuery(stm);
             while (r.Read())
             {
@@ -276,7 +260,6 @@ namespace gjTools
         }
         /// <summary>
         /// This function will return a Location object. 
-        /// <para>Use true and a custom string as parameters for custom queries.</para>
         /// <para>---Warning: must return all columns in order!---</para></summary>
         /// <param name="custom"></param>
         /// <param name="customCommand"></param>
@@ -284,15 +267,7 @@ namespace gjTools
         public List<Location> queryLocations()
         {
             var rList = new List<Location>();
-            string stm;
-            if (custom && customCommand != "")
-            {
-                stm = customCommand;
-            }
-            else
-            {
-                stm = "SELECT * FROM locations;";
-            }
+            string stm = "SELECT * FROM locations;";
             SQLiteDataReader r = executeQuery(stm);
             while (r.Read())
             {
@@ -303,7 +278,6 @@ namespace gjTools
         }
         /// <summary>
         /// This function will return a OEMColor object. 
-        /// <para>Use true and a custom string as parameters for custom queries.</para>
         /// <para>---Warning: must return all columns in order!---</para></summary>
         /// <param name="custom"></param>
         /// <param name="customCommand"></param>
@@ -311,15 +285,7 @@ namespace gjTools
         public List<OEMColor> queryOEMColors()
         {
             List<OEMColor> rList = new List<OEMColor>();
-            string stm;
-            if (custom && customCommand != "")
-            {
-                stm = customCommand;
-            }
-            else
-            {
-                stm = "SELECT * FROM oemColors;";
-            }
+            string stm = "SELECT * FROM oemColors;";
             SQLiteDataReader r = executeQuery(stm);
             while (r.Read())
             {
@@ -330,7 +296,6 @@ namespace gjTools
         }
         /// <summary>
         /// This function will return a VariableData object. 
-        /// <para>Use true and a custom string as parameters for custom queries.</para>
         /// <para>---Warning: must return all columns in order!---</para></summary>
         /// <param name="custom"></param>
         /// <param name="customCommand"></param>
@@ -338,15 +303,7 @@ namespace gjTools
         public List<VariableData> queryVariableData()
         {
             var rList = new List<VariableData>();
-            string stm;
-            if (custom && customCommand != "")
-            {
-                stm = customCommand;
-            }
-            else
-            {
-                stm = "SELECT * FROM variableData;";
-            }
+            string stm  = "SELECT * FROM variableData;";
             SQLiteDataReader r = executeQuery(stm);
             while (r.Read())
             {
