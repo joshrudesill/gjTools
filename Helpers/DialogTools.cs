@@ -2,6 +2,10 @@
 using System.Linq;
 using Rhino;
 
+
+/// <summary>
+/// Dialog creation and result return
+/// </summary>
 namespace gjTools
 {
     interface IHelperFunctions
@@ -11,18 +15,15 @@ namespace gjTools
         void updateUserInfo();
         int addLayer(string name, System.Drawing.Color color);
     }
-    /// <summary>
-    /// A class with functions designed to help areas with more complex functionality.
-    /// <para>Doc object must be passed to constructor.</para>
-    /// </summary>
-    class HelperFunctions : IHelperFunctions
+
+    class DialogTools : IHelperFunctions
     {
         RhinoDoc m_doc;
-        SQLHelper sql;
-        public HelperFunctions(RhinoDoc doc)
+        SQLTools sql;
+        public DialogTools(RhinoDoc doc)
         {
             m_doc = doc;
-            sql = new SQLHelper();
+            sql = new SQLTools();
         }
         /// <summary>
         /// Shows list box with colors listed.

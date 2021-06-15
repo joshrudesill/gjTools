@@ -9,12 +9,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-class genTools {
+/// <summary>
+/// This class is for object creation
+/// </summary>
+class DrawTools {
 
     public RhinoDoc doc;
     public Rhino.Display.CustomDisplay show = new Rhino.Display.CustomDisplay(false);
 
-    public genTools(RhinoDoc doc)
+    public DrawTools(RhinoDoc doc)
     {
         this.doc = doc;
     }

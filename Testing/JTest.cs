@@ -15,8 +15,8 @@ namespace gjTools
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            var h = new HelperFunctions(doc);
-            h.showColorPallete();
+            var h = new DialogTools(doc);
+            h.updateUserInfo();
             return Result.Success;
         }
     }

@@ -191,18 +191,18 @@ namespace gjTools
         public int cutNumber => _cutNumber;
     }
 
-    public sealed class SQLHelper : ISQLHelper
+    public sealed class SQLTools : ISQLHelper
     {
         SQLiteConnection con;
         string connectionString;
         
-        public SQLHelper()
+        public SQLTools()
         {
             connectionString = "Data Source=gToolsDatabase.db";
             con = new SQLiteConnection(connectionString);
             con.Open();
         }
-        ~SQLHelper()
+        ~SQLTools()
         {
             con.Close();
         }
