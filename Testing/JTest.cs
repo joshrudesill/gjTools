@@ -16,7 +16,7 @@ namespace gjTools
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            var h = new HelperFunctions(doc);
+            var h = new DialogTools(doc);
             h.updateUserInfo();
             return Result.Success;
         }

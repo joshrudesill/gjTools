@@ -6,6 +6,10 @@ using System.Threading.Tasks;
 using Rhino;
 using Rhino.Commands;
 
+
+/// <summary>
+/// Dialog creation and result return
+/// </summary>
 namespace gjTools
 {
     interface IHelperFunctions
@@ -15,14 +19,14 @@ namespace gjTools
         void updateUserInfo();
     }
 
-    class HelperFunctions : IHelperFunctions
+    class DialogTools : IHelperFunctions
     {
         RhinoDoc m_doc;
-        SQLHelper sql;
-        public HelperFunctions(RhinoDoc doc)
+        SQLTools sql;
+        public DialogTools(RhinoDoc doc)
         {
             m_doc = doc;
-            sql = new SQLHelper();
+            sql = new SQLTools();
         }
         /// <summary>
         /// Shows list box with colors listed.
