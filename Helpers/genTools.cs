@@ -19,26 +19,11 @@ class genTools {
         this.doc = doc;
     }
 
-    ~ genTools () {
+    public void hideDynamicDraw () {
         show.Dispose();
+        doc.Views.Redraw();
     }
 
-
-    /// <summary>
-    /// Returns the Center Point of a single object
-    /// </summary>
-    /// <param name="obj"></param>
-    /// <returns></returns>
-    public Point3d CurveCenter(Curve obj)
-    {
-        var bb = obj.GetBoundingBox(true);
-        Point3d[] corners = bb.GetCorners();
-        double[] center = {
-            corners[0].X + (corners[0].DistanceTo(corners[1]) / 2), 
-            corners[0].Y + (corners[0].DistanceTo(corners[3]) / 2)
-        };
-        return new Point3d(center[0], center[1], 0.0);
-    }
 
     /// <summary>
     /// return true or false if the line can be used as cut line
@@ -62,9 +47,10 @@ class genTools {
                 // see if it can be a polycurve
                 if (!seg.IsArc() && !seg.IsCircle() && !seg.IsLinear())
                 {
+                    isPoly = false;
+
                     if (show.Enabled)
                         show.AddCurve(seg, System.Drawing.Color.DarkMagenta, 5);
-                    isPoly = false;
                 }
                 else
                 {
@@ -73,6 +59,8 @@ class genTools {
                 }
             }
         }
+
+        doc.Views.Redraw();
         return isPoly;
     }
 

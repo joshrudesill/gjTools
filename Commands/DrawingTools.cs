@@ -63,10 +63,8 @@ namespace gjTools
                     {
                         tmpLay = doc.Layers[doc.Layers.Add()];
                         tmpLay.Name = "Temp";
-                    } else
-                    {
-                        tmpLay = doc.Layers.FindName("Temp");
                     }
+                    tmpLay = doc.Layers.FindName("Temp");
 
                     // define layer
                     tmpLay.Color = System.Drawing.Color.Aquamarine;
@@ -98,7 +96,17 @@ namespace gjTools
                     return objs.CommandResult();
 
                 var gt = new genTools(doc);
-                gt.CheckPolylines(objs, true);
+                bool res = gt.CheckPolylines(objs, true);
+
+                var cancelCommand = new GetString();
+                if (res)
+                    cancelCommand.SetCommandPrompt("All Lines are Good Polylines, Enter to Continue...");
+                else
+                    cancelCommand.SetCommandPrompt("Bad Lines and Need Converting, Enter to Continue...");
+                cancelCommand.AcceptNothing(true);
+                cancelCommand.Get();
+
+                gt.hideDynamicDraw();
             }
 
             return Result.Success;
