@@ -93,3 +93,24 @@ class DrawTools {
         return pts;
     }
 }
+
+class CutOperations
+{
+    public Curve[] CrvObjects;
+    public RhinoDoc doc;
+    public string objectLayer;
+
+    public CutOperations(Curve[] Crvs, RhinoDoc document)
+    {
+        CrvObjects = Crvs;
+        doc = document;
+        
+    }
+
+    public string CutLayers()
+    {
+        var allLays = new List<string>();
+        var cutLayers = new List<string>();
+        return "farts";
+    }
+}
