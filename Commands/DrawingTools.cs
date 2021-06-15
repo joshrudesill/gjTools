@@ -35,8 +35,8 @@ namespace gjTools
             // make part boundry boxes
             if (operation == options[0])
             {
-                var gt = new genTools();
-                List<string> selections = gt.SelParentLayers(doc, true);
+                var gt = new genTools(doc);
+                List<string> selections = gt.SelParentLayers(true);
 
                 foreach (string sel in selections)
                 {
@@ -97,9 +97,8 @@ namespace gjTools
                 if (objs.CommandResult() != Result.Success)
                     return objs.CommandResult();
 
-                var gt = new genTools();
-
-                gt.CheckPolylines(objs, doc, false);
+                var gt = new genTools(doc);
+                gt.CheckPolylines(objs, true);
             }
 
             return Result.Success;
