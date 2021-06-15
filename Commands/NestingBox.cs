@@ -8,16 +8,16 @@ using System.Collections.Generic;
 
 namespace gjTools
 {
-    public class gjToolsCommand : Command
+    public class NestingBox : Command
     {
-        public gjToolsCommand()
+        public NestingBox()
         {
             Instance = this;
         }
 
-        public static gjToolsCommand Instance { get; private set; }
+        public static NestingBox Instance { get; private set; }
 
-        public override string EnglishName => "gjToolsCommand";
+        public override string EnglishName => "NestingBox";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
