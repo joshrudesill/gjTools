@@ -1,5 +1,4 @@
-﻿using System;
-using Rhino;
+﻿using Rhino;
 using Rhino.Commands;
 
 namespace gjTools
@@ -12,12 +11,12 @@ namespace gjTools
         }
 
         public static JTest Instance { get; private set; }
-        public override string EnglishName => "JTest";
+        public override string EnglishName => "asdf";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             var h = new HelperFunctions(doc);
-            h.updateUserInfo();
+            h.showColorPallete();
             return Result.Success;
         }
     }

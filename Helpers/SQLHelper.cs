@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using System.Data.SQLite;
 using Rhino;
-using Rhino.Commands;
+
 namespace gjTools
 {
     interface ISQLHelper
     {
         void testConnection(); // Test connection. For debugging only.
-        List<CustomBlurb> queryCustomBlurbs();  // Definitions in summary. Query all items.
+        List<CustomBlurb> queryCustomBlurbs();  // Definitions in summaries. Query all items.
         List<JobSlot> queryJobSlots();
         List<Location> queryLocations();
         List<OEMColor> queryOEMColors();

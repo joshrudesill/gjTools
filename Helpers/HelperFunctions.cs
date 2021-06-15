@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Rhino;
-using Rhino.Commands;
 
 namespace gjTools
 {
@@ -13,8 +9,12 @@ namespace gjTools
         void showColorPallete();
         void addColor();
         void updateUserInfo();
+        int addLayer(string name, System.Drawing.Color color);
     }
-
+    /// <summary>
+    /// A class with functions designed to help areas with more complex functionality.
+    /// <para>Doc object must be passed to constructor.</para>
+    /// </summary>
     class HelperFunctions : IHelperFunctions
     {
         RhinoDoc m_doc;
@@ -38,8 +38,10 @@ namespace gjTools
             }
             Rhino.UI.Dialogs.ShowPropertyListBox("OEM Colors", "List of Colors", rL, rL2);
         }
-
-        public void addColor()
+        /// <summary>
+        /// Triggers dialog box that allows for adding of a color to the OEMColors table in the DB.
+        /// </summary>
+        public void addColor() 
         {
             int c = sql.queryOEMColors().Count();
             List<string> bsL = new List<string>{"", ""};
@@ -79,5 +81,7 @@ namespace gjTools
             layer.Color = color;
             return m_doc.Layers.Add(layer);
         }
+
+        
     }
 }
