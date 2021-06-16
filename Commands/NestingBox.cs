@@ -34,7 +34,7 @@ namespace gjTools
 
             foreach (var o in obj.Objects())
             {
-                o.Curve().GetLength()
+                o.Curve().GetLength();
                 bb.Union(o.Curve().GetBoundingBox(true));
             }
 
