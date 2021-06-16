@@ -13,7 +13,7 @@ namespace gjTools.Commands
 
         public static ZundEyes Instance { get; private set; }
 
-        public override string EnglishName => "ZundEyesgj";
+        public override string EnglishName => "gjZundEyes";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {

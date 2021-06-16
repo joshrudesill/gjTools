@@ -9,7 +9,22 @@ using System.Collections.Generic;
 /// <summary>
 /// This class is for object creation
 /// </summary>
-class DrawTools {
+/// 
+interface IDrawTools
+{
+    void hideDynamicDraw();
+    bool CheckPolylines(GetObject obj, bool showPreview = true);
+    List<string> SelParentLayers(bool multiSel = true);
+}
+
+interface ICutOperations
+{
+    List<string> CutLayers();
+    double CutLengthByLayer(string layerName);
+}
+
+class DrawTools : IDrawTools 
+{
 
     public RhinoDoc doc;
     public Rhino.Display.CustomDisplay show = new Rhino.Display.CustomDisplay(false);
@@ -91,7 +106,7 @@ class DrawTools {
     }
 }
 
-class CutOperations
+class CutOperations : ICutOperations
 {
     public List<Rhino.DocObjects.ObjRef> CrvObjects;
     public RhinoDoc doc;
