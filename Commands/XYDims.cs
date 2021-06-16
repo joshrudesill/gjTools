@@ -32,8 +32,8 @@ namespace gjTools.Commands
             Rhino.DocObjects.RhinoObject.GetTightBoundingBox(ids, out bb);
             Point3d[] ps = bb.GetCorners();
             Rhino.DocObjects.DimensionStyle ds = doc.DimStyles.Current;
-            AnnotationType at = AnnotationType.Aligned;
-            var dimension = Rhino.Geometry.LinearDimension.Create(at, ds, Plane.WorldXY, new Vector3d(1,0,0), ps[0], ps[3], new Point3d(0,0,0), 90.0);
+            AnnotationType at = AnnotationType.Rotated;
+            var dimension = Rhino.Geometry.LinearDimension.Create(at, ds, Plane.WorldXY, new Vector3d(1,0,0), ps[0], ps[3], new Point3d(0,0,0), 0.0);
             doc.Objects.AddLinearDimension(dimension);
             doc.Views.Redraw();
             return Result.Success;
