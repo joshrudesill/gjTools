@@ -95,7 +95,6 @@ class CutOperations
 {
     public List<Rhino.DocObjects.ObjRef> CrvObjects;
     public RhinoDoc doc;
-    public string objectLayer;
 
     public CutOperations(List<Rhino.DocObjects.ObjRef> Crvs, RhinoDoc document)
     {
@@ -123,8 +122,8 @@ class CutOperations
         foreach (var i in CrvObjects)
         {
             string layerName = doc.Layers[i.Object().Attributes.LayerIndex].Name;
-            if (layerName.Contains("C_"))
-                cutLayers.Add(layerName);
+            if (layerName.Contains("C_") && !cutLayers.Contains(layerName.Substring(2)))
+                cutLayers.Add(layerName.Substring(2));
         }
 
         return cutLayers;
@@ -135,9 +134,9 @@ class CutOperations
         double Tlength = 0.0;
 
         foreach (var i in CrvObjects)
-            if (doc.Layers[i.Object().Attributes.LayerIndex].Name == layerName)
+            if (doc.Layers[i.Object().Attributes.LayerIndex].Name == "C_" + layerName)
                 Tlength += i.Curve().GetLength();
         
-        return Tlength;
+        return Math.Round(Tlength, 2);
     }
 }
