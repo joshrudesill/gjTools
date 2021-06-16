@@ -30,11 +30,11 @@ namespace gjTools
                 return Result.Cancel;
 
             BoundingBox bb = obj.Object(0).Curve().GetBoundingBox(true);
-            
+            //var cutLengths = new CutOperations(obj.Objects(), doc);
 
             foreach (var o in obj.Objects())
             {
-                o.Curve().GetLength()
+                o.Curve().GetLength();
                 bb.Union(o.Curve().GetBoundingBox(true));
             }
 

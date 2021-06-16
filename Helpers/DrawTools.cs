@@ -5,9 +5,6 @@ using Rhino.Input;
 using Rhino.Input.Custom;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 /// <summary>
 /// This class is for object creation
@@ -96,21 +93,51 @@ class DrawTools {
 
 class CutOperations
 {
-    public Curve[] CrvObjects;
+    public List<Rhino.DocObjects.ObjRef> CrvObjects;
     public RhinoDoc doc;
     public string objectLayer;
 
-    public CutOperations(Curve[] Crvs, RhinoDoc document)
+    public CutOperations(List<Rhino.DocObjects.ObjRef> Crvs, RhinoDoc document)
     {
         CrvObjects = Crvs;
         doc = document;
-        
+
+        OnlyCurves();
     }
 
-    public string CutLayers()
+    private void OnlyCurves()
     {
-        var allLays = new List<string>();
+        var tmp = new List<Rhino.DocObjects.ObjRef>();
+
+        foreach (var i in CrvObjects)
+            if (i.Curve() != null)
+                tmp.Add(i);
+
+        CrvObjects = tmp;
+    }
+
+    public List<string> CutLayers()
+    {
         var cutLayers = new List<string>();
-        return "farts";
+        
+        foreach (var i in CrvObjects)
+        {
+            string layerName = doc.Layers[i.Object().Attributes.LayerIndex].Name;
+            if (layerName.Contains("C_"))
+                cutLayers.Add(layerName);
+        }
+
+        return cutLayers;
+    }
+
+    public double CutLengthByLayer(string layerName)
+    {
+        double Tlength = 0.0;
+
+        foreach (var i in CrvObjects)
+            if (doc.Layers[i.Object().Attributes.LayerIndex].Name == layerName)
+                Tlength += i.Curve().GetLength();
+        
+        return Tlength;
     }
 }
