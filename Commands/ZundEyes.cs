@@ -31,10 +31,6 @@ namespace gjTools.Commands
             l1.ParentLayerId = pli.Id;
             int l1index = doc.Layers.Add(l1);
             RhinoApp.WriteLine(doc.Layers.SetCurrentLayerIndex(l1index, true).ToString());
-            Rhino.DocObjects.Layer l2 = new Rhino.DocObjects.Layer();
-            l2.Name = "C_EYEFILL";
-            l2.ParentLayerId = pli.Id;
-            int l2index = doc.Layers.Add(l2);
             //--------//
             // Get corners
             Point3d[] corners = bb.GetCorners();
@@ -57,9 +53,7 @@ namespace gjTools.Commands
                 doc.Objects.AddCircle(c1);
                 var cu = c1.ToNurbsCurve();
                 var hatches = Hatch.Create(cu, doc.HatchPatterns.CurrentHatchPatternIndex, 0, 1.0, 1.0);
-                RhinoApp.WriteLine(doc.Layers.SetCurrentLayerIndex(l2index, true).ToString());
                 doc.Objects.AddHatch(hatches[0]);
-                RhinoApp.WriteLine(doc.Layers.SetCurrentLayerIndex(l1index, true).ToString());
                 for (int j = 0; j < numEyesS; j++)
                 {
                     first.Y -= spacingS;
@@ -67,19 +61,11 @@ namespace gjTools.Commands
                     doc.Objects.AddCircle(c2);
                     var cu1 = c2.ToNurbsCurve();
                     var hatches1 = Hatch.Create(cu1, doc.HatchPatterns.CurrentHatchPatternIndex, 0, 1.0, 1.0);
-                    RhinoApp.WriteLine(doc.Layers.SetCurrentLayerIndex(l2index, true).ToString());
                     doc.Objects.AddHatch(hatches1[0]);
-                    RhinoApp.WriteLine(doc.Layers.SetCurrentLayerIndex(l1index, true).ToString());
                 }
                 first.Y = corners[3].Y - 0.65;
                 first.X += spacingT;
             }
-            Circle fc = new Circle(new Point3d(corners[1].X - 1.65, corners[1].Y + 0.65, 0), 0.125);
-            doc.Objects.AddCircle(fc);
-            var nc = fc.ToNurbsCurve();
-            var hatches3 = Hatch.Create(nc, doc.HatchPatterns.CurrentHatchPatternIndex, 0, 1.0, 1.0);
-            RhinoApp.WriteLine(doc.Layers.SetCurrentLayerIndex(l2index, true).ToString());
-            doc.Objects.AddHatch(hatches3[0]);
 
             doc.Views.Redraw();
             return Result.Success;
