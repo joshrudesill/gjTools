@@ -82,7 +82,5 @@ namespace gjTools
             layer.Color = color;
             return m_doc.Layers.Add(layer);
         }
-
-        
     }
 }
