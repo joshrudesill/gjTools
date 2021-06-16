@@ -19,7 +19,7 @@ namespace gjTools.Commands
         {
             const Rhino.DocObjects.ObjectType filter = Rhino.DocObjects.ObjectType.Curve;
             Rhino.DocObjects.ObjRef objref;
-            Result rc = Rhino.Input.RhinoGet.GetOneObject("Select curve to divide", false, filter, out objref);
+            Result rc = Rhino.Input.RhinoGet.GetOneObject("Select box to add eyes to..", false, filter, out objref);
             Curve crv = objref.Curve();
             BoundingBox bb = crv.GetBoundingBox(true);
 
@@ -72,7 +72,14 @@ namespace gjTools.Commands
             return Result.Success;
         }
 
-        public void createHatchOnLayer(Circle c, int layer1, int layer2, RhinoDoc doc)
+        /// <summary>
+        /// Internal use only. Private function
+        /// </summary>
+        /// <param name="c"></param>
+        /// <param name="layer1"></param>
+        /// <param name="layer2"></param>
+        /// <param name="doc"></param>
+        void createHatchOnLayer(Circle c, int layer1, int layer2, RhinoDoc doc)
         {
             doc.Objects.AddCircle(c);
             var cu = c.ToNurbsCurve();
