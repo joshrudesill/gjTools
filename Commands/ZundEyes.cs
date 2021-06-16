@@ -19,23 +19,24 @@ namespace gjTools.Commands
         {
             const Rhino.DocObjects.ObjectType filter = Rhino.DocObjects.ObjectType.Curve;
             Rhino.DocObjects.ObjRef objref;
-            Result rc = Rhino.Input.RhinoGet.GetOneObject("Select curve to divide", false, filter, out objref);
+            Result rc = Rhino.Input.RhinoGet.GetOneObject("Select box to add eyes to..", false, filter, out objref);
             Curve crv = objref.Curve();
             BoundingBox bb = crv.GetBoundingBox(true);
 
             //----Layering----//
             int layer = objref.Object().Attributes.LayerIndex;
             Rhino.DocObjects.Layer pli = doc.Layers[layer];
+
             Rhino.DocObjects.Layer l1 = new Rhino.DocObjects.Layer();
             l1.Name = "C_EYES";
             l1.ParentLayerId = pli.Id;
             int l1index = doc.Layers.Add(l1);
-            RhinoApp.WriteLine(doc.Layers.SetCurrentLayerIndex(l1index, true).ToString());
+
             Rhino.DocObjects.Layer l2 = new Rhino.DocObjects.Layer();
             l2.Name = "C_EYEFILL";
             l2.ParentLayerId = pli.Id;
             int l2index = doc.Layers.Add(l2);
-            //--------//
+
             // Get corners
             Point3d[] corners = bb.GetCorners();
 
@@ -54,35 +55,38 @@ namespace gjTools.Commands
             for (int i = 0; i < numEyesT + 1; i++)
             {
                 Circle c1 = new Circle(first, 0.125);
-                doc.Objects.AddCircle(c1);
-                var cu = c1.ToNurbsCurve();
-                var hatches = Hatch.Create(cu, doc.HatchPatterns.CurrentHatchPatternIndex, 0, 1.0, 1.0);
-                RhinoApp.WriteLine(doc.Layers.SetCurrentLayerIndex(l2index, true).ToString());
-                doc.Objects.AddHatch(hatches[0]);
-                RhinoApp.WriteLine(doc.Layers.SetCurrentLayerIndex(l1index, true).ToString());
+                createHatchOnLayer(c1, l2index, l1index, doc);
                 for (int j = 0; j < numEyesS; j++)
                 {
                     first.Y -= spacingS;
                     Circle c2 = new Circle(first, 0.125);
-                    doc.Objects.AddCircle(c2);
-                    var cu1 = c2.ToNurbsCurve();
-                    var hatches1 = Hatch.Create(cu1, doc.HatchPatterns.CurrentHatchPatternIndex, 0, 1.0, 1.0);
-                    RhinoApp.WriteLine(doc.Layers.SetCurrentLayerIndex(l2index, true).ToString());
-                    doc.Objects.AddHatch(hatches1[0]);
-                    RhinoApp.WriteLine(doc.Layers.SetCurrentLayerIndex(l1index, true).ToString());
+                    createHatchOnLayer(c2, l2index, l1index, doc);
                 }
                 first.Y = corners[3].Y - 0.65;
                 first.X += spacingT;
             }
             Circle fc = new Circle(new Point3d(corners[1].X - 1.65, corners[1].Y + 0.65, 0), 0.125);
-            doc.Objects.AddCircle(fc);
-            var nc = fc.ToNurbsCurve();
-            var hatches3 = Hatch.Create(nc, doc.HatchPatterns.CurrentHatchPatternIndex, 0, 1.0, 1.0);
-            RhinoApp.WriteLine(doc.Layers.SetCurrentLayerIndex(l2index, true).ToString());
-            doc.Objects.AddHatch(hatches3[0]);
+            createHatchOnLayer(fc, l2index, l1index, doc);
 
             doc.Views.Redraw();
             return Result.Success;
+        }
+
+        /// <summary>
+        /// Internal use only. Private function
+        /// </summary>
+        /// <param name="c"></param>
+        /// <param name="layer1"></param>
+        /// <param name="layer2"></param>
+        /// <param name="doc"></param>
+        void createHatchOnLayer(Circle c, int layer1, int layer2, RhinoDoc doc)
+        {
+            doc.Objects.AddCircle(c);
+            var cu = c.ToNurbsCurve();
+            var hatches = Hatch.Create(cu, doc.HatchPatterns.CurrentHatchPatternIndex, 0, 1.0, 1.0);
+            doc.Layers.SetCurrentLayerIndex(layer1, true);
+            doc.Objects.AddHatch(hatches[0]);
+            doc.Layers.SetCurrentLayerIndex(layer2, true);
         }
     }
 }
