@@ -18,7 +18,12 @@ namespace gjTools.Commands
             DialogTools d = new DialogTools(doc);
             Rhino.Input.Custom.GetObject go = new Rhino.Input.Custom.GetObject();
             go.SetCommandPrompt("Select object(s) to offset..");
-            go.GetMultiple(0, -1);
+            Rhino.Input.GetResult gr = go.GetMultiple(0, -1);
+            if (gr != Rhino.Input.GetResult.Object)
+            {
+                RhinoApp.WriteLine("No objects selected. Command canceled");
+                return Result.Cancel;
+            }
             List<Rhino.DocObjects.RhinoObject> ids = new List<Rhino.DocObjects.RhinoObject>();
             double offset = 0.125;
             Rhino.Input.RhinoGet.GetNumber("Offset Distance?", true, ref offset);

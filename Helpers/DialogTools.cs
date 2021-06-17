@@ -13,7 +13,7 @@ namespace gjTools
         void showColorPallete();
         void addColor();
         void updateUserInfo();
-        int addLayer(string name, System.Drawing.Color color);
+        int addLayer(string name, System.Drawing.Color color, int parent);
     }
 
     class DialogTools : IHelperFunctions
@@ -70,16 +70,20 @@ namespace gjTools
                 ));
         }
         /// <summary>
-        /// Adds a named parent layer with color. Returns index of layer. Returns -1 on failure.
+        /// Adds a named parent layer with color and optional parent layer. Returns index of layer. Returns -1 on failure.
         /// </summary>
         /// <param name="name"></param>
         /// <param name="color"></param>
         /// <returns></returns>
-        public int addLayer(string name, System.Drawing.Color color)
+        public int addLayer(string name, System.Drawing.Color color, int parent = -1)
         {
             Rhino.DocObjects.Layer layer = new Rhino.DocObjects.Layer();
             layer.Name = name;
             layer.Color = color;
+            if (parent != -1)
+            {
+                layer.ParentLayerId = m_doc.Layers[parent].Id;
+            }
             return m_doc.Layers.Add(layer);
         }
     }
