@@ -104,9 +104,80 @@ class DrawTools : IDrawTools
 
         return pts;
     }
+
+
+    public void StandardDimstyle()
+    {
+        if (doc.DimStyles.FindName("LableMaker") == null)
+        {
+            // craete the dimstyle
+            int dimStyleIntex = doc.DimStyles.Add("LabelMaker");
+            var dimstyle = doc.DimStyles.FindIndex(dimStyleIntex);
+
+            dimstyle.DimensionScale = 1;
+            dimstyle.TextHeight = 0.14;
+            dimstyle.Font = Rhino.DocObjects.Font.FromQuartetProperties("Consolas", false, false);
+
+            RhinoApp.WriteLine("Created a Standard Dimstyle");
+        } else
+        {
+            RhinoApp.WriteLine("Standard Dimstyle Exists");
+        }
+            
+    }
+
+
+    /// <summary>
+    /// Create a Text entity and return for addition to document later
+    /// </summary>
+    /// <param name="text"></param>
+    /// <param name="point"></param>
+    /// <param name="dimsyleIndex"></param>
+    /// <param name="height"></param>
+    /// <param name="fontStyle">0=normal, 1=bold, 2=italic, 3=bold & italic</param>
+    /// <param name="justHoriz">0=left, 1=center, 2=right, 3=auto</param>
+    /// <param name="justVert">0=Top, 3=middle, 6=bottom</param>
+    /// <returns></returns>
+    public TextEntity AddText(string text, Point3d point, int dimsyleIndex, double height = 1, int fontStyle = 0, int justHoriz = 3, int justVert = 0)
+    {
+        Plane plane = doc.Views.ActiveView.ActiveViewport.ConstructionPlane();
+              plane.Origin = point;
+        var dimstyle = doc.DimStyles.FindIndex(dimsyleIndex);
+
+        bool bold = true ? (fontStyle == 1 || fontStyle == 3) : false;
+        bool italic = true ? (fontStyle == 2) : false;
+
+        var H = Rhino.DocObjects.TextHorizontalAlignment.Auto;
+        switch (justHoriz)
+        {
+            case 0: H = Rhino.DocObjects.TextHorizontalAlignment.Left; break;
+            case 1: H = Rhino.DocObjects.TextHorizontalAlignment.Center; break;
+            case 2: H = Rhino.DocObjects.TextHorizontalAlignment.Right; break;
+            default: break;
+        }
+
+        var V = Rhino.DocObjects.TextVerticalAlignment.Top;
+        switch (justVert)
+        {
+            case 0: V = Rhino.DocObjects.TextVerticalAlignment.Top; break;
+            case 3: V = Rhino.DocObjects.TextVerticalAlignment.Middle; break;
+            case 6: V = Rhino.DocObjects.TextVerticalAlignment.Bottom; break;
+            default: break;
+        }
+
+        var txtEntity = TextEntity.Create(text, plane, dimstyle, false, 0, 0);
+            txtEntity.SetBold(bold);
+            txtEntity.SetItalic(italic);
+            txtEntity.TextHorizontalAlignment = H;
+            txtEntity.TextVerticalAlignment = V;
+
+        return txtEntity;
+    }
 }
 
-class CutOperations : ICutOperations
+
+
+public class CutOperations
 {
     public List<Rhino.DocObjects.ObjRef> CrvObjects;
     public RhinoDoc doc;
@@ -126,6 +197,7 @@ class CutOperations : ICutOperations
     private void OnlyCurves()
     {
         var tmp = new List<Rhino.DocObjects.ObjRef>();
+        groupInd = new List<int>();
 
         foreach (var i in CrvObjects)
             if (i.Curve() != null)
@@ -168,6 +240,6 @@ class CutOperations : ICutOperations
             if (doc.Layers[i.Object().Attributes.LayerIndex].Name == "C_" + layerName)
                 Tlength += i.Curve().GetLength();
         
-        return Math.Round(Tlength, 2);
+        return (int)Tlength;
     }
 }
