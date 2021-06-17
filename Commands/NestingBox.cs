@@ -52,7 +52,7 @@ namespace gjTools
 
             
             doc.Objects.AddRectangle(nestBox);
-            makeInfoBox(cuts, doc, bb, nestBox);
+            CollectInfo(cuts, doc, bb, nestBox);
 
             doc.Views.Redraw();
             return Result.Success;
@@ -102,7 +102,11 @@ namespace gjTools
         {
             int wholeNum = (int)num;
             int afterDecimal = (int)((num - wholeNum) * 100);
-            var ranges = new List<int> { 10, 35, 60, 85 };
+            var ranges = new List<int> { 8, 30, 60, 80 };
+
+            if (afterDecimal >= ranges[3])
+                return wholeNum + 1;
+
             for (int i = 0;i < 4; i++)
             {
                 if (afterDecimal < ranges[i])
@@ -115,16 +119,27 @@ namespace gjTools
             return wholeNum + (afterDecimal * 0.01);
         }
 
-        public void makeInfoBox(CutOperations cutInfo, RhinoDoc doc, BoundingBox bb, Rectangle3d nestBox)
+
+        /// <summary>
+        /// Assembles the info from the nesting
+        /// </summary>
+        /// <param name="cutInfo"></param>
+        /// <param name="doc"></param>
+        /// <param name="bb"></param>
+        /// <param name="nestBox"></param>
+        public void CollectInfo(CutOperations cutInfo, RhinoDoc doc, BoundingBox bb, Rectangle3d nestBox)
         {
             // for now, build a text entity in the correct place
             string partNumber = "PN: " + cutInfo.parentLayer;
             
             string path = "File Not Saved";
             if (doc.Name != null)
-                path = "Path: " + doc.Path + "\\" + doc.Name;
+                path = "Path: " + doc.Path;
             
-            string shtSizeInfo = "Sheet Size: " + nestBox.Width + "w x " + nestBox.Height + "h   (Part Area: " + bb.GetEdges()[0].Length + "w x " + bb.GetEdges()[3].Length + "h)";
+            string shtSizeInfo = "Sheet Size: " + nestBox.Width + "w x " + 
+                nestBox.Height + "h   (Part Area: " + 
+                Math.Round(bb.GetEdges()[0].Length, 2) + 
+                "w x " + Math.Round(bb.GetEdges()[3].Length, 2) + "h)";
             
             string itemLine = "Items up: ";
             if (cutInfo.groupInd.Count > 0)
@@ -139,8 +154,14 @@ namespace gjTools
 
             string timeStamp = "GREG\n" + System.DateTime.UtcNow;
 
-            // add text here to see all info
             
+
+            // add text here to see all info
+            RhinoApp.WriteLine(partNumber);
+            RhinoApp.WriteLine(timeStamp);
+            RhinoApp.WriteLine(path);
+            RhinoApp.WriteLine(shtSizeInfo);
+            RhinoApp.WriteLine(itemLine);
         }
     }
 }
