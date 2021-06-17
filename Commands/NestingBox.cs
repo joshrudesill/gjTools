@@ -17,7 +17,7 @@ namespace gjTools
 
         public static NestingBox Instance { get; private set; }
 
-        public override string EnglishName => "NestingBoxCS";
+        public override string EnglishName => "gjNestingBox";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
