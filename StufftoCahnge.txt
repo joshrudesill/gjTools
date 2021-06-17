@@ -1,0 +1,10 @@
+﻿6/17/2021
+makeSmallest command
+- make support for multiple objects
+- smallest can be found from only 180deg rotate, 360 is twice the work
+- test smallest by boundingbox area
+
+6/17/2021
+zundEyes command
+- eyeFill layer is not a C_ layer type
+- layers are not assigning to the objects
