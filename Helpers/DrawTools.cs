@@ -23,7 +23,7 @@ interface ICutOperations
     double CutLengthByLayer(string layerName);
 }
 
-class DrawTools : IDrawTools 
+public class DrawTools : IDrawTools 
 {
 
     public RhinoDoc doc;
@@ -106,7 +106,7 @@ class DrawTools : IDrawTools
     }
 
 
-    public void StandardDimstyle()
+    public int StandardDimstyle()
     {
         if (doc.DimStyles.FindName("LableMaker") == null)
         {
@@ -119,9 +119,11 @@ class DrawTools : IDrawTools
             dimstyle.Font = Rhino.DocObjects.Font.FromQuartetProperties("Consolas", false, false);
 
             RhinoApp.WriteLine("Created a Standard Dimstyle");
+            return dimstyle.Index;
         } else
         {
             RhinoApp.WriteLine("Standard Dimstyle Exists");
+            return doc.DimStyles.FindName("LabelMaker").Index;
         }
             
     }
@@ -166,10 +168,10 @@ class DrawTools : IDrawTools
         }
 
         var txtEntity = TextEntity.Create(text, plane, dimstyle, false, 0, 0);
-            txtEntity.SetBold(bold);
-            txtEntity.SetItalic(italic);
             txtEntity.TextHorizontalAlignment = H;
             txtEntity.TextVerticalAlignment = V;
+            txtEntity.TextHeight = height;
+        txtEntity.Font = Rhino.DocObjects.Font.FromQuartetProperties("Consolas", bold, italic);
 
         return txtEntity;
     }
