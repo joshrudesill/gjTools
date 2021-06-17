@@ -13,7 +13,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="RhinoCommon" Version="7.4.21078.1001" IncludeAssets="compile;build" />
+    <PackageReference Include="RhinoCommon" Version="7.7.21160.5001" IncludeAssets="compile;build" />
     <PackageReference Include="SQLite" Version="3.13.0" />
     <PackageReference Include="System.Data.SQLite" Version="1.0.114.3" />
   </ItemGroup>

@@ -26,7 +26,7 @@ namespace gjTools
                 obj.GeometryFilter = Rhino.DocObjects.ObjectType.Curve;
                 obj.GetMultiple(1, 0);
 
-            if (obj == null)
+            if (obj.CommandResult() != Result.Success)
                 return Result.Cancel;
             
             BoundingBox bb = obj.Object(0).Curve().GetBoundingBox(true);
@@ -87,7 +87,7 @@ namespace gjTools
                 num.SetDefaultNumber(defaultNum);
             num.Get();
 
-            if (num == null) return -1.0;
+            if (num.CommandResult() != Result.Success) return -1.0;
             return num.Number();
         }
 
