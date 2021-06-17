@@ -106,7 +106,7 @@ class DrawTools : IDrawTools
     }
 }
 
-class CutOperations : ICutOperations
+public class CutOperations : ICutOperations
 {
     public List<Rhino.DocObjects.ObjRef> CrvObjects;
     public RhinoDoc doc;

@@ -29,7 +29,7 @@ namespace gjTools.Commands
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             Rhino.Input.Custom.GetObject go = new Rhino.Input.Custom.GetObject();
-            go.SetCommandPrompt("Select objects to get smallest rotation..");
+            go.SetCommandPrompt("Select object to get smallest rotation..");
             go.Get();
             BoundingBox bb;
             Rhino.DocObjects.RhinoObject ro = go.Object(0).Object();
