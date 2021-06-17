@@ -50,8 +50,8 @@ namespace gjTools
             Point3d topRight = new Point3d(bb.Center.X + sheetWidth, bb.Center.Y + sheetHeight, 0.0);
             Rectangle3d nestBox = new Rectangle3d(Plane.WorldXY, bottomLeft, topRight);
 
-            
-            doc.Objects.AddRectangle(nestBox);
+            Guid boxID = doc.Objects.AddRectangle(nestBox);
+            setObjectLayer(doc, cuts.parentLayer, "NestBox", boxID);
             CollectInfo(cuts, doc, bb, nestBox);
 
             doc.Views.Redraw();
@@ -120,6 +120,25 @@ namespace gjTools
         }
 
 
+        public void setObjectLayer(RhinoDoc doc, Rhino.DocObjects.Layer parent, string childName, Guid id)
+        {
+            Rhino.DocObjects.Layer clay;
+            if (doc.Layers.FindByFullPath(parent.Name + "::" + childName, -1) == -1)
+            {
+                int ind = doc.Layers.Add();
+                clay = doc.Layers[ind];
+                clay.Name = childName;
+                clay.ParentLayerId = parent.Id;
+            } else
+            {
+                clay = doc.Layers[doc.Layers.FindByFullPath(parent.Name + "::" + childName, 0)];
+            }
+
+            var obj = doc.Objects.FindId(id);
+                obj.Attributes.LayerIndex = clay.Index;
+                obj.CommitChanges();
+        }
+
         /// <summary>
         /// Assembles the info from the nesting
         /// </summary>
@@ -171,10 +190,55 @@ namespace gjTools
 
             textEnt.Add(tool.AddText(timeStamp, tbb.GetCorners()[2], ds, 0.06, 1, 2));
 
-            Rectangle3d box = new Rectangle3d(Plane.WorldXY, tbb.GetCorners()[0], tbb.GetCorners()[2]);
+            var box = new Rectangle3d(
+                Plane.WorldXY,
+                tbb.GetCorners()[0].DistanceTo(tbb.GetCorners()[1]) + 0.2,
+                -tbb.GetCorners()[1].DistanceTo(tbb.GetCorners()[2]) - 0.2
+            );
+            var line = new Line(
+                new Point3d(0.1, tbb.Center.Y, 0),
+                new Point3d(tbb.GetCorners()[1].X, tbb.Center.Y, 0)
+            );
+
+            // move data
+            Point3d basePt = nestBox.Corner(0);
+            Transform Xmove = Transform.Translation(basePt.X, basePt.Y, 0);
+
+            // scale data
+            double scale = 1;
+            var allowedWidth = new List<int> { 9, 12, 23, 36, 44, 65, 142, 200 };
+            foreach (int i in allowedWidth)
+                if (nestBox.Width > i)
+                    scale = i / box.Width;
+            Transform Xscale = Transform.Scale(basePt, scale);
+
+            // Perform the translates
+            box.Transform(Xmove);
+            box.Transform(Xscale);
+            line.Transform(Xmove);
+            line.Transform(Xscale);
+
+            var objIDs = new List<Guid>();
 
             foreach (var i in textEnt)
-                doc.Objects.Add(i);
+            {
+                i.Transform(Xmove);
+                i.Transform(Xscale);
+                i.TextHeight = i.TextHeight * scale;
+                objIDs.Add(doc.Objects.Add(i));
+            }
+
+            objIDs.Add(doc.Objects.AddRectangle(box));
+            objIDs.Add(doc.Objects.AddLine(line));
+
+            doc.Groups.Add(objIDs);
+            foreach (Guid i in objIDs)
+            {
+                var obj = doc.Objects.FindId(i);
+                    obj.Attributes.LayerIndex = cutInfo.parentLayer.Index;
+                    obj.CommitChanges();
+            }
+                
             doc.Views.Redraw();
         }
     }
