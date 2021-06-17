@@ -110,6 +110,8 @@ class CutOperations : ICutOperations
 {
     public List<Rhino.DocObjects.ObjRef> CrvObjects;
     public RhinoDoc doc;
+    public Rhino.DocObjects.Layer parentLayer;
+    public List<int> groupInd;
 
     public CutOperations(List<Rhino.DocObjects.ObjRef> Crvs, RhinoDoc document)
     {
@@ -117,6 +119,8 @@ class CutOperations : ICutOperations
         doc = document;
 
         OnlyCurves();
+        var singleSubLayer = doc.Layers[CrvObjects[0].Object().Attributes.LayerIndex];
+        parentLayer = doc.Layers.FindId(singleSubLayer.ParentLayerId);
     }
 
     private void OnlyCurves()
@@ -125,7 +129,19 @@ class CutOperations : ICutOperations
 
         foreach (var i in CrvObjects)
             if (i.Curve() != null)
+            {
                 tmp.Add(i);
+
+                // count groups (if any)
+                var singleObj = i.Object();
+                if (singleObj.GroupCount > 0)
+                {
+                    // we have a grouped object
+                    int indi = singleObj.GetGroupList()[0];
+                    if (!groupInd.Contains(indi))
+                        groupInd.Add(indi);
+                }
+            }
 
         CrvObjects = tmp;
     }

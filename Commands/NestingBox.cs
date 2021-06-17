@@ -30,30 +30,56 @@ namespace gjTools
                 return Result.Cancel;
             
             BoundingBox bb = obj.Object(0).Curve().GetBoundingBox(true);
-            var cuts = new CutOperations(new List<Rhino.DocObjects.ObjRef>(obj.Objects()), doc);
-            var cutLays = cuts.CutLayers();
-
-            // DELETE: see if the kerf class is good
-            foreach (string c in cutLays)
-                RhinoApp.WriteLine(c + ": " + cuts.CutLengthByLayer(c));
-
             foreach (var o in obj.Objects())
                 bb.Union(o.Curve().GetBoundingBox(true));
+            Line[] edges = bb.GetEdges();
+
+            // get object cut length object
+            var cuts = new CutOperations(new List<Rhino.DocObjects.ObjRef>(obj.Objects()), doc);
 
             // Time to collect the sheet input sizes
             var sheetHeight = numFromUser("Sheet Height", 48.0);
-            if (sheetHeight == -1) return Result.Cancel;
+                if (sheetHeight == -1) return Result.Cancel;
+                sheetHeight = SheetEndSize(sheetHeight, edges[3]);
+
             var sheetWidth = numFromUser("Sheet Margin/Length", 1.0);
-            if (sheetWidth == -1) return Result.Cancel;
+                if (sheetWidth == -1) return Result.Cancel;
+                sheetWidth = SheetEndSize(sheetWidth, edges[0]);
 
-            // DELETE: see if the inputs r gud
-            RhinoApp.WriteLine("Dims are: " + sheetWidth + " x " + sheetHeight);
-            RhinoApp.WriteLine("Dims are: " + RoundQuarterIn(sheetWidth) + " x " + RoundQuarterIn(sheetHeight));
+            Point3d bottomLeft = new Point3d(bb.Center.X - sheetWidth, bb.Center.Y - sheetHeight, 0.0);
+            Point3d topRight = new Point3d(bb.Center.X + sheetWidth, bb.Center.Y + sheetHeight, 0.0);
+            Rectangle3d nestBox = new Rectangle3d(Plane.WorldXY, bottomLeft, topRight);
 
+            
+            doc.Objects.AddRectangle(nestBox);
+            makeInfoBox(cuts, doc, bb, nestBox);
 
+            doc.Views.Redraw();
             return Result.Success;
         }
 
+
+        /// <summary>
+        /// Makes the decision on sheet size
+        /// </summary>
+        /// <param name="userVal"></param>
+        /// <param name="line"></param>
+        /// <returns></returns>
+        public double SheetEndSize(double userVal, Line line)
+        {
+            if (userVal <= 2.95)
+                return RoundQuarterIn((userVal * 2) + line.Length) / 2;
+            else
+                return RoundQuarterIn(userVal) / 2;
+        }
+
+
+        /// <summary>
+        /// Asks user for a sheet size number
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="defaultNum"></param>
+        /// <returns></returns>
         public double numFromUser(string message="", double defaultNum=0.0)
         {
             var num = new GetNumber();
@@ -65,6 +91,13 @@ namespace gjTools
             return num.Number();
         }
 
+
+
+        /// <summary>
+        /// Rounds the input to quarter inch within tolerance
+        /// </summary>
+        /// <param name="num"></param>
+        /// <returns></returns>
         public double RoundQuarterIn(double num)
         {
             int wholeNum = (int)num;
@@ -80,6 +113,34 @@ namespace gjTools
             }
 
             return wholeNum + (afterDecimal * 0.01);
+        }
+
+        public void makeInfoBox(CutOperations cutInfo, RhinoDoc doc, BoundingBox bb, Rectangle3d nestBox)
+        {
+            // for now, build a text entity in the correct place
+            string partNumber = "PN: " + cutInfo.parentLayer;
+            
+            string path = "File Not Saved";
+            if (doc.Name != null)
+                path = "Path: " + doc.Path + "\\" + doc.Name;
+            
+            string shtSizeInfo = "Sheet Size: " + nestBox.Width + "w x " + nestBox.Height + "h   (Part Area: " + bb.GetEdges()[0].Length + "w x " + bb.GetEdges()[3].Length + "h)";
+            
+            string itemLine = "Items up: ";
+            if (cutInfo.groupInd.Count > 0)
+                itemLine += cutInfo.groupInd.Count;
+            else
+                itemLine += cutInfo.CrvObjects.Count;
+
+            itemLine += "    Kerf:";
+            var cutNames = cutInfo.CutLayers();
+            foreach (string l in cutNames)
+                itemLine += " [" + l + ": " + cutInfo.CutLengthByLayer(l) + "]";
+
+            string timeStamp = "GREG\n" + System.DateTime.UtcNow;
+
+            // add text here to see all info
+            
         }
     }
 }
