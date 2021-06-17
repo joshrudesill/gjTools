@@ -32,17 +32,8 @@ namespace gjTools.Commands
             double offset = 0.25;
             Rhino.Input.RhinoGet.GetNumber("Offset Distance?", true, ref offset);
             var rect = new Rectangle3d(Plane.WorldXY, new Point3d(c[0].X - offset, c[0].Y - offset, 0), new Point3d(c[2].X + offset, c[2].Y + offset, 0));
-            var layer = doc.Layers.FindName("Temp");
-            int li;
-            if(layer == null)
-            {
-                li = d.addLayer("Temp", System.Drawing.Color.Black);
-            }
-            else
-            {
-                li = layer.Index;
-            }
-            doc.Layers.SetCurrentLayerIndex(li, true);
+            int layerind = ids[0].Attributes.LayerIndex;
+            doc.Layers.SetCurrentLayerIndex(layerind, true);
             doc.Objects.AddRectangle(rect);
             doc.Views.Redraw();
             return Result.Success;
