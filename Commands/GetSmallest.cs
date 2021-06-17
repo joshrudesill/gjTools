@@ -37,16 +37,20 @@ namespace gjTools.Commands
             List<BRotation> brl = new List<BRotation>();
             Point3d[] ps = bb.GetCorners();
             brl.Add(new BRotation(0, Math.Abs(ps[0].Y - ps[3].Y)));
-            double rotation = (2 * Math.PI) / 360;
+            double rotation = (2 * Math.PI) / 3600;
             BoundingBox bbt;
-            for (int j = 1; j < 360; j++)
+            for (int j = 0; j < 3600; j++)
             {
-                ro.Geometry.Rotate(rotation, new Vector3d(0, 0, 1), bb.Center);
-                bbt = ro.Geometry.GetBoundingBox(true);
+                var xf = Transform.Rotation(rotation, bb.Center);
+                Guid id = doc.Objects.Transform(ro, xf, true);
+                var ror1 = new Rhino.DocObjects.ObjRef(id);
+                var ro1 = ror1.Object();
+                bbt = ro1.Geometry.GetBoundingBox(true);
                 Point3d[] pst = bbt.GetCorners();
                 brl.Add(new BRotation(j * rotation, Math.Abs(pst[0].Y - pst[3].Y)));
+                ro = ro1;
             }
-            double height = 100000000000000000;
+            double height = 10000000000000080085;
             int index = 0;
             for (int i = 0; i < brl.Count; i++)
             {
@@ -56,12 +60,9 @@ namespace gjTools.Commands
                     index = i;
                 }
             }
-            RhinoApp.WriteLine((index * rotation).ToString());
-            RhinoApp.WriteLine(ro.Geometry.Rotate(index * rotation, new Vector3d(0, 0, 1), new Point3d(0, 0, 0)).ToString());
-            var r = Transform.Rotation(index * rotation, new Vector3d(0, 0, 1), new Point3d(0, 0, 0));
-            ro.Geometry.Transform(r);
+            var r = Transform.Rotation(brl[index].rotation, bb.Center);
+            doc.Objects.Transform(ro, r, true);
             doc.Views.Redraw();
-            RhinoApp.WriteLine(index.ToString());
             return Result.Success;
         }
     }
