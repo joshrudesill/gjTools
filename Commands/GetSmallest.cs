@@ -30,7 +30,12 @@ namespace gjTools.Commands
         {
             Rhino.Input.Custom.GetObject go = new Rhino.Input.Custom.GetObject();
             go.SetCommandPrompt("Select object to get smallest rotation..");
-            go.Get();
+            Rhino.Input.GetResult gr = go.Get();
+            if (gr != Rhino.Input.GetResult.Object)
+            {
+                RhinoApp.WriteLine("No objects selected. Command canceled");
+                return Result.Cancel;
+            }
             BoundingBox bb;
             Rhino.DocObjects.RhinoObject ro = go.Object(0).Object();
             bb = ro.Geometry.GetBoundingBox(true);

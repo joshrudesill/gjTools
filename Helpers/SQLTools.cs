@@ -202,10 +202,6 @@ namespace gjTools
             con = new SQLiteConnection(connectionString);
             con.Open();
         }
-        ~SQLTools()
-        {
-            con.Close();
-        }
         public void testConnection()
         {
             string stm = "SELECT SQLITE_VERSION()";
