@@ -129,7 +129,7 @@ namespace gjTools
         /// <param name="nestBox"></param>
         public void CollectInfo(CutOperations cutInfo, RhinoDoc doc, BoundingBox bb, Rectangle3d nestBox)
         {
-            // for now, build a text entity in the correct place
+            // build the text values
             string partNumber = "PN: " + cutInfo.parentLayer;
             
             string path = "File Not Saved";
@@ -154,14 +154,28 @@ namespace gjTools
 
             string timeStamp = "GREG\n" + System.DateTime.UtcNow;
 
-            
+            var tool = new DrawTools(doc);
+            int ds = tool.StandardDimstyle();
 
-            // add text here to see all info
-            RhinoApp.WriteLine(partNumber);
-            RhinoApp.WriteLine(timeStamp);
-            RhinoApp.WriteLine(path);
-            RhinoApp.WriteLine(shtSizeInfo);
-            RhinoApp.WriteLine(itemLine);
+            var textEnt = new List<TextEntity>
+            {
+                tool.AddText(partNumber, new Point3d(0.1, -0.1, 0), ds, 0.135, 1),
+                tool.AddText(path, new Point3d(0.1, -0.35, 0), ds, 0.07),
+                tool.AddText(shtSizeInfo, new Point3d(0.1, -0.6, 0), ds, 0.1, 1),
+                tool.AddText(itemLine, new Point3d(0.1, -0.8, 0), ds, 0.1, 2)
+            };
+
+            BoundingBox tbb = BoundingBox.Empty;
+            foreach (TextEntity t in textEnt)
+                tbb.Union(t.GetBoundingBox(true));
+
+            textEnt.Add(tool.AddText(timeStamp, tbb.GetCorners()[2], ds, 0.06, 1, 2));
+
+            Rectangle3d box = new Rectangle3d(Plane.WorldXY, tbb.GetCorners()[0], tbb.GetCorners()[2]);
+
+            foreach (var i in textEnt)
+                doc.Objects.Add(i);
+            doc.Views.Redraw();
         }
     }
 }
