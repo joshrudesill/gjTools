@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Rhino;
 using Rhino.DocObjects;
 
@@ -71,6 +68,7 @@ public class LayerTools
         return doc.Layers[doc.Layers.FindByFullPath(parent + "::" + layerName, 0)];
     }
 
+
     /// <summary>
     /// Create a Second-Level Layer with Color
     /// 
@@ -86,8 +84,55 @@ public class LayerTools
         return l;
     }
 
+    /// <summary>
+    /// Assign 1 Object to a layer
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <param name="layer"></param>
     public void AddObjectsToLayer(RhinoObject obj, Layer layer)
     {
+        obj.Attributes.LayerIndex = layer.Index;
+        obj.CommitChanges();
+    }
 
+    /// <summary>
+    /// Assign many objects to layer
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <param name="layer"></param>
+    public void AddObjectsToLayer(List<RhinoObject> obj, Layer layer)
+    {
+        foreach (var o in obj)
+            AddObjectsToLayer(o, layer);
+    }
+
+    /// <summary>
+    /// Assign object to layer
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <param name="layer"></param>
+    public void AddObjectsToLayer(Guid obj, Layer layer)
+    {
+        AddObjectsToLayer(doc.Objects.FindId(obj), layer);
+    }
+
+    /// <summary>
+    /// Get object Layer
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <returns></returns>
+    public Layer objLayer(Guid obj)
+    {
+        return doc.Layers[doc.Objects.FindId(obj).Attributes.LayerIndex];
+    }
+
+    /// <summary>
+    /// Get object Layer
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <returns></returns>
+    public Layer objLayer(RhinoObject obj)
+    {
+        return doc.Layers[obj.Attributes.LayerIndex];
     }
 }
