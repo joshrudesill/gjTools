@@ -33,7 +33,7 @@ namespace gjTools.Commands
             int l1index = doc.Layers.Add(l1);
 
             Rhino.DocObjects.Layer l2 = new Rhino.DocObjects.Layer();
-            l2.Name = "C_EYEFILL";
+            l2.Name = "EYEFILL";
             l2.ParentLayerId = pli.Id;
             int l2index = doc.Layers.Add(l2);
 
