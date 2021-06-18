@@ -24,9 +24,15 @@ namespace gjTools.Commands
             BoundingBox bb = crv.GetBoundingBox(true);
 
             //----Layering----//
+            
+            
             int layer = objref.Object().Attributes.LayerIndex;
             Rhino.DocObjects.Layer pli = doc.Layers[layer];
-
+            if (pli.ParentLayerId != Guid.Empty)
+            {
+                var player = doc.Layers.FindId(pli.ParentLayerId);
+                pli = player;
+            }
             Rhino.DocObjects.Layer l1 = new Rhino.DocObjects.Layer();
             l1.Name = "C_EYES";
             l1.ParentLayerId = pli.Id;
@@ -51,7 +57,7 @@ namespace gjTools.Commands
             //--------------------------------
 
             Point3d first = new Point3d((corners[3].X + 0.65), (corners[3].Y - 0.65), 0);
-            
+            doc.Layers.SetCurrentLayerIndex(l1index, true);
             for (int i = 0; i < numEyesT + 1; i++)
             {
                 Circle c1 = new Circle(first, 0.125);
