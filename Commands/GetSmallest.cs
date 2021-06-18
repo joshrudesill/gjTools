@@ -42,7 +42,7 @@ namespace gjTools.Commands
             List<BRotation> brl = new List<BRotation>();
             Point3d[] ps = bb.GetCorners();
             brl.Add(new BRotation(0, Math.Abs(ps[0].Y - ps[3].Y)));
-            double rotation = (2 * Math.PI) / 3600;
+            double rotation = (2 * Math.PI) / 7200;
             BoundingBox bbt;
             for (int j = 0; j < 3600; j++)
             {
