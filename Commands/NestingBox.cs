@@ -37,6 +37,7 @@ namespace gjTools
             // get object cut length object
             var cuts = new CutOperations(new List<Rhino.DocObjects.ObjRef>(obj.Objects()), doc);
 
+
             // Time to collect the sheet input sizes
             var sheetHeight = numFromUser("Sheet Height", 48.0);
                 if (sheetHeight == -1) return Result.Cancel;
@@ -152,7 +153,7 @@ namespace gjTools
             string partNumber = "PN: " + cutInfo.parentLayer;
             
             string path = "File Not Saved";
-            if (doc.Name != null)
+            if (doc.Name != "")
                 path = "Path: " + doc.Path;
             
             string shtSizeInfo = "Sheet Size: " + nestBox.Width + "w x " + 

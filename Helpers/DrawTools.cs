@@ -123,21 +123,23 @@ public class DrawTools : IDrawTools
             RhinoApp.WriteLine("Standard Dimstyle Exists");
             return doc.DimStyles.FindName("LabelMaker").Index;
         }
-            
     }
 
 
     /// <summary>
     /// Create a Text entity and return for addition to document later
+    /// <para> fontStyle: 0=normal, 1=bold, 2=italic, 3=bold & italic </para>
+    /// <para> justHoriz: 0=left, 1=center, 2=right, 3=auto </para>
+    /// <para> justVert: 0=Top, 3=middle, 6=bottom </para>
     /// </summary>
     /// <param name="text"></param>
     /// <param name="point"></param>
     /// <param name="dimsyleIndex"></param>
     /// <param name="height"></param>
-    /// <param name="fontStyle">0=normal, 1=bold, 2=italic, 3=bold & italic</param>
-    /// <param name="justHoriz">0=left, 1=center, 2=right, 3=auto</param>
-    /// <param name="justVert">0=Top, 3=middle, 6=bottom</param>
-    /// <returns></returns>
+    /// <param name="fontStyle"></param>
+    /// <param name="justHoriz"></param>
+    /// <param name="justVert"></param>
+    /// <returns>Rhino Text Object</returns>
     public TextEntity AddText(string text, Point3d point, int dimsyleIndex, double height = 1, int fontStyle = 0, int justHoriz = 3, int justVert = 0)
     {
         Plane plane = doc.Views.ActiveView.ActiveViewport.ConstructionPlane();
@@ -169,7 +171,7 @@ public class DrawTools : IDrawTools
             txtEntity.TextHorizontalAlignment = H;
             txtEntity.TextVerticalAlignment = V;
             txtEntity.TextHeight = height;
-        txtEntity.Font = Rhino.DocObjects.Font.FromQuartetProperties("Consolas", bold, italic);
+            txtEntity.Font = Rhino.DocObjects.Font.FromQuartetProperties("Consolas", bold, italic);
 
         return txtEntity;
     }
