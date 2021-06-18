@@ -7,6 +7,7 @@ public class CutOperations
     public RhinoDoc doc;
     public Rhino.DocObjects.Layer parentLayer;
     public List<int> groupInd;
+    private bool _IsValid;
 
     public CutOperations(List<Rhino.DocObjects.ObjRef> Crvs, RhinoDoc document)
     {
@@ -17,6 +18,9 @@ public class CutOperations
         var singleSubLayer = doc.Layers[CrvObjects[0].Object().Attributes.LayerIndex];
         parentLayer = doc.Layers.FindId(singleSubLayer.ParentLayerId);
     }
+
+
+    public bool IsValid { get { return _IsValid; } }
 
     private void OnlyCurves()
     {
@@ -39,6 +43,10 @@ public class CutOperations
                 }
             }
 
+        // No curves, object invalid
+        if (CrvObjects.Count == 0)
+            _IsValid = false;
+
         CrvObjects = tmp;
     }
 
@@ -53,11 +61,18 @@ public class CutOperations
                 cutLayers.Add(layerName.Substring(2));
         }
 
+        // No cut layers, object is invalid
+        if (cutLayers.Count == 0)
+            _IsValid = false;
+
         return cutLayers;
     }
 
     public double CutLengthByLayer(string layerName)
     {
+        if (!_IsValid)
+            return 0;
+
         double Tlength = 0.0;
 
         foreach (var i in CrvObjects)
