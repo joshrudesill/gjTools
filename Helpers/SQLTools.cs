@@ -12,7 +12,7 @@ namespace gjTools
         List<Location> queryLocations();
         List<OEMColor> queryOEMColors();
         List<VariableData> queryVariableData();
-        void executeCommand(string command); // Execute non query command on database.
+        int executeCommand(string command); // Execute non query command on database.
     }
 
     // Custom structs for return types from database
@@ -305,7 +305,77 @@ namespace gjTools
             return rList;
         }
 
-        private SQLiteDataReader executeQuery(string command) 
+        public bool updateCustomBlurb(CustomBlurb c)
+        {
+            string s = string.Format("UPDATE customBlurbs SET blurb = '{0}' WHERE id = '{1}';", c.blurb, c.id);
+            int r = executeCommand(s);
+            if (r == 0)
+            {
+                return false;
+            }
+            return true;
+        }
+        public bool updateJobSlot(JobSlot c)
+        {
+            string s = string.Format(
+                "UPDATE jobSlots SET slot = '{0}',job = '{1}',due = '{2}',description = '{3}',qty = '{4}',material = '{5}' WHERE slot = '{6}';", 
+                c.slot, c.job, c.due, c.description, c.quantity, c.material, c.slot
+            );
+
+            int r = executeCommand(s);
+            if (r == 0)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        public bool updateLocation(Location c)
+        {
+            string s = string.Format("UPDATE locations SET locName = '{0}', path = '{1}, id = '{2}' WHERE id = '{3}';", c.locName, c.path, c.id, c.id);
+            int r = executeCommand(s);
+            if (r == 0)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        public bool updateOemColor(OEMColor c)
+        {
+            string s = string.Format("UPDATE oemColors SET colorNum = '{0}', colorName = '{1}, id = '{2}' WHERE id = '{3}';", c.colorNum, c.colorName, c.id, c.id);
+            int r = executeCommand(s);
+            if (r == 0)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        public bool insertOemColor(OEMColor c)
+        {
+            string s = string.Format("INSERT INTO oemColors (colorNum, colorName, id) VALUES ('{0}', '{1}', '{2}');");
+            int r = executeCommand(s);
+            if (r == 0)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        public bool updateVariableData(VariableData c)
+        {
+            string s = string.Format("UPDATE variable SET userLastName = '{0}', userFirstName = '{1}, userItitials = '{2}' WHERE cutNumber = '{3}';", c.userLastName, c.userFirstName, c.userInitials, c.cutNumber);
+            int r = executeCommand(s);
+            if (r == 0)
+            {
+                return false;
+            }
+            return true;
+        }
+
+
+        private SQLiteDataReader executeQuery(string command)
         {
             SQLiteCommand cmd = new SQLiteCommand(command, con);
             SQLiteDataReader r = cmd.ExecuteReader();
@@ -315,11 +385,11 @@ namespace gjTools
         /// Executes a non-query command on the database.
         /// </summary>
         /// <param name="command"></param>
-        public void executeCommand(string command)
+        public int executeCommand(string command)
         {
             var cmd = new SQLiteCommand(con);
             cmd.CommandText = command;
-            cmd.ExecuteNonQuery();
+            return cmd.ExecuteNonQuery();
         }
 
     }
