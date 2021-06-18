@@ -153,7 +153,7 @@ namespace gjTools
             string partNumber = "PN: " + cutInfo.parentLayer;
             
             string path = "File Not Saved";
-            if (doc.Name != null)
+            if (doc.Name != "")
                 path = "Path: " + doc.Path;
             
             string shtSizeInfo = "Sheet Size: " + nestBox.Width + "w x " + 

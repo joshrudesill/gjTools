@@ -13,10 +13,14 @@ public class CutOperations
     {
         CrvObjects = Crvs;
         doc = document;
+        _IsValid = true;
 
         OnlyCurves();
         var singleSubLayer = doc.Layers[CrvObjects[0].Object().Attributes.LayerIndex];
-        parentLayer = doc.Layers.FindId(singleSubLayer.ParentLayerId);
+        if (singleSubLayer.ParentLayerId == System.Guid.Empty)
+            parentLayer = singleSubLayer;
+        else
+            parentLayer = doc.Layers.FindId(singleSubLayer.ParentLayerId);
     }
 
 
