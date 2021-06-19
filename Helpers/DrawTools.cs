@@ -128,7 +128,7 @@ public class DrawTools : IDrawTools
 
     /// <summary>
     /// Create a Text entity and return for addition to document later
-    /// <para> fontStyle: 0=normal, 1=bold, 2=italic, 3=bold & italic </para>
+    /// <para> fontStyle: 0=normal, 1=bold, 2=italic, 3=bold and italic </para>
     /// <para> justHoriz: 0=left, 1=center, 2=right, 3=auto </para>
     /// <para> justVert: 0=Top, 3=middle, 6=bottom </para>
     /// </summary>

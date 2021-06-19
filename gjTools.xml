@@ -164,11 +164,37 @@
             <param name="multiSel"></param>
             <returns></returns>
         </member>
-        <!-- Badly formed XML comment ignored for member "M:DrawTools.AddText(System.String,Rhino.Geometry.Point3d,System.Int32,System.Double,System.Int32,System.Int32,System.Int32)" -->
+        <member name="M:DrawTools.AddText(System.String,Rhino.Geometry.Point3d,System.Int32,System.Double,System.Int32,System.Int32,System.Int32)">
+            <summary>
+            Create a Text entity and return for addition to document later
+            <para> fontStyle: 0=normal, 1=bold, 2=italic, 3=bold and italic </para>
+            <para> justHoriz: 0=left, 1=center, 2=right, 3=auto </para>
+            <para> justVert: 0=Top, 3=middle, 6=bottom </para>
+            </summary>
+            <param name="text"></param>
+            <param name="point"></param>
+            <param name="dimsyleIndex"></param>
+            <param name="height"></param>
+            <param name="fontStyle"></param>
+            <param name="justHoriz"></param>
+            <param name="justVert"></param>
+            <returns>Rhino Text Object</returns>
+        </member>
         <member name="T:LayerTools">
             <summary>
             Does all things Layer Related
             </summary>
+        </member>
+        <member name="F:LayerTools.doc">
+            <summary>
+            The Active Document
+            </summary>
+        </member>
+        <member name="M:LayerTools.#ctor(Rhino.RhinoDoc)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="document"></param>
         </member>
         <member name="M:LayerTools.CreateLayer(System.String)">
             <summary>
@@ -200,6 +226,41 @@
             <param name="layerName"></param>
             <param name="parent"></param>
             <param name="color"></param>
+            <returns></returns>
+        </member>
+        <member name="M:LayerTools.AddObjectsToLayer(Rhino.DocObjects.RhinoObject,Rhino.DocObjects.Layer)">
+            <summary>
+            Assign 1 Object to a layer
+            </summary>
+            <param name="obj"></param>
+            <param name="layer"></param>
+        </member>
+        <member name="M:LayerTools.AddObjectsToLayer(System.Collections.Generic.List{Rhino.DocObjects.RhinoObject},Rhino.DocObjects.Layer)">
+            <summary>
+            Assign many objects to layer
+            </summary>
+            <param name="obj"></param>
+            <param name="layer"></param>
+        </member>
+        <member name="M:LayerTools.AddObjectsToLayer(System.Guid,Rhino.DocObjects.Layer)">
+            <summary>
+            Assign object to layer
+            </summary>
+            <param name="obj"></param>
+            <param name="layer"></param>
+        </member>
+        <member name="M:LayerTools.objLayer(System.Guid)">
+            <summary>
+            Get object Layer
+            </summary>
+            <param name="obj"></param>
+            <returns></returns>
+        </member>
+        <member name="M:LayerTools.objLayer(Rhino.DocObjects.RhinoObject)">
+            <summary>
+            Get object Layer
+            </summary>
+            <param name="obj"></param>
             <returns></returns>
         </member>
     </members>

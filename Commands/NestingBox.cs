@@ -52,7 +52,9 @@ namespace gjTools
             Rectangle3d nestBox = new Rectangle3d(Plane.WorldXY, bottomLeft, topRight);
 
             Guid boxID = doc.Objects.AddRectangle(nestBox);
-            setObjectLayer(doc, cuts.parentLayer, "NestBox", boxID);
+            var lt = new LayerTools(doc);
+            var lay = lt.CreateLayer("NestBox", cuts.parentLayer.Name);
+            lt.AddObjectsToLayer(boxID, lay);
             CollectInfo(cuts, doc, bb, nestBox);
 
             doc.Views.Redraw();

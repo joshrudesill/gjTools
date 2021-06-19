@@ -9,7 +9,14 @@ using Rhino.DocObjects;
 /// </summary>
 public class LayerTools
 {
+    /// <summary>
+    /// The Active Document
+    /// </summary>
     public RhinoDoc doc;
+    /// <summary>
+    /// Constructor
+    /// </summary>
+    /// <param name="document"></param>
     public LayerTools(RhinoDoc document)
     {
         doc = document;
