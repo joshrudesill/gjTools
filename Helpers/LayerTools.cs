@@ -59,10 +59,8 @@ public class LayerTools
     public Layer CreateLayer(string layerName, string parent)
     {
         if (doc.Layers.FindByFullPath(parent, -1) == -1)
-        {
-            // Parent Doesnt Exist
             CreateLayer(parent);
-        }
+        
         if (doc.Layers.FindByFullPath(parent + "::" + layerName, -1) == -1)
         {
             Guid pl = doc.Layers[doc.Layers.FindByFullPath(parent, 0)].Id;
@@ -92,14 +90,39 @@ public class LayerTools
     }
 
     /// <summary>
-    /// Assign 1 Object to a layer
+    /// Assign 1 Object to a Child of a parent
     /// </summary>
     /// <param name="obj"></param>
-    /// <param name="layer"></param>
-    public void AddObjectsToLayer(RhinoObject obj, Layer layer)
+    /// <param name="parent"></param>
+    /// <param name="layerName"></param>
+    public void AddObjectsToLayer(RhinoObject obj, string layerName, string parent)
     {
-        obj.Attributes.LayerIndex = layer.Index;
-        obj.CommitChanges();
+        var layer = CreateLayer(layerName, parent);
+        AddObjectsToLayer(obj, layer);
+    }
+
+    /// <summary>
+    /// Assign 1 Object to a Child of a parent
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <param name="parent"></param>
+    /// <param name="layerName"></param>
+    public void AddObjectsToLayer(Guid obj, string layerName, string parent)
+    {
+        var layer = CreateLayer(layerName, parent);
+        AddObjectsToLayer(obj, layer);
+    }
+
+    /// <summary>
+    /// Assign many Objects to a Child of a parent
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <param name="parent"></param>
+    /// <param name="layerName"></param>
+    public void AddObjectsToLayer(List<RhinoObject> obj, string layerName, string parent)
+    {
+        var layer = CreateLayer(layerName, parent);
+        AddObjectsToLayer(obj, layer);
     }
 
     /// <summary>
@@ -118,17 +141,28 @@ public class LayerTools
     /// </summary>
     /// <param name="obj"></param>
     /// <param name="layer"></param>
+    public void AddObjectsToLayer(RhinoObject obj, Layer layer)
+    {
+        obj.Attributes.LayerIndex = layer.Index;
+        obj.CommitChanges();
+    }
+
+    /// <summary>
+    /// Assign object to layer
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <param name="layer"></param>
     public void AddObjectsToLayer(Guid obj, Layer layer)
     {
         AddObjectsToLayer(doc.Objects.FindId(obj), layer);
     }
 
     /// <summary>
-    /// Get object Layer
+    /// Get object Layer by GUID
     /// </summary>
     /// <param name="obj"></param>
     /// <returns></returns>
-    public Layer objLayer(Guid obj)
+    public Layer ObjLayer(Guid obj)
     {
         return doc.Layers[doc.Objects.FindId(obj).Attributes.LayerIndex];
     }
@@ -138,7 +172,7 @@ public class LayerTools
     /// </summary>
     /// <param name="obj"></param>
     /// <returns></returns>
-    public Layer objLayer(RhinoObject obj)
+    public Layer ObjLayer(RhinoObject obj)
     {
         return doc.Layers[obj.Attributes.LayerIndex];
     }
