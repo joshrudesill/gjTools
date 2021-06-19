@@ -228,16 +228,40 @@
             <param name="color"></param>
             <returns></returns>
         </member>
-        <member name="M:LayerTools.AddObjectsToLayer(Rhino.DocObjects.RhinoObject,Rhino.DocObjects.Layer)">
+        <member name="M:LayerTools.AddObjectsToLayer(Rhino.DocObjects.RhinoObject,System.String,System.String)">
             <summary>
-            Assign 1 Object to a layer
+            Assign 1 Object to a Child of a parent
             </summary>
             <param name="obj"></param>
-            <param name="layer"></param>
+            <param name="parent"></param>
+            <param name="layerName"></param>
+        </member>
+        <member name="M:LayerTools.AddObjectsToLayer(System.Guid,System.String,System.String)">
+            <summary>
+            Assign 1 Object to a Child of a parent
+            </summary>
+            <param name="obj"></param>
+            <param name="parent"></param>
+            <param name="layerName"></param>
+        </member>
+        <member name="M:LayerTools.AddObjectsToLayer(System.Collections.Generic.List{Rhino.DocObjects.RhinoObject},System.String,System.String)">
+            <summary>
+            Assign many Objects to a Child of a parent
+            </summary>
+            <param name="obj"></param>
+            <param name="parent"></param>
+            <param name="layerName"></param>
         </member>
         <member name="M:LayerTools.AddObjectsToLayer(System.Collections.Generic.List{Rhino.DocObjects.RhinoObject},Rhino.DocObjects.Layer)">
             <summary>
             Assign many objects to layer
+            </summary>
+            <param name="obj"></param>
+            <param name="layer"></param>
+        </member>
+        <member name="M:LayerTools.AddObjectsToLayer(Rhino.DocObjects.RhinoObject,Rhino.DocObjects.Layer)">
+            <summary>
+            Assign object to layer
             </summary>
             <param name="obj"></param>
             <param name="layer"></param>
@@ -249,14 +273,14 @@
             <param name="obj"></param>
             <param name="layer"></param>
         </member>
-        <member name="M:LayerTools.objLayer(System.Guid)">
+        <member name="M:LayerTools.ObjLayer(System.Guid)">
             <summary>
-            Get object Layer
+            Get object Layer by GUID
             </summary>
             <param name="obj"></param>
             <returns></returns>
         </member>
-        <member name="M:LayerTools.objLayer(Rhino.DocObjects.RhinoObject)">
+        <member name="M:LayerTools.ObjLayer(Rhino.DocObjects.RhinoObject)">
             <summary>
             Get object Layer
             </summary>
