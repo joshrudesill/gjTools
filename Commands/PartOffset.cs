@@ -17,6 +17,11 @@ namespace gjTools.Commands
         public override string EnglishName => "PartOffset";
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
+            var options = new List<string> { "FilmPlain", "Printed", "Router" };
+            var optiVal = new List<double> { 0.125, 0.25, 0.5 };
+            var offset = 0.125;
+
+            // get objects
             var go = new GetObject();
                 go.SetCommandPrompt("Select Objects to Offset");
                 go.GeometryFilter = Rhino.DocObjects.ObjectType.Curve;
@@ -30,9 +35,7 @@ namespace gjTools.Commands
             foreach (var o in go.Objects())
                 obj.Add(o);
 
-            var options = new List<string> { "plainFilm", "Printed", "Router" };
-            var optiVal = new List<double> { 0.125, 0.25, 0.5 };
-            var offset = 0.125;
+            // get option or offset value
             var gs = new GetString();
                 gs.SetCommandPrompt("Offset Amount or Specify");
                 gs.AcceptNumber(true, true);
@@ -44,39 +47,27 @@ namespace gjTools.Commands
                 gs.SetCommandPromptDefault(options[0]);
             var gType = gs.Get();
 
-            // see what the shit-head typed
             if (gs.CommandResult() != Result.Success)
                 return Result.Cancel;
 
-            if (gType == Rhino.Input.GetResult.String)
-            {
-                if (options.Contains(gs.StringResult().Trim()))
-                {
-                    offset = optiVal[options.IndexOf(gs.StringResult().Trim())];
-                }
-                else
-                {
-                    RhinoApp.WriteLine("Not a Number, try again...");
-                    return Result.Cancel;
-                }
-            }
+            // see what asshat typed
+            if (gType == Rhino.Input.GetResult.Option)
+                offset = optiVal[gs.OptionIndex() - 1];
             else if (gType == Rhino.Input.GetResult.Number)
-            {
                 offset = gs.Number();
-            } else
-            {
+            else
                 return Result.Cancel;
-            }
 
             var lt = new LayerTools(doc);
-            var tmplayer = lt.CreateLayer("Temp", System.Drawing.Color.Bisque);
+            var tmplayer = lt.CreateLayer("Temp", System.Drawing.Color.FromArgb(255,150,140,50));
 
+            // Add the actual offset
             foreach(var o in obj)
             {
-                var offCrv = o.Curve().Offset(new Point3d(-10000, -10000, 0),
+                var offCrv = o.Curve().Offset(new Point3d(-100000, -100000, 0),
                     new Vector3d(0,0,1),
                     offset,
-                    0.01,
+                    0.05,
                     CurveOffsetCornerStyle.Round);
                 foreach (var oo in offCrv)
                 {
@@ -85,12 +76,8 @@ namespace gjTools.Commands
                 }
             }
 
-            RhinoApp.WriteLine("Number Chosen: " + offset);
-
             doc.Views.Redraw();
             return Result.Success;
         }
-
-        
     }
 }

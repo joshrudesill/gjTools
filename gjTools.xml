@@ -4,6 +4,9 @@
         <name>gjTools</name>
     </assembly>
     <members>
+        <member name="P:gjTools.Commands.gjCAD_CutFile.Instance">
+            <summary>The only instance of the MyCommand command.</summary>
+        </member>
         <member name="P:gjTools.Commands.UpdateUserInfo.Instance">
             <summary>The only instance of the MyCommand command.</summary>
         </member>
@@ -148,13 +151,11 @@
         </member>
         <member name="M:DrawTools.CheckPolylines(Rhino.Input.Custom.GetObject,System.Boolean)">
             <summary>
-            return true or false if the line can be used as cut line
             If supressMessage=false, show the bad line and display a message
             </summary>
             <param name="obj"></param>
-            <param name="doc"></param>
-            <param name="supressMessage"></param>
-            <returns></returns>
+            <param name="showPreview"></param>
+            <returns>return true or false if the line can be used as cut line</returns>
         </member>
         <member name="M:DrawTools.SelParentLayers(System.Boolean)">
             <summary>
@@ -162,6 +163,12 @@
             returns selected layers
             </summary>
             <param name="multiSel"></param>
+            <returns></returns>
+        </member>
+        <member name="M:DrawTools.StandardDimstyle">
+            <summary>
+            creates the default label dimstyle used all over
+            </summary>
             <returns></returns>
         </member>
         <member name="M:DrawTools.AddText(System.String,Rhino.Geometry.Point3d,System.Int32,System.Double,System.Int32,System.Int32,System.Int32)">

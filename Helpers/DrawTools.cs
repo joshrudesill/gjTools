@@ -39,13 +39,11 @@ public class DrawTools : IDrawTools
 
 
     /// <summary>
-    /// return true or false if the line can be used as cut line
     /// If supressMessage=false, show the bad line and display a message
     /// </summary>
     /// <param name="obj"></param>
-    /// <param name="doc"></param>
-    /// <param name="supressMessage"></param>
-    /// <returns></returns>
+    /// <param name="showPreview"></param>
+    /// <returns>return true or false if the line can be used as cut line</returns>
     public bool CheckPolylines(GetObject obj, bool showPreview=true)
     {
         bool isPoly = true;
@@ -104,6 +102,10 @@ public class DrawTools : IDrawTools
     }
 
 
+    /// <summary>
+    /// creates the default label dimstyle used all over
+    /// </summary>
+    /// <returns></returns>
     public int StandardDimstyle()
     {
         if (doc.DimStyles.FindName("LableMaker") == null)
