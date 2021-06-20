@@ -176,4 +176,21 @@ public class LayerTools
     {
         return doc.Layers[obj.Attributes.LayerIndex];
     }
+
+    /// <summary>
+    /// gives a list of layers that are cut layers
+    /// </summary>
+    /// <param name="parentLayer"></param>
+    /// <returns></returns>
+    public List<Layer> getAllCutLayers(Layer parentLayer)
+    {
+        var cutLayers = new List<Layer>();
+        var childLAyers = parentLayer.GetChildren();
+
+        foreach (var l in childLAyers)
+            if (l.Name.Substring(0, 2) == "C_")
+                cutLayers.Add(l);
+
+        return cutLayers;
+    }
 }

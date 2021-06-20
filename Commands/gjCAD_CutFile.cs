@@ -20,16 +20,38 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
+            var dt = new DrawTools(doc);
+            var lt = new LayerTools(doc);
+            var obj = new List<Rhino.DocObjects.RhinoObject>();
+
             // Once locations can be gotten from the DB, change this
             var paths = new List<string> { "C:\\Temp\\" };
-            var locations = new List<string> { "Temp" };
+            var locationNames = new List<string> { "Temp" };
+
+            // File is a 3DM File, path data is available to add working Location
             if (doc.Name != "")
             {
-                locations.Insert(0, "WorkingLocation");
-                paths.Insert(0, doc.Path);
+                locationNames.Insert(0, "WorkingLocation");
+                paths.Insert(0, doc.Path.Replace(doc.Name, ""));
             }
 
-            RhinoApp.RunScript("_-Export \"C:\\Temp\\Test.dxf\" Scheme \"Vomela\" _Enter", true);
+            var exportLayer = dt.SelParentLayers(false);
+            if (exportLayer[0] == null)
+                return Result.Cancel;
+            var cutLayers = lt.getAllCutLayers(doc.Layers.FindName(exportLayer[0]));
+
+            doc.Objects.UnselectAll(true);
+            foreach(var cl in cutLayers)
+            {
+                var selSett = new Rhino.DocObjects.ObjectEnumeratorSettings();
+                    selSett.LayerIndexFilter = cl.Index;
+                    selSett.ObjectTypeFilter = Rhino.DocObjects.ObjectType.Curve | Rhino.DocObjects.ObjectType.Annotation;
+                    selSett.NormalObjects = true;
+                foreach (var o in doc.Objects.GetObjectList(selSett))
+                    doc.Objects.Select(o.Id);
+            }
+            
+            RhinoApp.RunScript("_-Export \"C:\\Temp\\Test.dxf\" Scheme \"Vomela\" _Enter", false);
 
             return Result.Success;
         }

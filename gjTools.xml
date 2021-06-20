@@ -294,5 +294,12 @@
             <param name="obj"></param>
             <returns></returns>
         </member>
+        <member name="M:LayerTools.getAllCutLayers(Rhino.DocObjects.Layer)">
+            <summary>
+            gives a list of layers that are cut layers
+            </summary>
+            <param name="parentLayer"></param>
+            <returns></returns>
+        </member>
     </members>
 </doc>
