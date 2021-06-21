@@ -1,4 +1,4 @@
-﻿6/17/2021
+﻿6/17/2021 -- #DONE#
 makeSmallest command
 - make support for multiple objects
 - smallest can be found from only 180deg rotate, 360 is twice the work

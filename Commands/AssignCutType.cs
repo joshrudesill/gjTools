@@ -5,6 +5,16 @@ using Rhino.Commands;
 
 namespace gjTools.Commands
 {
+    struct RhObjLayer
+    {
+        public Rhino.DocObjects.RhinoObject r;
+        public Rhino.DocObjects.Layer l;
+        public RhObjLayer(Rhino.DocObjects.RhinoObject r, Rhino.DocObjects.Layer l)
+        {
+            this.r = r;
+            this.l = l;
+        }
+    }
     public class AssignCutType : Command
     {
         public AssignCutType()
@@ -27,9 +37,11 @@ namespace gjTools.Commands
                 RhinoApp.WriteLine("No objects selected. Command canceled");
                 return Result.Cancel;
             }
-            List<Rhino.DocObjects.RhinoObject> ids = new List<Rhino.DocObjects.RhinoObject>();
+            List<RhObjLayer> ids = new List<RhObjLayer>();
             for (int i = 0; i < go.ObjectCount; i++)
-                ids.Add(go.Object(i).Object());
+            {
+                ids.Add(new RhObjLayer(go.Object(i).Object(), doc.Layers[go.Object(i).Object().Attributes.LayerIndex]));
+            }
             
             var lt = new List<string> { 
                 "EYES",
@@ -41,6 +53,7 @@ namespace gjTools.Commands
                 "KISS",
                 "SCORE",
                 "OTHER" };
+
             var lc = new List<System.Drawing.Color> { 
                 System.Drawing.Color.Black,
                 System.Drawing.Color.FromArgb(255,140,14,14), 
@@ -55,20 +68,23 @@ namespace gjTools.Commands
 
             object lo = Rhino.UI.Dialogs.ShowListBox("Cut Type", "Choose a cut type", lt, lt[2]);
             string ls = "C_" + lo.ToString();
-            int li = ids[0].Attributes.LayerIndex;
+            foreach (var i in ids)
+            {
+                int li = i.l.Index;
 
-            var ilayer = doc.Layers[li];
-            if (ilayer.ParentLayerId != Guid.Empty)
-            {
-                var player = doc.Layers.FindId(ilayer.ParentLayerId);
-                li = player.Index;
+                var ilayer = doc.Layers[li];
+                if (ilayer.ParentLayerId != Guid.Empty)
+                {
+                    var player = doc.Layers.FindId(i.l.ParentLayerId);
+                    li = player.Index;
+                }
+                int sli = d.addLayer(ls, lc[lt.IndexOf(lo.ToString())], li);
+                
+                i.r.Attributes.LayerIndex = sli;
+                i.r.CommitChanges();
+                
             }
-            int sli = d.addLayer(ls, lc[lt.IndexOf(lo.ToString())], li);
-            foreach(Rhino.DocObjects.RhinoObject r in ids)
-            {
-                r.Attributes.LayerIndex = sli;
-                r.CommitChanges();
-            }
+            
             return Result.Success;
         }
     }
