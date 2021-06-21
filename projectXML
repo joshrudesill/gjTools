@@ -1,0 +1,358 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>gjTools</name>
+    </assembly>
+    <members>
+        <member name="P:gjTools.Commands.GetSmallest.Instance">
+            <summary>
+            instance
+            </summary>
+        </member>
+        <member name="P:gjTools.Commands.GetSmallest.EnglishName">
+            <summary>
+            eng name
+            </summary>
+        </member>
+        <member name="M:gjTools.Commands.GetSmallest.RunCommand(Rhino.RhinoDoc,Rhino.Commands.RunMode)">
+            <summary>
+            Class
+            </summary>
+            <param name="doc"></param>
+            <param name="mode"></param>
+            <returns></returns>
+        </member>
+        <member name="P:gjTools.Commands.gjCAD_CutFile.Instance">
+            <summary>The only instance of the MyCommand command.</summary>
+        </member>
+        <member name="P:gjTools.Commands.UpdateUserInfo.Instance">
+            <summary>The only instance of the MyCommand command.</summary>
+        </member>
+        <member name="M:gjTools.Commands.ZundEyes.createHatchOnLayer(Rhino.Geometry.Circle,System.Int32,System.Int32,Rhino.RhinoDoc)">
+            <summary>
+            Internal use only. Private function
+            </summary>
+            <param name="c"></param>
+            <param name="layer1"></param>
+            <param name="layer2"></param>
+            <param name="doc"></param>
+        </member>
+        <member name="P:gjTools.DrawingTools.Instance">
+            <summary>The only instance of the MyCommand command.</summary>
+        </member>
+        <member name="T:gjTools.gjToolsPlugin">
+            <summary>
+             <para>Every RhinoCommon .rhp assembly must have one and only one PlugIn-derived
+             class. DO NOT create instances of this class yourself. It is the
+             responsibility of Rhino to create an instance of this class.</para>
+             <para>To complete plug-in information, please also see all PlugInDescription
+             attributes in AssemblyInfo.cs (you might need to click "Project" ->
+             "Show All Files" to see it in the "Solution Explorer" window).</para>
+            </summary>
+        </member>
+        <member name="P:gjTools.gjToolsPlugin.Instance">
+            <summary>Gets the only instance of the gjToolsPlugin plug-in.</summary>
+        </member>
+        <member name="M:gjTools.NestingBox.SheetEndSize(System.Double,Rhino.Geometry.Line)">
+            <summary>
+            Makes the decision on sheet size
+            </summary>
+            <param name="userVal"></param>
+            <param name="line"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.NestingBox.numFromUser(System.String,System.Double)">
+            <summary>
+            Asks user for a sheet size number
+            </summary>
+            <param name="message"></param>
+            <param name="defaultNum"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.NestingBox.RoundQuarterIn(System.Double)">
+            <summary>
+            Rounds the input to quarter inch within tolerance
+            </summary>
+            <param name="num"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.NestingBox.CollectInfo(CutOperations,Rhino.RhinoDoc,Rhino.Geometry.BoundingBox,Rhino.Geometry.Rectangle3d)">
+            <summary>
+            Assembles the info from the nesting
+            </summary>
+            <param name="cutInfo"></param>
+            <param name="doc"></param>
+            <param name="bb"></param>
+            <param name="nestBox"></param>
+        </member>
+        <member name="M:gjTools.DialogTools.showColorPallete">
+            <summary>
+            Shows list box with colors listed.
+            </summary>
+        </member>
+        <member name="M:gjTools.DialogTools.addColor">
+            <summary>
+            Triggers dialog box that allows for adding of a color to the OEMColors table in the DB.
+            </summary>
+        </member>
+        <member name="M:gjTools.DialogTools.updateUserInfo">
+            <summary>
+            Updates user info in the database.
+            </summary>
+        </member>
+        <member name="M:gjTools.DialogTools.addLayer(System.String,System.Drawing.Color,System.Int32)">
+            <summary>
+            Adds a named parent layer with color and optional parent layer. Returns index of layer. Returns -1 on failure.
+            </summary>
+            <param name="name"></param>
+            <param name="color"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.SQLTools.queryCustomBlurbs">
+            <summary>
+            This function will return a CustomBlurb object. 
+            <para>---Warning: must return all columns in order!---</para>
+            </summary>
+            <param name="custom"></param>
+            <param name="customCommand"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.SQLTools.queryJobSlots">
+            <summary>
+            This function will return a JobSlot object. 
+            <para>---Warning: must return all columns in order!---</para></summary>
+            <param name="custom"></param>
+            <param name="customCommand"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.SQLTools.queryLocations">
+            <summary>
+            This function will return a Location object. 
+            <para>---Warning: must return all columns in order!---</para></summary>
+            <param name="custom"></param>
+            <param name="customCommand"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.SQLTools.queryOEMColors">
+            <summary>
+            This function will return a OEMColor object. 
+            <para>---Warning: must return all columns in order!---</para></summary>
+            <param name="custom"></param>
+            <param name="customCommand"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.SQLTools.queryVariableData">
+            <summary>
+            This function will return a VariableData object. 
+            <para>---Warning: must return all columns in order!---</para></summary>
+            <param name="custom"></param>
+            <param name="customCommand"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.SQLTools.updateCustomBlurb(gjTools.CustomBlurb)">
+            <summary>
+            Takes a custom blurb object and updates based on ID.
+            </summary>
+            <param name="c"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.SQLTools.updateJobSlot(gjTools.JobSlot)">
+            <summary>
+            Takes a Job Slot object and updates based on slot.
+            </summary>
+            <param name="c"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.SQLTools.updateLocation(gjTools.Location)">
+            <summary>
+            Takes a Location object and updates based on id.
+            </summary>
+            <param name="c"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.SQLTools.updateOemColor(gjTools.OEMColor)">
+            <summary>
+            Takes a OEMColor object and updates based on id.
+            </summary>
+            <param name="c"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.SQLTools.insertOemColor(gjTools.OEMColor)">
+            <summary>
+            Inserts a custom oemcolor object into the database.
+            </summary>
+            <param name="c"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.SQLTools.executeCommand(System.String)">
+            <summary>
+            Executes a non-query command on the database.
+            </summary>
+            <param name="command"></param>
+        </member>
+        <member name="P:gjTools.Testing.Fun.Instance">
+            <summary>The only instance of the MyCommand command.</summary>
+        </member>
+        <member name="P:gjTools.Testing.gregTest.Instance">
+            <summary>The only instance of the MyCommand command.</summary>
+        </member>
+        <member name="T:IDrawTools">
+            <summary>
+            This class is for object creation
+            </summary>
+            
+        </member>
+        <member name="M:DrawTools.CheckPolylines(Rhino.Input.Custom.GetObject,System.Boolean)">
+            <summary>
+            If supressMessage=false, show the bad line and display a message
+            </summary>
+            <param name="obj"></param>
+            <param name="showPreview"></param>
+            <returns>return true or false if the line can be used as cut line</returns>
+        </member>
+        <member name="M:DrawTools.SelParentLayers(System.Boolean)">
+            <summary>
+            asks user to select layer or layers depending on multiSel val
+            returns selected layers
+            </summary>
+            <param name="multiSel"></param>
+            <returns></returns>
+        </member>
+        <member name="M:DrawTools.StandardDimstyle">
+            <summary>
+            creates the default label dimstyle used all over
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:DrawTools.AddText(System.String,Rhino.Geometry.Point3d,System.Int32,System.Double,System.Int32,System.Int32,System.Int32)">
+            <summary>
+            Create a Text entity and return for addition to document later
+            <para> fontStyle: 0=normal, 1=bold, 2=italic, 3=bold and italic </para>
+            <para> justHoriz: 0=left, 1=center, 2=right, 3=auto </para>
+            <para> justVert: 0=Top, 3=middle, 6=bottom </para>
+            </summary>
+            <param name="text"></param>
+            <param name="point"></param>
+            <param name="dimsyleIndex"></param>
+            <param name="height"></param>
+            <param name="fontStyle"></param>
+            <param name="justHoriz"></param>
+            <param name="justVert"></param>
+            <returns>Rhino Text Object</returns>
+        </member>
+        <member name="T:LayerTools">
+            <summary>
+            Does all things Layer Related
+            </summary>
+        </member>
+        <member name="F:LayerTools.doc">
+            <summary>
+            The Active Document
+            </summary>
+        </member>
+        <member name="M:LayerTools.#ctor(Rhino.RhinoDoc)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="document"></param>
+        </member>
+        <member name="M:LayerTools.CreateLayer(System.String)">
+            <summary>
+            Makes a Top-Level Layer
+            </summary>
+            <param name="layerName"></param>
+        </member>
+        <member name="M:LayerTools.CreateLayer(System.String,System.Drawing.Color)">
+            <summary>
+            Makes a Top-Level Layer with Color
+            </summary>
+            <param name="layerName"></param>
+            <param name="color"></param>
+            <returns></returns>
+        </member>
+        <member name="M:LayerTools.CreateLayer(System.String,System.String)">
+            <summary>
+            Create a Second-Level Layer
+            </summary>
+            <param name="layerName"></param>
+            <param name="parent"></param>
+            <returns></returns>
+        </member>
+        <member name="M:LayerTools.CreateLayer(System.String,System.String,System.Drawing.Color)">
+            <summary>
+            Create a Second-Level Layer with Color
+            
+            </summary>
+            <param name="layerName"></param>
+            <param name="parent"></param>
+            <param name="color"></param>
+            <returns></returns>
+        </member>
+        <member name="M:LayerTools.AddObjectsToLayer(Rhino.DocObjects.RhinoObject,System.String,System.String)">
+            <summary>
+            Assign 1 Object to a Child of a parent
+            </summary>
+            <param name="obj"></param>
+            <param name="parent"></param>
+            <param name="layerName"></param>
+        </member>
+        <member name="M:LayerTools.AddObjectsToLayer(System.Guid,System.String,System.String)">
+            <summary>
+            Assign 1 Object to a Child of a parent
+            </summary>
+            <param name="obj"></param>
+            <param name="parent"></param>
+            <param name="layerName"></param>
+        </member>
+        <member name="M:LayerTools.AddObjectsToLayer(System.Collections.Generic.List{Rhino.DocObjects.RhinoObject},System.String,System.String)">
+            <summary>
+            Assign many Objects to a Child of a parent
+            </summary>
+            <param name="obj"></param>
+            <param name="parent"></param>
+            <param name="layerName"></param>
+        </member>
+        <member name="M:LayerTools.AddObjectsToLayer(System.Collections.Generic.List{Rhino.DocObjects.RhinoObject},Rhino.DocObjects.Layer)">
+            <summary>
+            Assign many objects to layer
+            </summary>
+            <param name="obj"></param>
+            <param name="layer"></param>
+        </member>
+        <member name="M:LayerTools.AddObjectsToLayer(Rhino.DocObjects.RhinoObject,Rhino.DocObjects.Layer)">
+            <summary>
+            Assign object to layer
+            </summary>
+            <param name="obj"></param>
+            <param name="layer"></param>
+        </member>
+        <member name="M:LayerTools.AddObjectsToLayer(System.Guid,Rhino.DocObjects.Layer)">
+            <summary>
+            Assign object to layer
+            </summary>
+            <param name="obj"></param>
+            <param name="layer"></param>
+        </member>
+        <member name="M:LayerTools.ObjLayer(System.Guid)">
+            <summary>
+            Get object Layer by GUID
+            </summary>
+            <param name="obj"></param>
+            <returns></returns>
+        </member>
+        <member name="M:LayerTools.ObjLayer(Rhino.DocObjects.RhinoObject)">
+            <summary>
+            Get object Layer
+            </summary>
+            <param name="obj"></param>
+            <returns></returns>
+        </member>
+        <member name="M:LayerTools.getAllCutLayers(Rhino.DocObjects.Layer)">
+            <summary>
+            gives a list of layers that are cut layers
+            </summary>
+            <param name="parentLayer"></param>
+            <returns></returns>
+        </member>
+    </members>
+</doc>
