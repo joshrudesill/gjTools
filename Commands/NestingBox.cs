@@ -1,7 +1,6 @@
 ﻿using Rhino;
 using Rhino.Commands;
 using Rhino.Geometry;
-using Rhino.Input;
 using Rhino.Input.Custom;
 using System;
 using System.Collections.Generic;
@@ -37,7 +36,6 @@ namespace gjTools
             // get object cut length object
             var cuts = new CutOperations(new List<Rhino.DocObjects.ObjRef>(obj.Objects()), doc);
 
-
             // Time to collect the sheet input sizes
             var sheetHeight = numFromUser("Sheet Height", 48.0);
                 if (sheetHeight == -1) return Result.Cancel;
@@ -52,7 +50,10 @@ namespace gjTools
             Rectangle3d nestBox = new Rectangle3d(Plane.WorldXY, bottomLeft, topRight);
 
             Guid boxID = doc.Objects.AddRectangle(nestBox);
-            setObjectLayer(doc, cuts.parentLayer, "NestBox", boxID);
+
+            var lt = new LayerTools(doc);
+            lt.AddObjectsToLayer(boxID, "NestBox", cuts.parentLayer.Name);
+
             CollectInfo(cuts, doc, bb, nestBox);
 
             doc.Views.Redraw();
@@ -118,26 +119,6 @@ namespace gjTools
             }
 
             return wholeNum + (afterDecimal * 0.01);
-        }
-
-
-        public void setObjectLayer(RhinoDoc doc, Rhino.DocObjects.Layer parent, string childName, Guid id)
-        {
-            Rhino.DocObjects.Layer clay;
-            if (doc.Layers.FindByFullPath(parent.Name + "::" + childName, -1) == -1)
-            {
-                int ind = doc.Layers.Add();
-                clay = doc.Layers[ind];
-                clay.Name = childName;
-                clay.ParentLayerId = parent.Id;
-            } else
-            {
-                clay = doc.Layers[doc.Layers.FindByFullPath(parent.Name + "::" + childName, 0)];
-            }
-
-            var obj = doc.Objects.FindId(id);
-                obj.Attributes.LayerIndex = clay.Index;
-                obj.CommitChanges();
         }
 
         /// <summary>

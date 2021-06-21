@@ -24,4 +24,9 @@
     <StartAction>Program</StartAction>
   </PropertyGroup>
   
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DocumentationFile>C:\Users\Lap Beast\Documents\gjTools\gjTools.xml</DocumentationFile>
+    <OutputPath></OutputPath>
+  </PropertyGroup>
+  
 </Project>
