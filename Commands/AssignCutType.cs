@@ -43,7 +43,7 @@ namespace gjTools.Commands
                 ids.Add(new RhObjLayer(go.Object(i).Object(), doc.Layers[go.Object(i).Object().Attributes.LayerIndex]));
             }
             
-            var lt = new List<string> { 
+            var lt = new List<string> {
                 "EYES",
                 "VGROOVE", 
                 "THRU", 
@@ -82,7 +82,6 @@ namespace gjTools.Commands
                 
                 i.r.Attributes.LayerIndex = sli;
                 i.r.CommitChanges();
-                
             }
             
             return Result.Success;
