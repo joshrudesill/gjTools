@@ -304,7 +304,11 @@ namespace gjTools
             }
             return rList;
         }
-
+        /// <summary>
+        /// Takes a custom blurb object and updates based on ID.
+        /// </summary>
+        /// <param name="c"></param>
+        /// <returns></returns>
         public bool updateCustomBlurb(CustomBlurb c)
         {
             string s = string.Format("UPDATE customBlurbs SET blurb = '{0}' WHERE id = '{1}';", c.blurb, c.id);
@@ -315,6 +319,11 @@ namespace gjTools
             }
             return true;
         }
+        /// <summary>
+        /// Takes a Job Slot object and updates based on slot.
+        /// </summary>
+        /// <param name="c"></param>
+        /// <returns></returns>
         public bool updateJobSlot(JobSlot c)
         {
             string s = string.Format(
@@ -329,7 +338,11 @@ namespace gjTools
             }
             return true;
         }
-
+        /// <summary>
+        /// Takes a Location object and updates based on id.
+        /// </summary>
+        /// <param name="c"></param>
+        /// <returns></returns>
         public bool updateLocation(Location c)
         {
             string s = string.Format("UPDATE locations SET locName = '{0}', path = '{1}, id = '{2}' WHERE id = '{3}';", c.locName, c.path, c.id, c.id);
@@ -340,7 +353,11 @@ namespace gjTools
             }
             return true;
         }
-
+        /// <summary>
+        /// Takes a OEMColor object and updates based on id.
+        /// </summary>
+        /// <param name="c"></param>
+        /// <returns></returns>
         public bool updateOemColor(OEMColor c)
         {
             string s = string.Format("UPDATE oemColors SET colorNum = '{0}', colorName = '{1}, id = '{2}' WHERE id = '{3}';", c.colorNum, c.colorName, c.id, c.id);
@@ -352,9 +369,14 @@ namespace gjTools
             return true;
         }
 
+        /// <summary>
+        /// Inserts a custom oemcolor object into the database.
+        /// </summary>
+        /// <param name="c"></param>
+        /// <returns></returns>
         public bool insertOemColor(OEMColor c)
         {
-            string s = string.Format("INSERT INTO oemColors (colorNum, colorName, id) VALUES ('{0}', '{1}', '{2}');");
+            string s = string.Format("INSERT INTO oemColors (colorNum, colorName, id) VALUES ('{0}', '{1}', '{2}');", c.colorNum, c.colorName, c.id);
             int r = executeCommand(s);
             if (r == 0)
             {
