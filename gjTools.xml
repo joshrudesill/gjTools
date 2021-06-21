@@ -22,6 +22,20 @@
         <member name="P:gjTools.DrawingTools.Instance">
             <summary>The only instance of the MyCommand command.</summary>
         </member>
+        <member name="M:gjTools.DrawingTools.PartBoundries(Rhino.RhinoDoc)">
+            <summary>
+            Make Boundry boxes around selected layers as a way of seeing if something got included on the wrong layer.
+            </summary>
+            <param name="doc"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.DrawingTools.CheckPolylines(Rhino.RhinoDoc)">
+            <summary>
+            Checks that the selected are polylines and shows a nifty X-Mas like display
+            </summary>
+            <param name="doc"></param>
+            <returns></returns>
+        </member>
         <member name="T:gjTools.gjToolsPlugin">
             <summary>
              <para>Every RhinoCommon .rhp assembly must have one and only one PlugIn-derived

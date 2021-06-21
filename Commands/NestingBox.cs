@@ -153,7 +153,8 @@ namespace gjTools
             foreach (string l in cutNames)
                 itemLine += " [" + l + ": " + cutInfo.CutLengthByLayer(l) + "]";
 
-            string timeStamp = "GREG\n" + System.DateTime.UtcNow;
+            var creds = new SQLTools();
+            string timeStamp = creds.queryVariableData()[0].userFirstName + "\n" + DateTime.UtcNow;
 
             var tool = new DrawTools(doc);
             int ds = tool.StandardDimstyle();
