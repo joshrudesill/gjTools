@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Rhino;
 using Rhino.Commands;
+using Rhino.Input.Custom;
 
 namespace gjTools.Commands
 {
@@ -22,11 +23,18 @@ namespace gjTools.Commands
         {
             var dt = new DrawTools(doc);
             var lt = new LayerTools(doc);
-            var obj = new List<Rhino.DocObjects.RhinoObject>();
+            var sql = new SQLTools();
 
-            // Once locations can be gotten from the DB, change this
-            var paths = new List<string> { "C:\\Temp\\" };
-            var locationNames = new List<string> { "Temp" };
+            var selectedObjects = new List<Rhino.DocObjects.ObjRef>();
+
+            // get locations from DB
+            var paths = new List<string>();
+            var locationNames = new List<string>();
+            foreach(var line in sql.queryLocations())
+            {
+                paths.Add(line.path);
+                locationNames.Add(line.locName);
+            }
 
             // File is a 3DM File, path data is available to add working Location
             if (doc.Name != "")
@@ -35,25 +43,83 @@ namespace gjTools.Commands
                 paths.Insert(0, doc.Path.Replace(doc.Name, ""));
             }
 
-            var exportLayer = dt.SelParentLayers(false);
-            if (exportLayer[0] == null)
+            // user chooses a cut location
+            var chosenLocation = Rhino.UI.Dialogs.ShowListBox("Cut Location", "Choose a Location", locationNames) as string;
+            if (chosenLocation == null)
                 return Result.Cancel;
-            var cutLayers = lt.getAllCutLayers(doc.Layers.FindName(exportLayer[0]));
 
+            // ask for the layer to send cut file out from
+            var layerList = lt.getAllParentLayersStrings();
+                layerList.Add("---Select Objects to Export");
+            var exportLayer = Rhino.UI.Dialogs.ShowListBox("Layers", "Choose a Layer", layerList) as string;
+            if (exportLayer == null)
+                return Result.Cancel;
+
+            // decide what kind of cut file to make
             doc.Objects.UnselectAll(true);
-            foreach(var cl in cutLayers)
+            if (exportLayer != "---Select Objects to Export")
             {
-                var selSett = new Rhino.DocObjects.ObjectEnumeratorSettings();
-                    selSett.LayerIndexFilter = cl.Index;
-                    selSett.ObjectTypeFilter = Rhino.DocObjects.ObjectType.Curve | Rhino.DocObjects.ObjectType.Annotation;
-                    selSett.NormalObjects = true;
-                foreach (var o in doc.Objects.GetObjectList(selSett))
-                    doc.Objects.Select(o.Id);
+                chosenLocation = paths[locationNames.IndexOf(chosenLocation)] + exportLayer[0] + ".dxf";
+                var cutLayers = lt.getAllCutLayers(doc.Layers.FindName(exportLayer));
+
+                // Select only the objects needed
+                foreach (var cl in cutLayers)
+                {
+                    var selSett = new Rhino.DocObjects.ObjectEnumeratorSettings();
+                        selSett.LayerIndexFilter = cl.Index;
+                        selSett.ObjectTypeFilter = Rhino.DocObjects.ObjectType.Curve | Rhino.DocObjects.ObjectType.Annotation;
+                        selSett.NormalObjects = true;
+
+                    foreach (var o in doc.Objects.GetObjectList(selSett))
+                    {
+                        doc.Objects.Select(o.Id);
+                        selectedObjects.Add(new Rhino.DocObjects.ObjRef(doc, o.Id));
+                    }
+                }
+            }
+            else
+            {
+                // user to select some stuff
+            }
+
+            if (dt.CheckPolylines(selectedObjects, true))
+            {
+                dt.hideDynamicDraw();
+                MakeDXF(chosenLocation);
+            } else
+            {
+                var msg = new GetString();
+                    msg.SetCommandPrompt("Some Bad Lines are Present, Would you like to Continue?");
+                    msg.AddOption("Yes");
+                    msg.AddOption("No");
+                    msg.SetDefaultString("No");
+                    msg.Get();
+
+                dt.hideDynamicDraw();
+                if (msg.CommandResult() != Result.Success)
+                    return Result.Cancel;
+
+                if (msg.StringResult().Trim() == "Yes")
+                    MakeDXF(chosenLocation);
+                else
+                    RhinoApp.WriteLine("Cancelled, No Cut File sent out...");
             }
             
-            RhinoApp.RunScript("_-Export \"C:\\Temp\\Test.dxf\" Scheme \"Vomela\" _Enter", false);
-
             return Result.Success;
+        }
+
+        /// <summary>
+        /// Send out the DXF file
+        /// </summary>
+        /// <param name="fullPath"></param>
+        public void MakeDXF(string fullPath)
+        {
+            RhinoApp.RunScript("_-Export \"" + fullPath + "\" Scheme \"Vomela\" _Enter", false);
+        }
+
+        public void MakeCutNameText()
+        {
+
         }
     }
 }

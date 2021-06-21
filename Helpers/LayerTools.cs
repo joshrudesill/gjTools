@@ -193,4 +193,32 @@ public class LayerTools
 
         return cutLayers;
     }
+
+    /// <summary>
+    /// Just returns all parent layer objects
+    /// </summary>
+    /// <returns></returns>
+    public List<Layer> getAllParentLayers()
+    {
+        var parents = new List<Layer>();
+        foreach (Layer l in doc.Layers)
+            if (l.ParentLayerId == Guid.Empty)
+                parents.Add(l);
+
+        return parents;
+    }
+
+    /// <summary>
+    /// Just returns all parent layer names
+    /// </summary>
+    /// <returns></returns>
+    public List<string> getAllParentLayersStrings()
+    {
+        var parents = new List<string>();
+        foreach (Layer l in doc.Layers)
+            if (l.ParentLayerId == Guid.Empty)
+                parents.Add(l.Name);
+
+        return parents;
+    }
 }

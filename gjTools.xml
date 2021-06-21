@@ -4,8 +4,32 @@
         <name>gjTools</name>
     </assembly>
     <members>
+        <member name="P:gjTools.Commands.GetSmallest.Instance">
+            <summary>
+            instance
+            </summary>
+        </member>
+        <member name="P:gjTools.Commands.GetSmallest.EnglishName">
+            <summary>
+            eng name
+            </summary>
+        </member>
+        <member name="M:gjTools.Commands.GetSmallest.RunCommand(Rhino.RhinoDoc,Rhino.Commands.RunMode)">
+            <summary>
+            Class
+            </summary>
+            <param name="doc"></param>
+            <param name="mode"></param>
+            <returns></returns>
+        </member>
         <member name="P:gjTools.Commands.gjCAD_CutFile.Instance">
             <summary>The only instance of the MyCommand command.</summary>
+        </member>
+        <member name="M:gjTools.Commands.gjCAD_CutFile.MakeDXF(System.String)">
+            <summary>
+            Send out the DXF file
+            </summary>
+            <param name="fullPath"></param>
         </member>
         <member name="P:gjTools.Commands.UpdateUserInfo.Instance">
             <summary>The only instance of the MyCommand command.</summary>
@@ -145,6 +169,41 @@
             <param name="customCommand"></param>
             <returns></returns>
         </member>
+        <member name="M:gjTools.SQLTools.updateCustomBlurb(gjTools.CustomBlurb)">
+            <summary>
+            Takes a custom blurb object and updates based on ID.
+            </summary>
+            <param name="c"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.SQLTools.updateJobSlot(gjTools.JobSlot)">
+            <summary>
+            Takes a Job Slot object and updates based on slot.
+            </summary>
+            <param name="c"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.SQLTools.updateLocation(gjTools.Location)">
+            <summary>
+            Takes a Location object and updates based on id.
+            </summary>
+            <param name="c"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.SQLTools.updateOemColor(gjTools.OEMColor)">
+            <summary>
+            Takes a OEMColor object and updates based on id.
+            </summary>
+            <param name="c"></param>
+            <returns></returns>
+        </member>
+        <member name="M:gjTools.SQLTools.insertOemColor(gjTools.OEMColor)">
+            <summary>
+            Inserts a custom oemcolor object into the database.
+            </summary>
+            <param name="c"></param>
+            <returns></returns>
+        </member>
         <member name="M:gjTools.SQLTools.executeCommand(System.String)">
             <summary>
             Executes a non-query command on the database.
@@ -165,7 +224,23 @@
         </member>
         <member name="M:DrawTools.CheckPolylines(Rhino.Input.Custom.GetObject,System.Boolean)">
             <summary>
-            If supressMessage=false, show the bad line and display a message
+            Highlights the lines green=Good, Red=Bad
+            </summary>
+            <param name="obj"></param>
+            <param name="showPreview"></param>
+            <returns>return true or false if the line can be used as cut line</returns>
+        </member>
+        <member name="M:DrawTools.CheckPolylines(System.Collections.Generic.List{Rhino.DocObjects.ObjRef},System.Boolean)">
+            <summary>
+            Highlights the lines green=Good, Red=Bad
+            </summary>
+            <param name="obj"></param>
+            <param name="showPreview"></param>
+            <returns>return true or false if the line can be used as cut line</returns>
+        </member>
+        <member name="M:DrawTools.CheckPolylines(System.Collections.Generic.List{Rhino.Geometry.Curve},System.Boolean)">
+            <summary>
+            Highlights the lines green=Good, Red=Bad
             </summary>
             <param name="obj"></param>
             <param name="showPreview"></param>
