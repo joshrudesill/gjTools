@@ -29,14 +29,28 @@ namespace gjTools.Commands
             }
             List<Rhino.DocObjects.RhinoObject> ids = new List<Rhino.DocObjects.RhinoObject>();
             for (int i = 0; i < go.ObjectCount; i++)
-            {
                 ids.Add(go.Object(i).Object());
-            }
-            var lt = new List<string> { "EYES", "VGROOVE", "THRU", "BOARD", "TEXT", "CREASE", "KISS", "SCORE", "OTHER" };
+            
+            var lt = new List<string> { 
+                "EYES",
+                "VGROOVE", 
+                "THRU", 
+                "BOARD", 
+                "TEXT", 
+                "CREASE", 
+                "KISS",
+                "SCORE",
+                "OTHER" };
             var lc = new List<System.Drawing.Color> { 
-             System.Drawing.Color.Black, System.Drawing.Color.AliceBlue, System.Drawing.Color.Red , 
-             System.Drawing.Color.Black , System.Drawing.Color.Black , System.Drawing.Color.DeepPink ,
-             System.Drawing.Color.Magenta, System.Drawing.Color.Black, System.Drawing.Color.Black
+                System.Drawing.Color.Black,
+                System.Drawing.Color.FromArgb(255,140,14,14), 
+                System.Drawing.Color.Red,
+                System.Drawing.Color.FromArgb(255,0,20,255), 
+                System.Drawing.Color.Black,
+                System.Drawing.Color.FromArgb(255,170,95,15),
+                System.Drawing.Color.FromArgb(255,200,0,200),
+                System.Drawing.Color.FromArgb(255,120,30,155),
+                System.Drawing.Color.Black
             };
 
             object lo = Rhino.UI.Dialogs.ShowListBox("Cut Type", "Choose a cut type", lt, lt[2]);
