@@ -1,3 +1,7 @@
 ﻿[*.{cs,vb}]
 
 
+
+# CS1591: Missing XML comment for publicly visible type or member
+# Severity for missing xml definition reduced to silent. - J
+dotnet_diagnostic.CS1591.severity = silent

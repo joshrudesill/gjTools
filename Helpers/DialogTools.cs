@@ -74,6 +74,7 @@ namespace gjTools
         /// </summary>
         /// <param name="name"></param>
         /// <param name="color"></param>
+        /// <param name="parent"></param>
         /// <returns></returns>
         public int addLayer(string name, System.Drawing.Color color, int parent = -1)
         {

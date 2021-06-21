@@ -46,41 +46,47 @@ namespace gjTools.Commands
                 RhinoApp.WriteLine("No objects selected. Command canceled");
                 return Result.Cancel;
             }
-            List<Rhino.DocObjects.RhinoObject> ids = new List<Rhino.DocObjects.RhinoObject>();
+            List<Rhino.DocObjects.ObjRef> ids = new List<Rhino.DocObjects.ObjRef>();
+            List<BRotation> brl = new List<BRotation>();
+
             for (int i = 0; i < go.ObjectCount; i++)
             {
-                Rhino.DocObjects.RhinoObject robj = go.Object(i).Object();
+                Rhino.DocObjects.ObjRef robj = go.Object(i);
                 ids.Add(robj);
             }
             BoundingBox bb;
-            Rhino.DocObjects.RhinoObject.GetTightBoundingBox(ids, out bb);
-            List<BRotation> brl = new List<BRotation>();
-            brl.Add(new BRotation(0, bb.Area));
-            double rotation = (2 * Math.PI) / 7200;
             BoundingBox bbt;
-            for (int j = 0; j < 3600; j++)
+
+            var idsol = new List<Rhino.DocObjects.RhinoObject>();
+            foreach (var o in ids)
             {
-                List<Rhino.DocObjects.RhinoObject> ol = new List<Rhino.DocObjects.RhinoObject>();
-                List<Rhino.DocObjects.RhinoObject> ol2 = new List<Rhino.DocObjects.RhinoObject>(ids);
-                var xf = Transform.Rotation(rotation * j, bb.Center);
-                RhinoApp.WriteLine(ids.Count.ToString());
-                foreach (var ob in ol2)
-                {
-                    Guid id = doc.Objects.Transform(ob, xf, true);
-                    var toadd = doc.Objects.FindId(id);
-                    if (toadd == null)
-                    {
-                        RhinoApp.WriteLine("Null");
-                    }
-                    ol.Add(toadd);
-                }
-                ol2 = ids;
-                RhinoApp.WriteLine(ol.Count.ToString());
-                Rhino.DocObjects.RhinoObject.GetTightBoundingBox(ol, out bbt);
-                brl.Add(new BRotation(j * rotation, bbt.Area));
+                idsol.Add(o.Object());
             }
+            Rhino.DocObjects.RhinoObject.GetTightBoundingBox(idsol, out bb);
+            brl.Add(new BRotation(0, bb.Area));
+            
+            double rotation = (2 * Math.PI) / 7200;
             double height = 10000000000000080085;
             int index = 0;
+
+            for (int j = 0; j < 3600; j++)
+            {
+                idsol.Clear();
+                var xf = Transform.Rotation(rotation * j, bb.Center);
+                foreach (var ob in ids)
+                {
+                    var o1 = ob.Curve();
+                    o1.Transform(xf);
+                    idsol.Add(doc.Objects.FindId(doc.Objects.AddCurve(o1)));
+                }
+                Rhino.DocObjects.RhinoObject.GetTightBoundingBox(idsol, out bbt);
+                brl.Add(new BRotation(j * rotation, bbt.Area));
+                foreach(var u in idsol)
+                {
+                    doc.Objects.Delete(u);
+                }
+            }
+
             for (int i = 0; i < brl.Count; i++)
             {
                 if (brl[i].area < height)
@@ -89,11 +95,16 @@ namespace gjTools.Commands
                     index = i;
                 }
             }
+
             var r = Transform.Rotation(brl[index].rotation, bb.Center);
             foreach (var i in ids)
             {
                 doc.Objects.Transform(i, r, true);
             }
+
+            RhinoApp.WriteLine("Rotated " + brl[index].rotation.ToString() + " radians");
+            RhinoApp.WriteLine("Area (bounding box) is now equal to " + brl[index].area.ToString() + "inches squared");
+
             doc.Views.Redraw(); 
             return Result.Success;
         }
