@@ -87,5 +87,16 @@ namespace gjTools
             }
             return m_doc.Layers.Add(layer);
         }
+        public Rhino.Input.Custom.GetObject selectObjects(string message)
+        {
+            Rhino.Input.Custom.GetObject go = new Rhino.Input.Custom.GetObject();
+            go.SetCommandPrompt(message);
+            Rhino.Input.GetResult gr = go.GetMultiple(0, -1);
+            if (gr != Rhino.Input.GetResult.Object)
+            {
+                return null;
+            }
+            return go;
+        }
     }
 }

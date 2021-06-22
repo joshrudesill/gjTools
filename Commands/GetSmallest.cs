@@ -38,10 +38,9 @@ namespace gjTools.Commands
         /// <returns></returns>
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            Rhino.Input.Custom.GetObject go = new Rhino.Input.Custom.GetObject();
-            go.SetCommandPrompt("Select object to get smallest rotation..");
-            Rhino.Input.GetResult gr = go.GetMultiple(0, -1);
-            if (gr != Rhino.Input.GetResult.Object)
+            DialogTools d = new DialogTools(doc);
+            var go = d.selectObjects("Select object to get smallest rotation..");
+            if (go == null)
             {
                 RhinoApp.WriteLine("No objects selected. Command canceled");
                 return Result.Cancel;

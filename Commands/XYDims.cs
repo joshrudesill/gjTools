@@ -19,10 +19,9 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            Rhino.Input.Custom.GetObject go = new Rhino.Input.Custom.GetObject();
-            go.SetCommandPrompt("Select objects to dimension..");
-            Rhino.Input.GetResult gr = go.GetMultiple(0, -1);
-            if (gr != Rhino.Input.GetResult.Object)
+            DialogTools d = new DialogTools(doc);
+            var go = d.selectObjects("Select object(s) to get dims");
+            if (go == null)
             {
                 RhinoApp.WriteLine("No objects selected. Command canceled");
                 return Result.Cancel;

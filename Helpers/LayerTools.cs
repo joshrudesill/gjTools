@@ -221,4 +221,12 @@ public class LayerTools
 
         return parents;
     }
+    public bool isObjectOnCutLayer(Rhino.DocObjects.RhinoObject o)
+    {
+        //if(doc.Layers[o.Attributes.LayerIndex].Name[0] == 
+        {
+
+        }
+        return false;
+    }
 }
