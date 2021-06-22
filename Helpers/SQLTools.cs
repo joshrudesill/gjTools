@@ -180,15 +180,57 @@ namespace gjTools
             _userInitials = userInitials;
             _cutNumber = cutNumber;
         }
-        private readonly string _userLastName;
-        private readonly string _userFirstName;
-        private readonly string _userInitials;
-        private readonly int _cutNumber;
+        private string _userLastName;
+        private string _userFirstName;
+        private string _userInitials;
+        private int _cutNumber;
 
-        public string userLastName => _userLastName;
-        public string userFirstName => _userFirstName;
-        public string userInitials => _userInitials;
-        public int cutNumber => _cutNumber;
+        public string userLastName
+        {
+            get
+            {
+                return _userLastName;
+            }
+            set
+            {
+                _userLastName = value;
+            }
+        }
+            
+        public string userFirstName
+        {
+            get
+            {
+                return _userFirstName;
+            }
+            set
+            {
+                _userFirstName = value;
+            }
+        }
+            
+        public string userInitials
+        {
+            get
+            {
+                return _userInitials;
+            }
+            set
+            {
+                _userInitials = value;
+            }
+        }
+        public int cutNumber
+        {
+            get
+            {
+                return _cutNumber;
+            }
+            set
+            {
+                _cutNumber = value;
+            }
+        }
     }
 
     public sealed class SQLTools : ISQLHelper
