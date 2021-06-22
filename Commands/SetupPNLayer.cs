@@ -25,9 +25,12 @@ namespace gjTools.Commands
                 RhinoApp.WriteLine("No objects selected. Command canceled");
                 return Result.Cancel;
             }
-            List<RhObjLayer> rl = new List<RhObjLayer>();
-            List<Rhino.DocObjects.RhinoObject> ro = new List<Rhino.DocObjects.RhinoObject>();
-            Rhino.DocObjects.Layer parent = new Rhino.DocObjects.Layer();
+
+            var rl = new List<RhObjLayer>();
+            var ro = new List<Rhino.DocObjects.RhinoObject>();
+
+            var parent = new Rhino.DocObjects.Layer();
+
             bool pnfound = false;
             for (int i = 0; i < go.ObjectCount; i++)
             {
