@@ -182,13 +182,13 @@ public class LayerTools
     /// </summary>
     /// <param name="parentLayer"></param>
     /// <returns></returns>
-    public List<Layer> getAllCutLayers(Layer parentLayer)
+    public List<Layer> getAllCutLayers(Layer parentLayer, bool includeNestBox = true)
     {
         var cutLayers = new List<Layer>();
         var childLAyers = parentLayer.GetChildren();
 
         foreach (var l in childLAyers)
-            if (l.Name.Substring(0, 2) == "C_")
+            if (l.Name.Substring(0, 2) == "C_" || l.Name == "NestBox")
                 cutLayers.Add(l);
 
         return cutLayers;

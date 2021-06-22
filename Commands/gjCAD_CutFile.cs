@@ -50,25 +50,46 @@ namespace gjTools.Commands
 
             // ask for the layer to send cut file out from
             var layerList = lt.getAllParentLayersStrings();
-                layerList.Add("---Select Objects to Export");
             var exportLayer = Rhino.UI.Dialogs.ShowListBox("Layers", "Choose a Layer", layerList) as string;
             if (exportLayer == null)
                 return Result.Cancel;
 
             // decide what kind of cut file to make
             doc.Objects.UnselectAll(true);
-            if (exportLayer != "---Select Objects to Export")
-            {
-                chosenLocation = paths[locationNames.IndexOf(chosenLocation)] + exportLayer[0] + ".dxf";
-                var cutLayers = lt.getAllCutLayers(doc.Layers.FindName(exportLayer));
 
+            chosenLocation = paths[locationNames.IndexOf(chosenLocation)] + exportLayer[0] + ".dxf";
+            var cutLayers = lt.getAllCutLayers(doc.Layers.FindName(exportLayer));
+
+            // test for multiple nest boxes
+            if (NestBoxCounter(doc, lt.CreateLayer(exportLayer)))
+            {
+                var go = new GetObject();
+                    go.SetCommandPrompt("Multiple Nestings on one Layer Detected, Choose Objects for Cut File");
+                    go.GeometryFilter = Rhino.DocObjects.ObjectType.Curve | Rhino.DocObjects.ObjectType.Annotation;
+                    go.GetMultiple(1, 0);
+
+                if (go.CommandResult() != Result.Success)
+                    return Result.Cancel;
+
+                doc.Objects.UnselectAll();
+                foreach (var o in go.Objects())
+                {
+                    if (lt.ObjLayer(o.ObjectId).Name.Substring(0, 2) == "C_" || lt.ObjLayer(o.ObjectId).Name == "NestBox")
+                    {
+                        selectedObjects.Add(o);
+                        doc.Objects.Select(o.ObjectId);
+                    }
+                }
+            }
+            else
+            {
                 // Select only the objects needed
                 foreach (var cl in cutLayers)
                 {
                     var selSett = new Rhino.DocObjects.ObjectEnumeratorSettings();
-                        selSett.LayerIndexFilter = cl.Index;
-                        selSett.ObjectTypeFilter = Rhino.DocObjects.ObjectType.Curve | Rhino.DocObjects.ObjectType.Annotation;
-                        selSett.NormalObjects = true;
+                    selSett.LayerIndexFilter = cl.Index;
+                    selSett.ObjectTypeFilter = Rhino.DocObjects.ObjectType.Curve | Rhino.DocObjects.ObjectType.Annotation;
+                    selSett.NormalObjects = true;
 
                     foreach (var o in doc.Objects.GetObjectList(selSett))
                     {
@@ -77,11 +98,8 @@ namespace gjTools.Commands
                     }
                 }
             }
-            else
-            {
-                // user to select some stuff
-            }
 
+            // Check that objects are all polylines
             if (dt.CheckPolylines(selectedObjects, true))
             {
                 dt.hideDynamicDraw();
@@ -117,8 +135,43 @@ namespace gjTools.Commands
             RhinoApp.RunScript("_-Export \"" + fullPath + "\" Scheme \"Vomela\" _Enter", false);
         }
 
-        public void MakeCutNameText()
+        /// <summary>
+        /// Returns true if there is more than one entity on the NestBox Layer
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="parentLayer"></param>
+        /// <returns></returns>
+        public bool NestBoxCounter(RhinoDoc doc, Rhino.DocObjects.Layer parentLayer)
         {
+            int nestLayerIndex = doc.Layers.FindByFullPath(parentLayer.Name + "NestBox", -1);
+            if (nestLayerIndex == -1)
+            {
+                return false;
+            } else
+            {
+                var selSet = new Rhino.DocObjects.ObjectEnumeratorSettings();
+                    selSet.LayerIndexFilter = nestLayerIndex;
+                    selSet.ObjectTypeFilter = Rhino.DocObjects.ObjectType.Curve;
+
+                var nestCount = doc.Objects.GetObjectList(selSet) as List<Rhino.DocObjects.RhinoObject>;
+                if (nestCount.Count > 1)
+                    return true;
+            }
+            return false;
+        }
+
+        public void MakeCutNameText(SQLTools sql, string cutType)
+        {
+            switch (cutType)
+            {
+                case "Default":
+                    // Default Cut
+                    var varData = sql.queryVariableData()[0];
+                    int nextNumber = varData.cutNumber;
+
+                    varData.cutNumber++;
+                    break;
+            }
 
         }
     }
