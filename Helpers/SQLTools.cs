@@ -429,7 +429,7 @@ namespace gjTools
 
         public bool updateVariableData(VariableData c)
         {
-            string s = string.Format("UPDATE variable SET userLastName = '{0}', userFirstName = '{1}, userItitials = '{2}' WHERE cutNumber = '{3}';", c.userLastName, c.userFirstName, c.userInitials, c.cutNumber);
+            string s = string.Format("UPDATE variable SET userLastName = '{0}', userFirstName = '{1}, userItitials = '{2}' cutNumber = '{3}';", c.userLastName, c.userFirstName, c.userInitials, c.cutNumber);
             int r = executeCommand(s);
             if (r == 0)
             {

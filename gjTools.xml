@@ -31,6 +31,14 @@
             </summary>
             <param name="fullPath"></param>
         </member>
+        <member name="M:gjTools.Commands.gjCAD_CutFile.NestBoxCounter(Rhino.RhinoDoc,Rhino.DocObjects.Layer)">
+            <summary>
+            Returns true if there is more than one entity on the NestBox Layer
+            </summary>
+            <param name="doc"></param>
+            <param name="parentLayer"></param>
+            <returns></returns>
+        </member>
         <member name="P:gjTools.Commands.UpdateUserInfo.Instance">
             <summary>The only instance of the MyCommand command.</summary>
         </member>
@@ -126,6 +134,7 @@
             </summary>
             <param name="name"></param>
             <param name="color"></param>
+            <param name="parent"></param>
             <returns></returns>
         </member>
         <member name="M:gjTools.SQLTools.queryCustomBlurbs">
@@ -383,11 +392,23 @@
             <param name="obj"></param>
             <returns></returns>
         </member>
-        <member name="M:LayerTools.getAllCutLayers(Rhino.DocObjects.Layer)">
+        <member name="M:LayerTools.getAllCutLayers(Rhino.DocObjects.Layer,System.Boolean)">
             <summary>
             gives a list of layers that are cut layers
             </summary>
             <param name="parentLayer"></param>
+            <returns></returns>
+        </member>
+        <member name="M:LayerTools.getAllParentLayers">
+            <summary>
+            Just returns all parent layer objects
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:LayerTools.getAllParentLayersStrings">
+            <summary>
+            Just returns all parent layer names
+            </summary>
             <returns></returns>
         </member>
     </members>

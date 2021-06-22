@@ -48,7 +48,8 @@ public class DrawTools : IDrawTools
     {
         var Curves = new List<Curve>();
         for (var i = 0; i <= obj.ObjectCount - 1; i++)
-            Curves.Add(obj.Object(i).Curve());
+            if (obj.Object(i).Curve() != null)
+                Curves.Add(obj.Object(i).Curve());
 
         return CheckPolylines(Curves, showPreview);
     }
@@ -63,7 +64,8 @@ public class DrawTools : IDrawTools
     {
         var Curves = new List<Curve>();
         for (var i = 0; i <= obj.Count - 1; i++)
-            Curves.Add(obj[i].Curve());
+            if (obj[i].Curve() != null)
+                Curves.Add(obj[i].Curve());
 
         return CheckPolylines(Curves, showPreview);
     }
