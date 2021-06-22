@@ -8,6 +8,37 @@ using Rhino.Input.Custom;
 
 namespace gjTools.Commands
 {
+    public struct CutData
+    {
+        public string cutType;
+        public string layerName;
+        public string path;
+        public List<ObjRef> objCrv;
+        public List<ObjRef> objNestBox;
+        public List<ObjRef> objText;
+        public RhinoDoc doc;
+
+        public DrawTools dt;
+        public LayerTools lt;
+        public SQLTools sql;
+
+        public CutData(RhinoDoc document)
+        {
+            doc = document;
+            
+            cutType = "";
+            layerName = "";
+            path = "";
+            objCrv = new List<ObjRef>();
+            objNestBox = new List<ObjRef>();
+            objText = new List<ObjRef>();
+
+            dt = new DrawTools(doc);
+            lt = new LayerTools(doc);
+            sql = new SQLTools();
+        }
+    }
+
     [CommandStyle(Style.ScriptRunner)]
     public class gjCAD_CutFile : Command
     {
@@ -23,9 +54,7 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            var dt = new DrawTools(doc);
-            var lt = new LayerTools(doc);
-            var sql = new SQLTools();
+            CutData info = new CutData(doc);
 
             var selectedObjects = new List<ObjRef>();
 
@@ -59,7 +88,6 @@ namespace gjTools.Commands
             // decide what kind of cut file to make
             doc.Objects.UnselectAll(true);
 
-            chosenLocation = paths[locationNames.IndexOf(chosenLocation)] + exportLayer[0] + ".dxf";
             var cutLayers = lt.getAllCutLayers(doc.Layers.FindName(exportLayer));
 
             // test for multiple nest boxes
@@ -105,7 +133,6 @@ namespace gjTools.Commands
             if (dt.CheckPolylines(selectedObjects, true))
             {
                 dt.hideDynamicDraw();
-                MakeDXF(chosenLocation);
             }
             else
             {
@@ -114,16 +141,21 @@ namespace gjTools.Commands
                     msg.AddOption("Yes");
                     msg.AddOption("No");
                     msg.SetDefaultString("No");
-                    msg.Get();
+                var res = msg.Get();
 
                 dt.hideDynamicDraw();
                 if (msg.CommandResult() != Result.Success)
                     return Result.Cancel;
 
-                if (msg.StringResult().Trim() == "Yes")
-                    MakeDXF(chosenLocation);
-                else
-                    RhinoApp.WriteLine("Cancelled, No Cut File sent out...");
+                if (res == Rhino.Input.GetResult.Option)
+                {
+                    if (msg.Option().EnglishName == "No")
+                        return Result.Cancel;
+                } 
+                else if (msg.StringResult().Trim() == "No")
+                {
+                    return Result.Cancel;
+                }
             }
 
             // all is well if it reaches here
@@ -132,7 +164,9 @@ namespace gjTools.Commands
                 if (selectedObjects[i].Curve() != null)
                     bb.Union(selectedObjects[i].Curve().GetBoundingBox(true));
 
-            MakeCutNameText(sql, dt, doc, chosenLocation, exportLayer, bb);
+            string cutName = MakeCutNameText(sql, dt, doc, chosenLocation, exportLayer, bb);
+            if (cutName != null)
+                MakeDXF(paths[locationNames.IndexOf(chosenLocation)] + cutName + ".dxf");
 
             return Result.Success;
         }
@@ -171,27 +205,36 @@ namespace gjTools.Commands
             return false;
         }
 
-        public void MakeCutNameText(SQLTools sql, DrawTools dt, RhinoDoc doc, string cutType, string layer, BoundingBox cutObjects)
+        public string MakeCutNameText(SQLTools sql, DrawTools dt, RhinoDoc doc, string cutType, string layer, BoundingBox cutObjects)
         {
             string nextNumber = "";
             if (cutType == "Router")
             {
-                var path = new List<string>(doc.Path.Split('\\'));
                 var gs = new GetString();
                     gs.SetCommandPrompt("Router File Name");
-                    gs.AddOption(path[-2]);
-                    gs.AddOption(layer);
+                    //gs.AddOption(layer);
                     gs.SetDefaultString(layer);
-                    gs.Get();
+                var res = gs.Get();
+
+                if (res == Rhino.Input.GetResult.Option)
+                {
+                    nextNumber = gs.Option().EnglishName + "-ROUTE";
+                }
+                else if (res == Rhino.Input.GetResult.String)
+                {
+                    nextNumber = gs.StringResult().Trim() + "-ROUTE";
+                }
+                else
+                {
+                    return null;
+                }
 
                 // get route number
-                double number = 1;
+                double number = 0;
                 Rhino.Input.RhinoGet.GetNumber("Route Number", false, ref number);
 
-                if (gs.CommandResult() != Result.Success)
-                    nextNumber = layer + "-ROUTE" + number;
-                else
-                    nextNumber = gs.StringResult().Trim() + "-ROUTE" + number;
+                if (number > 0)
+                    nextNumber = nextNumber + number;
             }
             else
             {
@@ -205,13 +248,14 @@ namespace gjTools.Commands
 
 
             // Time to create the text
+            var ds = dt.StandardDimstyle();
             var txt1 = dt.AddText("Cut Name:",
                 new Point3d(0, 0, 0),
-                dt.StandardDimstyle(),
+                ds,
                 0.75, 0, 0, 6);
             var txt2 = dt.AddText(nextNumber,
                 new Point3d(0,-1,0),
-                dt.StandardDimstyle(),
+                ds,
                 1.5, 0, 0, 0);
 
             BoundingBox bb = new BoundingBox();
@@ -235,6 +279,8 @@ namespace gjTools.Commands
             doc.Objects.AddRectangle(box);
             doc.Objects.AddText(txt1);
             doc.Objects.AddText(txt2);
+
+            return nextNumber;
         }
     }
 }
