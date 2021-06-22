@@ -26,20 +26,39 @@ namespace gjTools.Commands
                 return Result.Cancel;
             }
             List<RhObjLayer> rl = new List<RhObjLayer>();
+            List<Rhino.DocObjects.RhinoObject> ro = new List<Rhino.DocObjects.RhinoObject>();
+            Rhino.DocObjects.Layer parent = new Rhino.DocObjects.Layer();
+            bool pnfound = false;
             for (int i = 0; i < go.ObjectCount; i++)
             {
-                if (go.Object(i).Object().ObjectType == Rhino.DocObjects.ObjectType.Annotation)
+                if (go.Object(i).Object().ObjectType == Rhino.DocObjects.ObjectType.Annotation && !pnfound)
                 {
                     var t = go.Object(i).TextEntity().PlainText;
+                    if (t.Substring(0, 3) == "PN:")
+                    {
+                        pnfound = true;
+                    }
                     var tf = t.Remove(0, 4);
-                    var parent  = lt.CreateLayer(tf);
+                    parent  = lt.CreateLayer(tf);
                 }
-                else
+                else if(lt.isObjectOnCutLayer(go.Object(i).Object()))
                 {
                     var o = go.Object(i).Object();
                     var l = lt.ObjLayer(go.Object(i).Object());
                     rl.Add(new RhObjLayer(o, l));
                 }
+                else
+                {
+                    ro.Add(go.Object(i).Object());
+                }
+            }
+            foreach (var o in rl)
+            {
+                lt.CreateLayer(o.l.Name, parent.Name);
+            }
+            foreach (var o in ro)
+            {
+                lt.AddObjectsToLayer(o, parent);
             }
             return Result.Success;
         }
