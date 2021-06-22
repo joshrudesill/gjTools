@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using Rhino;
+using Rhino.Geometry;
+using Rhino.DocObjects;
 using Rhino.Commands;
 using Rhino.Input.Custom;
 
@@ -25,7 +27,7 @@ namespace gjTools.Commands
             var lt = new LayerTools(doc);
             var sql = new SQLTools();
 
-            var selectedObjects = new List<Rhino.DocObjects.ObjRef>();
+            var selectedObjects = new List<ObjRef>();
 
             // get locations from DB
             var paths = new List<string>();
@@ -65,13 +67,13 @@ namespace gjTools.Commands
             {
                 var go = new GetObject();
                     go.SetCommandPrompt("Multiple Nestings on one Layer Detected, Choose Objects for Cut File");
-                    go.GeometryFilter = Rhino.DocObjects.ObjectType.Curve | Rhino.DocObjects.ObjectType.Annotation;
+                    go.GeometryFilter = ObjectType.Curve | ObjectType.Annotation;
                     go.GetMultiple(1, 0);
 
                 if (go.CommandResult() != Result.Success)
                     return Result.Cancel;
 
-                doc.Objects.UnselectAll();
+                doc.Objects.UnselectAll(true);
                 foreach (var o in go.Objects())
                 {
                     if (lt.ObjLayer(o.ObjectId).Name.Substring(0, 2) == "C_" || lt.ObjLayer(o.ObjectId).Name == "NestBox")
@@ -86,15 +88,15 @@ namespace gjTools.Commands
                 // Select only the objects needed
                 foreach (var cl in cutLayers)
                 {
-                    var selSett = new Rhino.DocObjects.ObjectEnumeratorSettings();
-                    selSett.LayerIndexFilter = cl.Index;
-                    selSett.ObjectTypeFilter = Rhino.DocObjects.ObjectType.Curve | Rhino.DocObjects.ObjectType.Annotation;
-                    selSett.NormalObjects = true;
+                    var selSett = new ObjectEnumeratorSettings();
+                        selSett.LayerIndexFilter = cl.Index;
+                        selSett.ObjectTypeFilter = ObjectType.Curve | ObjectType.Annotation;
+                        selSett.NormalObjects = true;
 
                     foreach (var o in doc.Objects.GetObjectList(selSett))
                     {
                         doc.Objects.Select(o.Id);
-                        selectedObjects.Add(new Rhino.DocObjects.ObjRef(doc, o.Id));
+                        selectedObjects.Add(new ObjRef(doc, o.Id));
                     }
                 }
             }
@@ -104,7 +106,8 @@ namespace gjTools.Commands
             {
                 dt.hideDynamicDraw();
                 MakeDXF(chosenLocation);
-            } else
+            }
+            else
             {
                 var msg = new GetString();
                     msg.SetCommandPrompt("Some Bad Lines are Present, Would you like to Continue?");
@@ -122,7 +125,15 @@ namespace gjTools.Commands
                 else
                     RhinoApp.WriteLine("Cancelled, No Cut File sent out...");
             }
-            
+
+            // all is well if it reaches here
+            BoundingBox bb = new BoundingBox();
+            for (var i = 0; i < selectedObjects.Count; i++)
+                if (selectedObjects[i].Curve() != null)
+                    bb.Union(selectedObjects[i].Curve().GetBoundingBox(true));
+
+            MakeCutNameText(sql, dt, doc, chosenLocation, exportLayer, bb);
+
             return Result.Success;
         }
 
@@ -141,7 +152,7 @@ namespace gjTools.Commands
         /// <param name="doc"></param>
         /// <param name="parentLayer"></param>
         /// <returns></returns>
-        public bool NestBoxCounter(RhinoDoc doc, Rhino.DocObjects.Layer parentLayer)
+        public bool NestBoxCounter(RhinoDoc doc, Layer parentLayer)
         {
             int nestLayerIndex = doc.Layers.FindByFullPath(parentLayer.Name + "NestBox", -1);
             if (nestLayerIndex == -1)
@@ -149,30 +160,81 @@ namespace gjTools.Commands
                 return false;
             } else
             {
-                var selSet = new Rhino.DocObjects.ObjectEnumeratorSettings();
+                var selSet = new ObjectEnumeratorSettings();
                     selSet.LayerIndexFilter = nestLayerIndex;
-                    selSet.ObjectTypeFilter = Rhino.DocObjects.ObjectType.Curve;
+                    selSet.ObjectTypeFilter = ObjectType.Curve;
 
-                var nestCount = doc.Objects.GetObjectList(selSet) as List<Rhino.DocObjects.RhinoObject>;
+                var nestCount = doc.Objects.GetObjectList(selSet) as List<RhinoObject>;
                 if (nestCount.Count > 1)
                     return true;
             }
             return false;
         }
 
-        public void MakeCutNameText(SQLTools sql, string cutType)
+        public void MakeCutNameText(SQLTools sql, DrawTools dt, RhinoDoc doc, string cutType, string layer, BoundingBox cutObjects)
         {
-            switch (cutType)
+            string nextNumber = "";
+            if (cutType == "Router")
             {
-                case "Default":
-                    // Default Cut
-                    var varData = sql.queryVariableData()[0];
-                    int nextNumber = varData.cutNumber;
+                var path = new List<string>(doc.Path.Split('\\'));
+                var gs = new GetString();
+                    gs.SetCommandPrompt("Router File Name");
+                    gs.AddOption(path[-2]);
+                    gs.AddOption(layer);
+                    gs.SetDefaultString(layer);
+                    gs.Get();
 
-                    varData.cutNumber++;
-                    break;
+                // get route number
+                double number = 1;
+                Rhino.Input.RhinoGet.GetNumber("Route Number", false, ref number);
+
+                if (gs.CommandResult() != Result.Success)
+                    nextNumber = layer + "-ROUTE" + number;
+                else
+                    nextNumber = gs.StringResult().Trim() + "-ROUTE" + number;
+            }
+            else
+            {
+                // Default Cut
+                var varData = sql.queryVariableData()[0];
+                nextNumber = varData.userInitials + varData.cutNumber;
+
+                varData.cutNumber++;
+                sql.updateVariableData(varData);
             }
 
+
+            // Time to create the text
+            var txt1 = dt.AddText("Cut Name:",
+                new Point3d(0, 0, 0),
+                dt.StandardDimstyle(),
+                0.75, 0, 0, 6);
+            var txt2 = dt.AddText(nextNumber,
+                new Point3d(0,-1,0),
+                dt.StandardDimstyle(),
+                1.5, 0, 0, 0);
+
+            BoundingBox bb = new BoundingBox();
+                bb.Union(txt1.GetBoundingBox(true));
+                bb.Union(txt2.GetBoundingBox(true));
+            Point3d[] p = bb.GetCorners();
+
+            Rectangle3d box = new Rectangle3d(Plane.WorldXY,
+                new Point3d(p[0].X - 0.5, p[0].Y - 0.5, 0),
+                new Point3d(p[2].X + 0.5, p[2].Y + 0.5, 0));
+            bb = box.BoundingBox;
+            p = bb.GetCorners();
+            var cp = cutObjects.GetCorners();
+
+            // Move the box to location
+            Transform move = Transform.Translation(cp[2].X - p[1].X, cp[2].Y - p[0].Y, 0);
+            box.Transform(move);
+            txt1.Transform(move);
+            txt2.Transform(move);
+
+            doc.Objects.AddRectangle(box);
+            doc.Objects.AddText(txt1);
+            doc.Objects.AddText(txt2);
         }
     }
 }
