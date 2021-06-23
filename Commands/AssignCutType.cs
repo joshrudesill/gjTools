@@ -29,6 +29,7 @@ namespace gjTools.Commands
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             DialogTools d = new DialogTools(doc);
+            var lts = new LayerTools(doc);
             var go = d.selectObjects("Select object(s) to assign cut type");
             if (go == null)
             {
@@ -76,10 +77,9 @@ namespace gjTools.Commands
                     var player = doc.Layers.FindId(i.l.ParentLayerId);
                     li = player.Index;
                 }
-                int sli = d.addLayer(ls, lc[lt.IndexOf(lo.ToString())], li);
+                var ly = lts.CreateLayer(ls, doc.Layers[li].Name, lc[lt.IndexOf(lo.ToString())]);
                 
-                i.r.Attributes.LayerIndex = sli;
-                i.r.CommitChanges();
+                i.r.Attributes.LayerIndex = ly.Index;
             }
             
             return Result.Success;
