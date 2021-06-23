@@ -92,7 +92,7 @@ public class DrawTools : IDrawTools
                     isPoly = false;
 
                     if (show.Enabled)
-                        show.AddCurve(seg, System.Drawing.Color.DarkMagenta, 5);
+                        show.AddCurve(seg, System.Drawing.Color.DarkRed, 5);
                 }
                 else
                 {
@@ -139,7 +139,7 @@ public class DrawTools : IDrawTools
     /// <returns></returns>
     public int StandardDimstyle()
     {
-        if (doc.DimStyles.FindName("LableMaker") == null)
+        if (doc.DimStyles.FindName("LableMaker") != null)
         {
             // craete the dimstyle
             int dimStyleIntex = doc.DimStyles.Add("LabelMaker");

@@ -25,6 +25,15 @@
         <member name="P:gjTools.Commands.gjCAD_CutFile.Instance">
             <summary>The only instance of the MyCommand command.</summary>
         </member>
+        <member name="M:gjTools.Commands.gjCAD_CutFile.GetStringPremade(System.String,System.Collections.Generic.List{System.String},System.Int32)">
+            <summary>
+            Rhino's getstring custom with options bundled up
+            </summary>
+            <param name="prompt"></param>
+            <param name="options"></param>
+            <param name="defaultIndex"></param>
+            <returns></returns>
+        </member>
         <member name="M:gjTools.Commands.gjCAD_CutFile.MakeDXF(System.String)">
             <summary>
             Send out the DXF file
@@ -397,6 +406,7 @@
             gives a list of layers that are cut layers
             </summary>
             <param name="parentLayer"></param>
+            <param name="includeNestBox"></param>
             <returns></returns>
         </member>
         <member name="M:LayerTools.getAllParentLayers">
