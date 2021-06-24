@@ -73,11 +73,11 @@ namespace gjTools.Commands
                 eo = new EmbeddedLO(ly, layerobj);
                 embeddedl.Add(eo);
             }
-            string kerf = "";
             foreach (var lo in embeddedl)
             {
+            string kerf = "";
                 BoundingBox bb;
-                Rhino.DocObjects.RhinoObject.GetTightBoundingBox(new List<Rhino.DocObjects.RhinoObject>(doc.Objects.FindByLayer(lo.pLayer)), out bb);
+                var colist = new List<Rhino.DocObjects.RhinoObject>();
                 foreach (var rl in lo.rl)
                 {
                     kerf += rl.cLayers.Name + ": ";
@@ -85,14 +85,17 @@ namespace gjTools.Commands
                     foreach (var cr in rl.oList)
                     {
                         length += (int)new Rhino.DocObjects.ObjRef(cr).Curve().GetLength();
+                        colist.Add(cr);
                     }
                     kerf += length.ToString() + "\n";
                 }
-                Plane plane = new Plane();
-                plane.Origin = bb.GetCorners()[2];
-                doc.Objects.AddText(kerf, plane, 1.0, "Arial", false, false, TextJustification.BottomRight);
+                Rhino.DocObjects.RhinoObject.GetTightBoundingBox(colist, out bb);
+                var crns = bb.GetCorners();
+                Plane plane = doc.Views.ActiveView.ActiveViewport.ConstructionPlane();
+                plane.Origin = crns[2];
+                doc.Objects.AddText(kerf, plane, bb.GetEdges()[2].Length / 500, "Arial", false, false, TextJustification.BottomRight);
             }
-            RhinoApp.WriteLine(kerf);
+            doc.Views.Redraw();
             return Result.Success;
         }
     }
