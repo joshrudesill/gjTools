@@ -48,6 +48,39 @@
             <param name="parentLayer"></param>
             <returns></returns>
         </member>
+        <member name="T:gjTools.Commands.PDF_Export.PDF">
+            <summary>
+            Holds all of the data needed to make a PDF file
+            </summary>
+        </member>
+        <member name="P:gjTools.Commands.PDF_Export.Instance">
+            <summary>Makes my PDF Files</summary>
+        </member>
+        <member name="M:gjTools.Commands.PDF_Export.PDFViewport(gjTools.Commands.PDF_Export.PDF)">
+            <summary>
+            Sends out PDF from viewport objects
+            </summary>
+            <param name="pdfData"></param>
+        </member>
+        <member name="M:gjTools.Commands.PDF_Export.PDFLayout(gjTools.Commands.PDF_Export.PDF)">
+            <summary>
+            Sends out PDF from Layouts
+            </summary>
+            <param name="pdfdata"></param>
+        </member>
+        <member name="M:gjTools.Commands.PDF_Export.PDFMultiPage(System.Collections.Generic.List{gjTools.Commands.PDF_Export.PDF})">
+            <summary>
+            Makes a multi-page PDF file
+            </summary>
+            <param name="pdfData"></param>
+        </member>
+        <member name="M:gjTools.Commands.PDF_Export.ZoomObject(gjTools.Commands.PDF_Export.PDF)">
+            <summary>
+            Converts the viewport zoom to fit PDF Page
+            </summary>
+            <param name="pdfData"></param>
+            <returns>modified PDF object</returns>
+        </member>
         <member name="P:gjTools.Commands.UpdateUserInfo.Instance">
             <summary>The only instance of the MyCommand command.</summary>
         </member>
