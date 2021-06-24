@@ -50,6 +50,11 @@ namespace gjTools.Commands
                 parentsString.Add(p.Name);
             }
             var la = Rhino.UI.Dialogs.ShowMultiListBox("Layers", "Select a layer..", parentsString);
+            if (la == null)
+            {
+                RhinoApp.WriteLine("Cancelled.");
+                return Result.Cancel;
+            }
             parents.Clear();
             foreach(var i in la)
             {
@@ -75,7 +80,7 @@ namespace gjTools.Commands
             }
             foreach (var lo in embeddedl)
             {
-            string kerf = "";
+                string kerf = "";
                 BoundingBox bb;
                 var colist = new List<Rhino.DocObjects.RhinoObject>();
                 foreach (var rl in lo.rl)
@@ -84,7 +89,13 @@ namespace gjTools.Commands
                     int length = 0;
                     foreach (var cr in rl.oList)
                     {
-                        length += (int)new Rhino.DocObjects.ObjRef(cr).Curve().GetLength();
+                        var crv = new Rhino.DocObjects.ObjRef(cr).Curve();
+                        if (crv == null)
+                        {
+                            RhinoApp.WriteLine("FAILED: Non-curve on cut layer! Check for annotations!");
+                            return Result.Failure;
+                        }
+                        length += (int)crv.GetLength();
                         colist.Add(cr);
                     }
                     kerf += length.ToString() + "\n";
