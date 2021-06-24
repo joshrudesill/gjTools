@@ -106,6 +106,10 @@ namespace gjTools.Commands
                 if (num > 0)
                     info.cutName = info.cutName + num;
             }
+            else if (info.cutType == "WorkingLocation")
+            {
+                info.cutName = info.layerName;
+            }
             else
             {
                 var variableData = info.sql.queryVariableData()[0];
