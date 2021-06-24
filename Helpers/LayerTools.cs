@@ -187,12 +187,15 @@ public class LayerTools
     {
         var cutLayers = new List<Layer>();
         var childLAyers = parentLayer.GetChildren();
-
+        if (childLAyers != null) 
+        {
         foreach (var l in childLAyers)
             if (l.Name.Substring(0, 2) == "C_" || l.Name == "NestBox")
                 cutLayers.Add(l);
 
         return cutLayers;
+        }
+        return null;
     }
 
     /// <summary>

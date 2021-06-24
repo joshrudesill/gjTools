@@ -80,6 +80,7 @@ namespace gjTools.Commands
                 var ly = lts.CreateLayer(ls, doc.Layers[li].Name, lc[lt.IndexOf(lo.ToString())]);
                 
                 i.r.Attributes.LayerIndex = ly.Index;
+                i.r.CommitChanges();
             }
             
             return Result.Success;
