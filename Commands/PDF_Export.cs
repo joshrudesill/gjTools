@@ -108,12 +108,14 @@ namespace gjTools.Commands
                 return Result.Cancel;
 
             // Regular Single Page output
-            if (outType == "LocalTemp" || outType == "MeasuredDrawing" || outType == "WorkingLocation" || outType == "ProtoNestings")
+            if (outType != "EPExportLegacy" && outType != "EPExport" && outType !=  "Mylar")
             {
                 var layer = new List<string>();
                 layer.AddRange(Dialogs.ShowMultiListBox("Layers", "Select Parts", lt.getAllParentLayersStrings()));
                 if (layer.Count == 0)
                     return Result.Cancel;
+
+                var multiPage = new List<PDF>();
 
                 //  Create all PDF objects
                 foreach (var l in layer)
@@ -136,16 +138,19 @@ namespace gjTools.Commands
                             break;
                         case "ProtoNestings":
                             // Check the sticky info
-                            page.path = 
+                            page.path = "";
                             break;
                     }
 
-                    // prep the content and write the PDF
-                    PDFViewport(page);
+                    if (outType == "MultiPagePDF")
+                        multiPage.Add(page);
+                    else
+                        PDFViewport(page);
                 }
-            }
 
-            // 
+                if (outType == "MultiPagePDF")
+                    PDFMultiPage(multiPage);
+            }
 
             return Result.Success;
         }
@@ -160,7 +165,7 @@ namespace gjTools.Commands
         /// <returns></returns>
         public string PrototypePath(RhinoDoc doc)
         {
-            
+            return "";
         }
 
         /// <summary>

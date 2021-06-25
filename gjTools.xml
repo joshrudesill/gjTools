@@ -56,6 +56,12 @@
         <member name="P:gjTools.Commands.PDF_Export.Instance">
             <summary>Makes my PDF Files</summary>
         </member>
+        <member name="M:gjTools.Commands.PDF_Export.PrototypePath(Rhino.RhinoDoc)">
+            <summary>
+            Finds the job path in rhino Stickies
+            </summary>
+            <returns></returns>
+        </member>
         <member name="M:gjTools.Commands.PDF_Export.PDFViewport(gjTools.Commands.PDF_Export.PDF)">
             <summary>
             Sends out PDF from viewport objects
@@ -72,14 +78,26 @@
             <summary>
             Makes a multi-page PDF file
             </summary>
+            <param name="pdfDatas"></param>
+        </member>
+        <member name="M:gjTools.Commands.PDF_Export.ClearPath(gjTools.Commands.PDF_Export.PDF)">
+            <summary>
+            Checks if the file path is created or creates it
+            </summary>
             <param name="pdfData"></param>
         </member>
-        <member name="M:gjTools.Commands.PDF_Export.ZoomObject(gjTools.Commands.PDF_Export.PDF)">
+        <member name="M:gjTools.Commands.PDF_Export.LayerBounding(gjTools.Commands.PDF_Export.PDF)">
             <summary>
             Converts the viewport zoom to fit PDF Page
             </summary>
             <param name="pdfData"></param>
             <returns>modified PDF object</returns>
+        </member>
+        <member name="M:gjTools.Commands.PDF_Export.MakeDXF(System.String)">
+            <summary>
+            Send out the DXF file
+            </summary>
+            <param name="fullPath"></param>
         </member>
         <member name="P:gjTools.Commands.UpdateUserInfo.Instance">
             <summary>The only instance of the MyCommand command.</summary>
