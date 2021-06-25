@@ -110,12 +110,11 @@ namespace gjTools.Commands
             // Regular Single Page output
             if (outType != "EPExportLegacy" && outType != "EPExport" && outType !=  "Mylar")
             {
-                var layer = new List<string>();
-                layer.AddRange(Dialogs.ShowMultiListBox("Layers", "Select Parts", lt.getAllParentLayersStrings()));
-                if (layer.Count == 0)
+                var dial = Dialogs.ShowMultiListBox("Layers", "Select Parts", lt.getAllParentLayersStrings());
+                if (dial == null)
                     return Result.Cancel;
 
-                var multiPage = new List<PDF>();
+                var layer = new List<string>(dial);
 
                 //  Create all PDF objects
                 foreach (var l in layer)
@@ -138,18 +137,58 @@ namespace gjTools.Commands
                             break;
                         case "ProtoNestings":
                             // Check the sticky info
-                            page.path = "";
+                            page.path = PrototypePath(doc);
+                            break;
+                        case "MultiPagePDF":
+                            if (doc.Path != "")
+                            {
+                                page.pdfName = doc.Name;
+                                page.path = doc.Path.Replace(doc.Name, "");
+                            }
+                            else
+                            {
+                                page.pdfName = "MultiPage";
+                                page.path = sql[3].path;
+                            }
                             break;
                     }
 
                     if (outType == "MultiPagePDF")
-                        multiPage.Add(page);
+                        pdfData.Add(page);
                     else
                         PDFViewport(page);
                 }
 
                 if (outType == "MultiPagePDF")
-                    PDFMultiPage(multiPage);
+                    PDFMultiPage(pdfData);
+                
+                // Set layer back
+                ShowAllLayers(doc);
+            }
+            else if (outType == "Mylar")
+            {
+                var page = new PDF(doc);
+                var layouts = doc.Views.GetPageViews();
+                if (layouts.Length == 0)
+                    return Result.Cancel;
+
+                var layoutNames = new List<string>();
+                foreach (var l in layouts)
+                    layoutNames.Add(l.MainViewport.Name);
+
+                var dial = (string)Dialogs.ShowListBox("Layout Maker", "Choose a layout", layoutNames);
+                if (dial == null)
+                    return Result.Cancel;
+
+                page.pdfName = dial;
+                page.layoutName = dial;
+                if (doc.Path != "")
+                    page.path = doc.Path.Replace(doc.Name, "");
+                else
+                    page.path = sql[3].path;
+                page.outputColor = 2;
+
+                PDFLayout(page);
             }
 
             return Result.Success;
@@ -158,6 +197,41 @@ namespace gjTools.Commands
 
 
 
+        /// <summary>
+        /// Hides all layers aside from the one needed
+        /// </summary>
+        /// <param name="pdfData"></param>
+        public void HideLayers(PDF pdfData)
+        {
+            var lt = new LayerTools(pdfData.doc);
+            var refLayer = lt.CreateLayer("REF");
+            pdfData.doc.Layers.SetCurrentLayerIndex(refLayer.Index, true);
+            pdfData.layer.IsVisible = true;
+
+            foreach(var l in lt.getAllParentLayers())
+            {
+                if (l != pdfData.layer && l != refLayer)
+                    l.IsVisible = false;
+            }
+        }
+
+        /// <summary>
+        /// Does what it says
+        /// </summary>
+        /// <param name="doc"></param>
+        public void ShowAllLayers(RhinoDoc doc)
+        {
+            var lt = new LayerTools(doc);
+            var parents = lt.getAllParentLayers();
+            parents[parents.Count - 1].IsVisible = true;
+            doc.Layers.SetCurrentLayerIndex(parents[0].Index, true);
+            foreach (var l in parents)
+            {
+                l.IsVisible = true;
+                if (l.Name == "REF")
+                    doc.Layers.Delete(l);
+            }
+        }
 
         /// <summary>
         /// Finds the job path in rhino Stickies
@@ -176,6 +250,8 @@ namespace gjTools.Commands
         {
             // prep the zoom box
             pdfData = LayerBounding(pdfData);
+            if (pdfData.obj.Count == 0)
+                return;
             
             // get view Data
             var view = pdfData.doc.Views.GetViewList(true, false);
@@ -185,6 +261,7 @@ namespace gjTools.Commands
                     top = view[i];
 
             ClearPath(pdfData);
+            HideLayers(pdfData);
 
             // resize the viewport
             var currentViewSize = top.Size;
@@ -226,7 +303,7 @@ namespace gjTools.Commands
             var page = Rhino.FileIO.FilePdf.Create();
             var capture = new ViewCaptureSettings(
                 layout,
-                new System.Drawing.Size((int)layout.PageWidth * pdfdata.dpi, (int)layout.PageHeight * pdfdata.dpi),
+                new System.Drawing.Size((int)(layout.PageWidth * pdfdata.dpi), (int)(layout.PageHeight * pdfdata.dpi)),
                 pdfdata.dpi
             );
             capture.OutputColor = pdfdata.colorMode;
@@ -259,6 +336,10 @@ namespace gjTools.Commands
             {
                 // prep the zoom box
                 PDF pdfData = LayerBounding(p);
+                if (pdfData.obj.Count == 0)
+                    continue;
+
+                HideLayers(pdfData);
 
                 // do the proper zooming
                 top.MainViewport.ZoomBoundingBox(pdfData.bb);
@@ -302,8 +383,9 @@ namespace gjTools.Commands
         public PDF LayerBounding(PDF pdfData)
         {
             var objLayers = new List<Layer>();
+            if (pdfData.layer.GetChildren() != null)
                 objLayers.AddRange(pdfData.layer.GetChildren());
-                objLayers.Add(pdfData.layer);
+            objLayers.Add(pdfData.layer);
 
             // Get all objects
             foreach(var l in objLayers)

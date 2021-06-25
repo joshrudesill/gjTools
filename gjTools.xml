@@ -56,6 +56,18 @@
         <member name="P:gjTools.Commands.PDF_Export.Instance">
             <summary>Makes my PDF Files</summary>
         </member>
+        <member name="M:gjTools.Commands.PDF_Export.HideLayers(gjTools.Commands.PDF_Export.PDF)">
+            <summary>
+            Hides all layers aside from the one needed
+            </summary>
+            <param name="pdfData"></param>
+        </member>
+        <member name="M:gjTools.Commands.PDF_Export.ShowAllLayers(Rhino.RhinoDoc)">
+            <summary>
+            Does what it says
+            </summary>
+            <param name="doc"></param>
+        </member>
         <member name="M:gjTools.Commands.PDF_Export.PrototypePath(Rhino.RhinoDoc)">
             <summary>
             Finds the job path in rhino Stickies
