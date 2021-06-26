@@ -233,6 +233,28 @@ namespace gjTools
         }
     }
 
+    public struct DataStore
+    {
+        private int _index;
+        public string stringValue;
+        public int intValue;
+        public double doubleValue;
+        public DataStore(int i, string sv, int iv, double dv)
+        {
+            _index = i;
+            stringValue = sv;
+            intValue = iv;
+            doubleValue = dv;
+        }
+        public int DBindex
+        {
+            get
+            {
+                return _index;
+            }
+        }
+    }
+
     public sealed class SQLTools : ISQLHelper
     {
         SQLiteConnection con;
@@ -252,12 +274,11 @@ namespace gjTools
             RhinoApp.WriteLine($"SQLite version: {version}");
         }
 
+
         /// <summary>
         /// This function will return a CustomBlurb object. 
         /// <para>---Warning: must return all columns in order!---</para>
         /// </summary>
-        /// <param name="custom"></param>
-        /// <param name="customCommand"></param>
         /// <returns></returns>
         public List<CustomBlurb> queryCustomBlurbs()
         {
@@ -273,11 +294,11 @@ namespace gjTools
             }
             return rList;
         }
+
+
         /// <summary>
         /// This function will return a JobSlot object. 
         /// <para>---Warning: must return all columns in order!---</para></summary>
-        /// <param name="custom"></param>
-        /// <param name="customCommand"></param>
         /// <returns></returns>
         public List<JobSlot> queryJobSlots()
         {
@@ -292,11 +313,11 @@ namespace gjTools
             }
             return rList;
         }
+
+
         /// <summary>
         /// This function will return a Location object. 
         /// <para>---Warning: must return all columns in order!---</para></summary>
-        /// <param name="custom"></param>
-        /// <param name="customCommand"></param>
         /// <returns></returns>
         public List<Location> queryLocations()
         {
@@ -310,11 +331,11 @@ namespace gjTools
             }
             return rList;
         }
+
+
         /// <summary>
         /// This function will return a OEMColor object. 
         /// <para>---Warning: must return all columns in order!---</para></summary>
-        /// <param name="custom"></param>
-        /// <param name="customCommand"></param>
         /// <returns></returns>
         public List<OEMColor> queryOEMColors()
         {
@@ -328,11 +349,11 @@ namespace gjTools
             }
             return rList;
         }
+
+
         /// <summary>
         /// This function will return a VariableData object. 
         /// <para>---Warning: must return all columns in order!---</para></summary>
-        /// <param name="custom"></param>
-        /// <param name="customCommand"></param>
         /// <returns></returns>
         public List<VariableData> queryVariableData()
         {
@@ -346,6 +367,66 @@ namespace gjTools
             }
             return rList;
         }
+
+
+        /// <summary>
+        /// Returns a list of DataStore objects based on input DB ids
+        /// </summary>
+        /// <param name="indexList"></param>
+        /// <returns></returns>
+        public List<DataStore> queryDataStore(List<int> indexList)
+        {
+            if (indexList.Count == 0)
+                return null;
+
+            var ds = new List<DataStore>();
+            string que = "SELECT * FROM dataStore WHERE id IN (" + indexList[0].ToString();
+            foreach(var i in indexList)
+            {
+                que += ", " + i.ToString();
+            }
+            que += ")";
+
+            SQLiteDataReader r = executeQuery(que);
+            while (r.Read())
+            {
+                ds.Add(new DataStore(r.GetInt32(0), r.GetString(0), r.GetInt32(0), r.GetFloat(0)));
+            }
+            return ds;
+        }
+
+
+        /// <summary>
+        /// updates the dataStore Values
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        public bool updateDataStore(DataStore data)
+        {
+            string que = string.Format("UPDATE dataStore SET string = \"{1}\", int = {2}, float = {3} WHERE id = {0}", 
+                data.DBindex, data.stringValue, data.intValue, data.doubleValue);
+            if (executeCommand(que) == 0)
+                return false;
+            else
+                return true;
+        }
+
+        /// <summary>
+        /// insert row into dataStore
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        public bool insertDataStore(DataStore data)
+        {
+            string que = string.Format("INSERT INTO dataStore (string, integer, float) VALUES (\"{0}\", {1}, {2})",
+                data.stringValue, data.intValue, data.doubleValue);
+            if (executeCommand(que) == 0)
+                return false;
+            else
+                return true;
+        }
+
+
         /// <summary>
         /// Takes a custom blurb object and updates based on ID.
         /// </summary>
@@ -361,6 +442,8 @@ namespace gjTools
             }
             return true;
         }
+
+
         /// <summary>
         /// Takes a Job Slot object and updates based on slot.
         /// </summary>
@@ -380,6 +463,8 @@ namespace gjTools
             }
             return true;
         }
+
+
         /// <summary>
         /// Takes a Location object and updates based on id.
         /// </summary>
@@ -395,6 +480,8 @@ namespace gjTools
             }
             return true;
         }
+
+
         /// <summary>
         /// Takes a OEMColor object and updates based on id.
         /// </summary>
@@ -410,6 +497,7 @@ namespace gjTools
             }
             return true;
         }
+
 
         /// <summary>
         /// Inserts a custom oemcolor object into the database.
@@ -445,6 +533,8 @@ namespace gjTools
             SQLiteDataReader r = cmd.ExecuteReader();
             return r;
         }
+
+
         /// <summary>
         /// Executes a non-query command on the database.
         /// </summary>

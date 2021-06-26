@@ -115,6 +115,8 @@ namespace gjTools.Commands
                     return Result.Cancel;
 
                 var layer = new List<string>(dial);
+                RhinoView currentView = doc.Views.ActiveView;
+                RhinoView floatView = CreateViewport(doc);
 
                 //  Create all PDF objects
                 foreach (var l in layer)
@@ -156,12 +158,17 @@ namespace gjTools.Commands
                     if (outType == "MultiPagePDF")
                         pdfData.Add(page);
                     else
-                        PDFViewport(page);
+                        PDFViewport(page, floatView);
                 }
 
                 if (outType == "MultiPagePDF")
-                    PDFMultiPage(pdfData);
-                
+                    PDFMultiPage(pdfData, floatView);
+
+                // delete the viewport and reset
+                floatView.Close();
+                doc.Views.ActiveView = currentView;
+                currentView.Maximized = true;
+
                 // Set layer back
                 ShowAllLayers(doc);
             }
@@ -190,7 +197,7 @@ namespace gjTools.Commands
 
                 PDFLayout(page);
             }
-
+            
             return Result.Success;
         }
 
@@ -242,47 +249,39 @@ namespace gjTools.Commands
             return "";
         }
 
+        public RhinoView CreateViewport(RhinoDoc doc, int width = 1100, int height = 850)
+        {
+            var rect = new System.Drawing.Rectangle(30, 30, width, height);
+            return doc.Views.Add("PDFExport", DefinedViewportProjection.Top, rect, true);
+        }
+
         /// <summary>
         /// Sends out PDF from viewport objects
         /// </summary>
         /// <param name="pdfData"></param>
-        public void PDFViewport(PDF pdfData)
+        public void PDFViewport(PDF pdfData, RhinoView view)
         {
             // prep the zoom box
             pdfData = LayerBounding(pdfData);
             if (pdfData.obj.Count == 0)
                 return;
-            
-            // get view Data
-            var view = pdfData.doc.Views.GetViewList(true, false);
-            RhinoView top = view[0];
-            for (var i = 0; i < view.Length; i++)
-                if (view[i].MainViewport.Name == "Top")
-                    top = view[i];
 
             ClearPath(pdfData);
             HideLayers(pdfData);
 
-            // resize the viewport
-            var currentViewSize = top.Size;
-            top.Size = new System.Drawing.Size(1100, 850);
-
             // do the proper zooming
-            top.MainViewport.ZoomBoundingBox(pdfData.bb);
+            view.MainViewport.ZoomBoundingBox(pdfData.bb);
 
             // Construct the PDF page
             var page = Rhino.FileIO.FilePdf.Create();
             var capture = new ViewCaptureSettings(
-                top, 
+                view, 
                 new System.Drawing.Size((int)pdfData.sheetSize[0] * pdfData.dpi, (int)pdfData.sheetSize[1] * pdfData.dpi),
                 pdfData.dpi
             );
             capture.OutputColor = pdfData.colorMode;
             page.AddPage(capture);
             page.Write(pdfData.path + pdfData.pdfName + ".pdf");
-
-            // reset the viewport size
-            top.Size = currentViewSize;
         }
 
         /// <summary>
@@ -315,21 +314,10 @@ namespace gjTools.Commands
         /// Makes a multi-page PDF file
         /// </summary>
         /// <param name="pdfDatas"></param>
-        public void PDFMultiPage(List<PDF> pdfDatas)
+        public void PDFMultiPage(List<PDF> pdfDatas, RhinoView view)
         {
             ClearPath(pdfDatas[0]);
             var page = Rhino.FileIO.FilePdf.Create();
-
-            // get view Data
-            var view = pdfDatas[0].doc.Views.GetViewList(true, false);
-            var top = view[0];
-            for (var i = 0; i < view.Length; i++)
-                if (view[i].MainViewport.Name == "Top")
-                    top = view[i];
-
-            // resize the viewport
-            var currentViewSize = top.Size;
-            top.Size = new System.Drawing.Size(1100, 850);
 
             // start the page loop
             foreach (var p in pdfDatas)
@@ -342,11 +330,11 @@ namespace gjTools.Commands
                 HideLayers(pdfData);
 
                 // do the proper zooming
-                top.MainViewport.ZoomBoundingBox(pdfData.bb);
+                view.MainViewport.ZoomBoundingBox(pdfData.bb);
 
                 // Construct the PDF page
                 var capture = new ViewCaptureSettings(
-                    top,
+                    view,
                     new System.Drawing.Size((int)pdfData.sheetSize[0] * pdfData.dpi, (int)pdfData.sheetSize[1] * pdfData.dpi),
                     pdfData.dpi
                 );
@@ -355,9 +343,6 @@ namespace gjTools.Commands
             }
             
             page.Write(pdfDatas[0].path + pdfDatas[0].pdfName + ".pdf");
-
-            // reset the viewport size
-            top.Size = currentViewSize;
         }
 
         /// <summary>
@@ -405,7 +390,7 @@ namespace gjTools.Commands
                 pdfData.bb.Union(o.Geometry.GetBoundingBox(true));
             
             // make it a smidge bigger
-            pdfData.bb.Inflate(pdfData.bb.GetEdges()[1].Length * 0.04);
+            pdfData.bb.Inflate(pdfData.bb.GetEdges()[1].Length * 0.02);
             return pdfData;
         }
 
