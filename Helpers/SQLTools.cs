@@ -381,16 +381,19 @@ namespace gjTools
 
             var ds = new List<DataStore>();
             string que = "SELECT * FROM dataStore WHERE id IN (" + indexList[0].ToString();
-            foreach(var i in indexList)
+            if (indexList.Count > 1)
             {
-                que += ", " + i.ToString();
+                foreach (var i in indexList)
+                {
+                    que += ", " + i.ToString();
+                }
             }
             que += ")";
 
             SQLiteDataReader r = executeQuery(que);
             while (r.Read())
             {
-                ds.Add(new DataStore(r.GetInt32(0), r.GetString(0), r.GetInt32(0), r.GetFloat(0)));
+                ds.Add(new DataStore(r.GetInt32(0), r.GetString(1), r.GetInt32(2), r.GetFloat(3)));
             }
             return ds;
         }

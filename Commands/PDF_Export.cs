@@ -50,7 +50,7 @@ namespace gjTools.Commands
                 };
                 layoutName = "";
 
-                layer = new Layer();
+                layer = document.Layers[0];
                 doc = document;
 
                 obj = new List<RhinoObject>();
@@ -104,15 +104,20 @@ namespace gjTools.Commands
 
             // Get user data
             var outType = (string)Dialogs.ShowListBox("PDF Output", "Choose a Type", outTypes);
-            if (outType == null)
+            if (outType == null || (outType == "ProtoNestings" && doc.Path == ""))
                 return Result.Cancel;
 
             // Regular Single Page output
             if (outType != "EPExportLegacy" && outType != "EPExport" && outType !=  "Mylar")
             {
                 var dial = Dialogs.ShowMultiListBox("Layers", "Select Parts", lt.getAllParentLayersStrings());
-                if (dial == null)
+                if (dial == null )
                     return Result.Cancel;
+
+                // get proto job path
+                string protoPath = sql[3].path;
+                if (outType == "ProtoNestings")
+                    protoPath = PrototypePath(doc);
 
                 var layer = new List<string>(dial);
                 RhinoView currentView = doc.Views.ActiveView;
@@ -139,7 +144,7 @@ namespace gjTools.Commands
                             break;
                         case "ProtoNestings":
                             // Check the sticky info
-                            page.path = PrototypePath(doc);
+                            page.path = protoPath;
                             break;
                         case "MultiPagePDF":
                             if (doc.Path != "")
@@ -246,7 +251,16 @@ namespace gjTools.Commands
         /// <returns></returns>
         public string PrototypePath(RhinoDoc doc)
         {
-            return "";
+            if (doc.Name != "")
+            {
+                var sql = new SQLTools();
+                var ind = new List<int>();
+                    ind.Add(1);
+                DataStore jobSlot = sql.queryDataStore(ind)[0];
+                string jobNumber = sql.queryJobSlots()[jobSlot.intValue - 1].job;
+                return doc.Path.Replace(doc.Name, "") + jobNumber + "\\NESTINGS\\";
+            }
+            return null;
         }
 
         public RhinoView CreateViewport(RhinoDoc doc, int width = 1100, int height = 850)
