@@ -220,7 +220,7 @@ public class LayerTools
     {
         var parents = new List<string>();
         foreach (Layer l in doc.Layers)
-            if (l.ParentLayerId == Guid.Empty && l.Name != "")
+            if (l.ParentLayerId == Guid.Empty && l.Name.Length > 2)
                 parents.Add(l.Name);
 
         return parents;

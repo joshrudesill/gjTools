@@ -23,7 +23,12 @@ namespace gjTools
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             // ask for input
-            var options = new List<string> { "Part Boundries", "Check for Polylines", "Make Objects into Circles" };
+            var options = new List<string> { 
+                "Part Boundries", 
+                "Check for Polylines", 
+                "Make Objects into Circles", 
+                "Destroy all Blocks" 
+            };
 
             string operation = (string)Rhino.UI.Dialogs.ShowListBox("Part Operations", "Choose Operation", options);
             if (operation == null)
@@ -39,21 +44,59 @@ namespace gjTools
             if (operation == options[2])
                 ForceCircleOnObject(doc);
 
+            if (operation == options[3])
+                ExplodeAllBlocks(doc);
+
             return Result.Success;
         }
 
 
+
+        public void ExplodeAllBlocks(RhinoDoc doc)
+        {
+            var blocks =new List<Rhino.DocObjects.InstanceDefinition>(doc.InstanceDefinitions.GetList(true));
+            foreach (var b in blocks)
+            {
+                var NestBlocks = new List<Rhino.DocObjects.InstanceObject>(b.GetReferences(1));
+                foreach (var nest in NestBlocks)
+                {
+                    doc.Objects.AddExplodedInstancePieces(nest, true, true);
+                }
+                doc.InstanceDefinitions.Delete(b);
+            }
+        }
+
+        /// <summary>
+        /// Makes objects into circles if they fit into tolerance
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="tolerance"></param>
+        /// <returns></returns>
         public bool ForceCircleOnObject(RhinoDoc doc, double tolerance = 0.05)
         {
             var go = new GetObject();
-                go.SetCommandPrompt("Objects to Try Circle Cvonvert");
+                go.SetCommandPrompt("Objects to Try Circle Convert <Tolerance=" + tolerance + ">");
+                go.AcceptNumber(true, true);
                 go.GeometryFilter = Rhino.DocObjects.ObjectType.Curve;
-                go.GetMultiple(1,0);
+                go.DisablePreSelect();
+            var res = go.GetMultiple(1, 0);
 
-            if (go.CommandResult() != Result.Success && go.ObjectCount > 0)
-                return false;
+            while (res != Rhino.Input.GetResult.Object)
+            {
+                if (go.CommandResult() == Result.Cancel)
+                    return false;
+                else if (res == Rhino.Input.GetResult.Number)
+                {
+                    tolerance = go.Number();
+                    go.SetCommandPrompt("Objects to Try Circle Convert <Tolerance=" + tolerance + ">");
+                    res = go.GetMultiple(1, 0);
+                }
+                else
+                    res = go.GetMultiple(1, 0);
+            }
 
             var obj = new List<Rhino.DocObjects.ObjRef> (go.Objects());
+            int converted = 0;
             foreach(var o in obj)
             {
                 var crv = o.Curve();
@@ -70,9 +113,11 @@ namespace gjTools
                     Guid cir = doc.Objects.AddCircle(new Circle(bb.Center, bb.GetEdges()[0].Length / 2));
                     doc.Objects.Select(cir);
                     doc.Objects.Delete(o, true);
+                    converted++;
                 }
             }
 
+            RhinoApp.WriteLine(converted + " Objects were converted to Circles");
             return true;
         }
 
