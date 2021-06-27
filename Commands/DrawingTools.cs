@@ -58,10 +58,10 @@ namespace gjTools
             foreach (var b in blocks)
             {
                 var NestBlocks = new List<Rhino.DocObjects.InstanceObject>(b.GetReferences(1));
-                foreach (var nest in NestBlocks)
-                {
-                    doc.Objects.AddExplodedInstancePieces(nest, true, true);
-                }
+                if (NestBlocks.Count > 0)
+                    foreach (var nest in NestBlocks)
+                        doc.Objects.AddExplodedInstancePieces(nest, true, true);
+
                 doc.InstanceDefinitions.Delete(b);
             }
         }
