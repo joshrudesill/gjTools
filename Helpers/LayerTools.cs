@@ -76,7 +76,6 @@ public class LayerTools
 
     /// <summary>
     /// Create a Second-Level Layer with Color
-    /// 
     /// </summary>
     /// <param name="layerName"></param>
     /// <param name="parent"></param>
@@ -225,12 +224,36 @@ public class LayerTools
 
         return parents;
     }
+
+    /// <summary>
+    /// Checks if object is on a cut layer
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
     public bool isObjectOnCutLayer(RhinoObject o)
     {
         if(doc.Layers[o.Attributes.LayerIndex].Name.Substring(0,2) == "C_")
-        {
             return true;
-        }
         return false;
+    }
+
+
+    /// <summary>
+    /// Checks if object is on a cut layer
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public List<Layer> isObjectOnCutLayer(RhinoObject o, bool returnParentChild)
+    {
+        var res = new List<Layer>();
+        if (isObjectOnCutLayer(o))
+        {
+            // object on cut layer, safe to assume it has a parent
+            var child = ObjLayer(o);
+            if (child.ParentLayerId != Guid.Empty)
+                res.Add(doc.Layers.FindId(child.ParentLayerId));
+            res.Add(child);
+        }
+        return res;
     }
 }

@@ -304,11 +304,11 @@ namespace gjTools
         {
             var rList = new List<JobSlot>();
             string stm;
-            stm = "SELECT * FROM jobSlots;";
+            stm = "SELECT * FROM jobSlots";
             SQLiteDataReader r = executeQuery(stm);
             while (r.Read())
             {
-                var blrb = new JobSlot(r.GetInt32(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetInt32(4), r.GetString(5));
+                var blrb = new JobSlot(r.GetInt32(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetInt32(4), (string)r.GetValue(5));
                 rList.Add(blrb);
             }
             return rList;

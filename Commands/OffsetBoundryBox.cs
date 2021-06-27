@@ -2,7 +2,10 @@
 using Rhino;
 using Rhino.Commands;
 using System.Collections.Generic;
+using Rhino.DocObjects;
 using Rhino.Geometry;
+using Rhino.Input.Custom;
+
 namespace gjTools.Commands
 {
     public class OffsetBoundryBox : Command
@@ -17,27 +20,56 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            DialogTools d = new DialogTools(doc);
-            var go = d.selectObjects("Select object(s) to make boundry box");
-            if (go == null)
-            {
-                RhinoApp.WriteLine("No objects selected. Command canceled");
-                return Result.Cancel;
-            }
-            List<Rhino.DocObjects.RhinoObject> ids = new List<Rhino.DocObjects.RhinoObject>();
-            for (int i = 0; i < go.ObjectCount; i++)
-            {
-                ids.Add(go.Object(i).Object());
-            }
-            BoundingBox bb;
-            Rhino.DocObjects.RhinoObject.GetTightBoundingBox(ids, out bb);
-            Point3d[] c = bb.GetCorners();
             double offset = 0.25;
-            Rhino.Input.RhinoGet.GetNumber("Offset Distance?", true, ref offset);
-            var rect = new Rectangle3d(Plane.WorldXY, new Point3d(c[0].X - offset, c[0].Y - offset, 0), new Point3d(c[2].X + offset, c[2].Y + offset, 0));
-            int layerind = ids[0].Attributes.LayerIndex;
-            doc.Layers.SetCurrentLayerIndex(layerind, true);
-            doc.Objects.AddRectangle(rect);
+            var lt = new LayerTools(doc);
+
+            var go = new GetObject();
+                go.SetCommandPrompt("Select Objects <Offset=" + offset + ">");
+                go.GeometryFilter = ObjectType.Curve;
+                go.DisablePreSelect();
+                go.AcceptNumber(true, true);
+
+            while (true)
+            {
+                var res = go.GetMultiple(1, 0);
+                if (res == Rhino.Input.GetResult.Cancel)
+                    return Result.Cancel;
+                if (res == Rhino.Input.GetResult.Number)
+                {
+                    offset = go.Number();
+                    go.SetCommandPrompt("Select Objects <Offset=" + offset + ">");
+                }
+                else if (res == Rhino.Input.GetResult.Object)
+                    break;
+                else
+                    return Result.Cancel;
+            }
+
+            var obj = new List<ObjRef> (go.Objects());
+            BoundingBox bb = obj[0].Curve().GetBoundingBox(true);
+
+            // Test one object for layer and cuttype
+            var layers = lt.isObjectOnCutLayer(obj[0].Object(), true);
+            var boxLayer = lt.ObjLayer(obj[0].Object());
+            if (layers.Count > 1)
+            {
+                if (layers[1].Name == "C_KISS")
+                    boxLayer = lt.CreateLayer("C_THRU", layers[0].Name, System.Drawing.Color.Red);
+                else if (layers[1].Name == "C_THRU")
+                    boxLayer = lt.CreateLayer("C_KISS", layers[0].Name, System.Drawing.Color.FromArgb(255, 200, 0, 200));
+            }
+
+            // update boundingbox and offset
+            foreach (var o in obj)
+                bb.Union(o.Curve().GetBoundingBox(true));
+            bb.Inflate(offset);
+
+            // create objects and assign layer
+            Guid id = doc.Objects.AddRectangle(new Rectangle3d(Plane.WorldXY, bb.GetCorners()[0], bb.GetCorners()[2]));
+            var newRect = doc.Objects.FindId(id);
+                newRect.Attributes.LayerIndex = boxLayer.Index;
+                newRect.CommitChanges();
+
             doc.Views.Redraw();
             return Result.Success;
         }

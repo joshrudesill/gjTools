@@ -3,7 +3,6 @@ using Rhino;
 using Rhino.Geometry;
 using Rhino.Input.Custom;
 using Rhino.Commands;
-using System.Collections;
 using System.Collections.Generic;
 
 namespace gjTools

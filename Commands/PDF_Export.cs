@@ -169,7 +169,7 @@ namespace gjTools.Commands
                         // select objects
                         foreach (var o in page.obj)
                             doc.Objects.Select(new ObjRef(o));
-                        new gjCAD_CutFile().MakeDXF(page.path + page.pdfName + ".dxf");
+                        MakeDXF(page.path + page.pdfName + ".dwg");
                     }
                 }
 
@@ -268,6 +268,15 @@ namespace gjTools.Commands
                 return doc.Path.Replace(doc.Name, "") + jobNumber + "\\NESTINGS\\";
             }
             return null;
+        }
+
+        /// <summary>
+        /// Send out the DXF file
+        /// </summary>
+        /// <param name="fullPath"></param>
+        public void MakeDXF(string fullPath)
+        {
+            RhinoApp.RunScript("_-Export \"" + fullPath + "\" Scheme \"Vomela\" _Enter", false);
         }
 
         public RhinoView CreateViewport(RhinoDoc doc, int width = 1100, int height = 850)
@@ -372,7 +381,7 @@ namespace gjTools.Commands
         /// <param name="pdfData"></param>
         public void ClearPath(PDF pdfData)
         {
-            if (System.IO.Directory.Exists(pdfData.path))
+            if (!System.IO.Directory.Exists(pdfData.path))
                 // see if the folder exists or create it
                 System.IO.Directory.CreateDirectory(pdfData.path);
             else
