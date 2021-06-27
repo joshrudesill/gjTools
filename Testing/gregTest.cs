@@ -19,10 +19,7 @@ namespace gjTools.Testing
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            var l = new LayerTools(doc);
 
-
-            doc.Views.Redraw();
             return Result.Success;
         }
     }

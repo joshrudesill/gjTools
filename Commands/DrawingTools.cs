@@ -23,7 +23,7 @@ namespace gjTools
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             // ask for input
-            var options = new List<string> { "Part Boundries", "Check for Polylines" };
+            var options = new List<string> { "Part Boundries", "Check for Polylines", "Make Objects into Circles" };
 
             string operation = (string)Rhino.UI.Dialogs.ShowListBox("Part Operations", "Choose Operation", options);
             if (operation == null)
@@ -31,21 +31,57 @@ namespace gjTools
 
 
             if (operation == options[0])
-                return PartBoundries(doc);
+                PartBoundries(doc);
 
             if (operation == options[1])
-                return CheckPolylines(doc);
-            
+                CheckPolylines(doc);
+
+            if (operation == options[2])
+                ForceCircleOnObject(doc);
+
             return Result.Success;
         }
 
+
+        public bool ForceCircleOnObject(RhinoDoc doc, double tolerance = 0.05)
+        {
+            var go = new GetObject();
+                go.SetCommandPrompt("Objects to Try Circle Cvonvert");
+                go.GeometryFilter = Rhino.DocObjects.ObjectType.Curve;
+                go.GetMultiple(1,0);
+
+            if (go.CommandResult() != Result.Success && go.ObjectCount > 0)
+                return false;
+
+            var obj = new List<Rhino.DocObjects.ObjRef> (go.Objects());
+            foreach(var o in obj)
+            {
+                var crv = o.Curve();
+                var bb = crv.GetBoundingBox(true);
+                double diff = 0.0;
+
+                if (bb.GetEdges()[0].Length >= bb.GetEdges()[1].Length)
+                    diff = bb.GetEdges()[0].Length - bb.GetEdges()[1].Length;
+                else
+                    diff = bb.GetEdges()[1].Length - bb.GetEdges()[0].Length;
+
+                if (diff <= tolerance)
+                {
+                    Guid cir = doc.Objects.AddCircle(new Circle(bb.Center, bb.GetEdges()[0].Length / 2));
+                    doc.Objects.Select(cir);
+                    doc.Objects.Delete(o, true);
+                }
+            }
+
+            return true;
+        }
 
         /// <summary>
         /// Make Boundry boxes around selected layers as a way of seeing if something got included on the wrong layer.
         /// </summary>
         /// <param name="doc"></param>
         /// <returns></returns>
-        public Result PartBoundries(RhinoDoc doc)
+        public bool PartBoundries(RhinoDoc doc)
         {
             var gt = new DrawTools(doc);
             List<string> selections = gt.SelParentLayers(true);
@@ -94,7 +130,7 @@ namespace gjTools
             }
             doc.Views.Redraw();
 
-            return Result.Success;
+            return true;
         }
 
 
@@ -103,7 +139,7 @@ namespace gjTools
         /// </summary>
         /// <param name="doc"></param>
         /// <returns></returns>
-        public Result CheckPolylines(RhinoDoc doc)
+        public bool CheckPolylines(RhinoDoc doc)
         {
             var objs = new GetObject();
             objs.SetCommandPrompt("Select Objects to Check");
@@ -111,7 +147,7 @@ namespace gjTools
             objs.GetMultiple(1, 0);
 
             if (objs.CommandResult() != Result.Success)
-                return objs.CommandResult();
+                return false;
 
             var gt = new DrawTools(doc);
             bool res = gt.CheckPolylines(objs, true);
@@ -127,7 +163,10 @@ namespace gjTools
 
             gt.hideDynamicDraw();
 
-            return Result.Success;
+            if (res)
+                return true;
+            else
+                return false;
         }
     }
 }

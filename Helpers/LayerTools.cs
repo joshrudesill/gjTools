@@ -225,7 +225,7 @@ public class LayerTools
 
         return parents;
     }
-    public bool isObjectOnCutLayer(Rhino.DocObjects.RhinoObject o)
+    public bool isObjectOnCutLayer(RhinoObject o)
     {
         if(doc.Layers[o.Attributes.LayerIndex].Name.Substring(0,2) == "C_")
         {

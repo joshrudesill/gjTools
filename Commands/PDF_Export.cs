@@ -122,6 +122,7 @@ namespace gjTools.Commands
                 var layer = new List<string>(dial);
                 RhinoView currentView = doc.Views.ActiveView;
                 RhinoView floatView = CreateViewport(doc);
+                currentView.Maximized = true;
 
                 //  Create all PDF objects
                 foreach (var l in layer)
@@ -163,7 +164,13 @@ namespace gjTools.Commands
                     if (outType == "MultiPagePDF")
                         pdfData.Add(page);
                     else
+                    {
                         PDFViewport(page, floatView);
+                        // select objects
+                        foreach (var o in page.obj)
+                            doc.Objects.Select(new ObjRef(o));
+                        new gjCAD_CutFile().MakeDXF(page.path + page.pdfName + ".dxf");
+                    }
                 }
 
                 if (outType == "MultiPagePDF")
@@ -404,17 +411,8 @@ namespace gjTools.Commands
                 pdfData.bb.Union(o.Geometry.GetBoundingBox(true));
             
             // make it a smidge bigger
-            pdfData.bb.Inflate(pdfData.bb.GetEdges()[1].Length * 0.02);
+            //pdfData.bb.Inflate(pdfData.bb.GetEdges()[1].Length * 0.01);
             return pdfData;
-        }
-
-        /// <summary>
-        /// Send out the DXF file
-        /// </summary>
-        /// <param name="fullPath"></param>
-        public void MakeDXF(string fullPath)
-        {
-            RhinoApp.RunScript("_-Export \"" + fullPath + "\" Scheme \"Vomela\" _Enter", false);
         }
     }
 }
