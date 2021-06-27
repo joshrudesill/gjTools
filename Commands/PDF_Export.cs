@@ -120,9 +120,6 @@ namespace gjTools.Commands
                     protoPath = PrototypePath(doc);
 
                 var layer = new List<string>(dial);
-                RhinoView currentView = doc.Views.ActiveView;
-                RhinoView floatView = CreateViewport(doc);
-                currentView.Maximized = true;
 
                 //  Create all PDF objects
                 foreach (var l in layer)
@@ -161,25 +158,37 @@ namespace gjTools.Commands
                             break;
                     }
 
-                    if (outType == "MultiPagePDF")
-                        pdfData.Add(page);
-                    else
-                    {
-                        PDFViewport(page, floatView);
-                        // select objects
-                        foreach (var o in page.obj)
-                            doc.Objects.Select(new ObjRef(o));
-                        MakeDXF(page.path + page.pdfName + ".dwg");
-                    }
+                    pdfData.Add(page);
                 }
+
+
+                // Make the pdf files
+                RhinoView currentView = doc.Views.ActiveView;
+                RhinoView floatView = CreateViewport(doc);
+                currentView.Maximized = true;
 
                 if (outType == "MultiPagePDF")
                     PDFMultiPage(pdfData, floatView);
+                else
+                    foreach (var pdf in pdfData)
+                        PDFViewport(pdf, floatView);
 
                 // delete the viewport and reset
                 floatView.Close();
                 doc.Views.ActiveView = currentView;
                 currentView.Maximized = true;
+
+                // Future Save out 3dm files instead of DWG
+                if (outType != "MultiPagePDF")
+                    foreach(var pdf in pdfData)
+                    {
+                        doc.Objects.UnselectAll();
+                        foreach (var o in pdf.obj)
+                            doc.Objects.Select(o.Id);
+                        
+                        MakeDWG(pdf.path + pdf.pdfName + ".dwg");
+                        //doc.ExportSelected(pdf.path + pdf.pdfName + ".3dm");
+                    }
 
                 // Set layer back
                 ShowAllLayers(doc);
@@ -274,7 +283,7 @@ namespace gjTools.Commands
         /// Send out the DXF file
         /// </summary>
         /// <param name="fullPath"></param>
-        public void MakeDXF(string fullPath)
+        public void MakeDWG(string fullPath)
         {
             RhinoApp.RunScript("_-Export \"" + fullPath + "\" Scheme \"Vomela\" _Enter", false);
         }

@@ -26,9 +26,8 @@ namespace gjTools.Commands
             var go = new GetObject();
                 go.SetCommandPrompt("Select Objects <Offset=" + offset + ">");
                 go.GeometryFilter = ObjectType.Curve;
-                go.DisablePreSelect();
                 go.AcceptNumber(true, true);
-
+            
             while (true)
             {
                 var res = go.GetMultiple(1, 0);
@@ -40,7 +39,10 @@ namespace gjTools.Commands
                     go.SetCommandPrompt("Select Objects <Offset=" + offset + ">");
                 }
                 else if (res == Rhino.Input.GetResult.Object)
+                {
+                    RhinoApp.WriteLine("Preselected Objects completes with Default 0.25\" Offset");
                     break;
+                }
                 else
                     return Result.Cancel;
             }
