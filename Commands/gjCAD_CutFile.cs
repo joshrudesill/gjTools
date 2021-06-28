@@ -277,7 +277,7 @@ namespace gjTools.Commands
         /// <returns></returns>
         public bool NestBoxCounter(RhinoDoc doc, Layer parentLayer)
         {
-            int nestLayerIndex = doc.Layers.FindByFullPath(parentLayer.Name + "NestBox", -1);
+            int nestLayerIndex = doc.Layers.FindByFullPath(parentLayer.Name + "::NestBox", -1);
             if (nestLayerIndex == -1)
             {
                 return false;
@@ -287,7 +287,7 @@ namespace gjTools.Commands
                     selSet.LayerIndexFilter = nestLayerIndex;
                     selSet.ObjectTypeFilter = ObjectType.Curve;
 
-                var nestCount = doc.Objects.GetObjectList(selSet) as List<RhinoObject>;
+                var nestCount = new List<RhinoObject>(doc.Objects.GetObjectList(selSet));
                 if (nestCount.Count > 1)
                     return true;
             }
