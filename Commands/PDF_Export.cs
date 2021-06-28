@@ -7,6 +7,60 @@ using Rhino.DocObjects;
 using Rhino.Display;
 using Rhino.Geometry;
 
+
+/// <summary>
+/// Holds all of the data needed to make a PDF file
+/// </summary>
+public struct PDF
+{
+    public string pdfName;
+    public string path;
+    public int dpi;
+    public List<double> sheetSize;
+    public int outputColor;
+    private List<ViewCaptureSettings.ColorMode> _colorMode;
+    public string layoutName;
+
+    public Layer layer;
+    public RhinoDoc doc;
+
+    public List<RhinoObject> obj;
+    public BoundingBox bb;
+
+    public PDF(RhinoDoc document)
+    {
+        pdfName = "";
+        path = "";
+        dpi = 600;
+        sheetSize = new List<double> { 11.0, 8.5 };
+        outputColor = 0;
+        _colorMode = new List<ViewCaptureSettings.ColorMode> {
+                    ViewCaptureSettings.ColorMode.DisplayColor,
+                    ViewCaptureSettings.ColorMode.PrintColor,
+                    ViewCaptureSettings.ColorMode.BlackAndWhite
+                };
+        layoutName = "";
+
+        layer = document.Layers[0];
+        doc = document;
+
+        obj = new List<RhinoObject>();
+        bb = new BoundingBox();
+    }
+
+    public ViewCaptureSettings.ColorMode colorMode
+    {
+        get
+        {
+            if (outputColor < 3)
+                return _colorMode[outputColor];
+            else
+                return _colorMode[0];
+        }
+    }
+}
+
+
 namespace gjTools.Commands
 {
     [CommandStyle(Style.ScriptRunner)]
@@ -16,62 +70,6 @@ namespace gjTools.Commands
         {
             Instance = this;
         }
-
-        /// <summary>
-        /// Holds all of the data needed to make a PDF file
-        /// </summary>
-        public struct PDF
-        {
-            public string pdfName;
-            public string path;
-            public int dpi;
-            public List<double> sheetSize;
-            public int outputColor;
-            private List<ViewCaptureSettings.ColorMode> _colorMode;
-            public string layoutName;
-
-            public Layer layer;
-            public RhinoDoc doc;
-
-            public List<RhinoObject> obj;
-            public BoundingBox bb;
-
-            public PDF(RhinoDoc document)
-            {
-                pdfName = "";
-                path = "";
-                dpi = 600;
-                sheetSize = new List<double> { 11.0, 8.5 };
-                outputColor = 0;
-                _colorMode = new List<ViewCaptureSettings.ColorMode> { 
-                    ViewCaptureSettings.ColorMode.DisplayColor, 
-                    ViewCaptureSettings.ColorMode.PrintColor, 
-                    ViewCaptureSettings.ColorMode.BlackAndWhite
-                };
-                layoutName = "";
-
-                layer = document.Layers[0];
-                doc = document;
-
-                obj = new List<RhinoObject>();
-                bb = new BoundingBox();
-            }
-
-            public ViewCaptureSettings.ColorMode colorMode
-            {
-                get
-                {
-                    if (outputColor < 3)
-                        return _colorMode[outputColor];
-                    else
-                        return _colorMode[0];
-                }
-            }
-        }
-
-
-
-
 
         ///<summary>Makes my PDF Files</summary>
         public static PDF_Export Instance { get; private set; }
@@ -224,6 +222,12 @@ namespace gjTools.Commands
 
 
 
+
+
+        public void MakeEpXML(Curve nestBox, string path)
+        {
+
+        }
 
         /// <summary>
         /// Hides all layers aside from the one needed

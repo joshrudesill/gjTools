@@ -34,7 +34,9 @@ namespace gjTools
             Line[] edges = bb.GetEdges();
 
             // get object cut length object
-            var cuts = new CutOperations(new List<Rhino.DocObjects.ObjRef>(obj.Objects()), doc);
+            var co = new CutOperations(doc);
+            var lt = new LayerTools(doc);
+            var cuts = co.FindCutLayers(lt.ObjLayer(obj.Object(0).ObjectId));
 
             // Time to collect the sheet input sizes
             var sheetHeight = numFromUser("Sheet Height", 48.0);
@@ -51,8 +53,7 @@ namespace gjTools
 
             Guid boxID = doc.Objects.AddRectangle(nestBox);
 
-            var lt = new LayerTools(doc);
-            lt.AddObjectsToLayer(boxID, "NestBox", cuts.parentLayer.Name);
+            lt.AddObjectsToLayer(boxID, "NestBox", cuts[0].parentLayer.Name);
 
             CollectInfo(cuts, doc, bb, nestBox);
 
@@ -128,10 +129,10 @@ namespace gjTools
         /// <param name="doc"></param>
         /// <param name="bb"></param>
         /// <param name="nestBox"></param>
-        public void CollectInfo(CutOperations cutInfo, RhinoDoc doc, BoundingBox bb, Rectangle3d nestBox)
+        public void CollectInfo(List<CutOp> cutInfo, RhinoDoc doc, BoundingBox bb, Rectangle3d nestBox)
         {
             // build the text values
-            string partNumber = "PN: " + cutInfo.parentLayer;
+            string partNumber = "PN: " + cutInfo[0].parentLayer.Name;
             
             string path = "File Not Saved";
             if (doc.Name != "")
@@ -143,15 +144,22 @@ namespace gjTools
                 "w x " + Math.Round(bb.GetEdges()[3].Length, 2) + "h)";
             
             string itemLine = "Items up: ";
-            if (cutInfo.groupInd.Count > 0)
-                itemLine += cutInfo.groupInd.Count;
+            int grpCount = 0;
+            int objCount = 0;
+            foreach (var c in cutInfo)
+            {
+                grpCount += c.countObjGroups;
+                objCount += c.countObjIndv;
+            }
+
+            if (grpCount > 0)
+                itemLine += grpCount;
             else
-                itemLine += cutInfo.CrvObjects.Count;
+                itemLine += objCount;
 
             itemLine += "    Kerf:";
-            var cutNames = cutInfo.CutLayers();
-            foreach (string l in cutNames)
-                itemLine += " [" + l + ": " + cutInfo.CutLengthByLayer(l) + "]";
+            foreach (var l in cutInfo)
+                itemLine += " [" + l.cutLayerName + ": " + l.cutLength + "]";
 
             var creds = new SQLTools();
             string timeStamp = creds.queryVariableData()[0].userFirstName + "\n" + DateTime.UtcNow;
@@ -218,7 +226,7 @@ namespace gjTools
             foreach (Guid i in objIDs)
             {
                 var obj = doc.Objects.FindId(i);
-                    obj.Attributes.LayerIndex = cutInfo.parentLayer.Index;
+                    obj.Attributes.LayerIndex = cutInfo[0].parentLayer.Index;
                     obj.CommitChanges();
             }
                 

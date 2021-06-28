@@ -1,87 +1,129 @@
 ﻿using Rhino;
+using Rhino.Geometry;
+using Rhino.DocObjects;
 using System.Collections.Generic;
+
+
+public struct CutOp
+{
+    public List<ObjRef> obj;
+
+    public Layer parentLayer;
+    public Layer cutLayer;
+    public string cutLayerName;
+
+    public double cutLength;
+
+    public int countObjIndv;
+    public int countObjGroups;
+
+    public CutOp(RhinoDoc document)
+    {
+        obj = new List<ObjRef>();
+        parentLayer = document.Layers[0];
+        cutLayer = document.Layers[0];
+        cutLayerName = "";
+        cutLength = 0;
+        countObjGroups = 0;
+        countObjIndv = 0;
+    }
+
+    /// <summary>
+    /// if the CutOp is blank, then it contains invalid data
+    /// </summary>
+    public bool IsValid
+    {
+        get
+        {
+            if (obj.Count > 0)
+                return true;
+            else
+                return false;
+        }
+    }
+}
+
 public class CutOperations
 {
-    public List<Rhino.DocObjects.ObjRef> CrvObjects;
+    
+
     public RhinoDoc doc;
-    public Rhino.DocObjects.Layer parentLayer;
-    public List<int> groupInd;
-    private bool _IsValid;
 
-    public CutOperations(List<Rhino.DocObjects.ObjRef> Crvs, RhinoDoc document)
+    public CutOperations(RhinoDoc document)
     {
-        CrvObjects = Crvs;
         doc = document;
-        _IsValid = true;
-
-        OnlyCurves();
-        var singleSubLayer = doc.Layers[CrvObjects[0].Object().Attributes.LayerIndex];
-        if (singleSubLayer.ParentLayerId == System.Guid.Empty)
-            parentLayer = singleSubLayer;
-        else
-            parentLayer = doc.Layers.FindId(singleSubLayer.ParentLayerId);
     }
 
 
-    public bool IsValid { get { return _IsValid; } }
-
-    private void OnlyCurves()
+    /// <summary>
+    /// Makes objects out of cut layers only
+    /// </summary>
+    /// <param name="parentLayer"></param>
+    /// <returns> list of cut layer objects or null </returns>
+    public List<CutOp> FindCutLayers(Layer parentLayer)
     {
-        var tmp = new List<Rhino.DocObjects.ObjRef>();
-        groupInd = new List<int>();
+        var childLayers = parentLayer.GetChildren();
+        var cutInfo = new List<CutOp>();
 
-        foreach (var i in CrvObjects)
-            if (i.Curve() != null)
+        for (int i = 0;i < childLayers.Length; i++)
+        {
+            if (childLayers[i].Name.Substring(0,2) == "C_")
             {
-                tmp.Add(i);
+                cutInfo.Add(CutLayerInfo(childLayers[i]));
+            }
+        }
+        if (cutInfo.Count > 0)
+            return cutInfo;
+        else
+            return null;
+    }
+    public List<CutOp> FindCutLayers(string parentLayer)
+    {
+        var pl = doc.Layers.FindByFullPath(parentLayer, -1);
+        if (pl == -1)
+            return null;
 
-                // count groups (if any)
-                var singleObj = i.Object();
-                if (singleObj.GroupCount > 0)
+        return FindCutLayers(doc.Layers[pl]);
+    }
+
+
+
+    /// <summary>
+    /// returns information on one cut layer
+    /// <para>Make SURE you are passing it a cut layer</para>
+    /// </summary>
+    /// <param name="childLayer"></param>
+    /// <returns></returns>
+    public CutOp CutLayerInfo(Layer childLayer)
+    {
+        //  We have a cut layer
+        var cutLayer = new CutOp(doc);
+        cutLayer.cutLayerName = childLayer.Name.Substring(2);
+        cutLayer.parentLayer = doc.Layers.FindId(childLayer.ParentLayerId);
+        cutLayer.cutLayer = childLayer;
+
+        // create a custome selection set
+        var ss = new ObjectEnumeratorSettings();
+            ss.LayerIndexFilter = childLayer.Index;
+            ss.ObjectTypeFilter = ObjectType.Curve;
+
+        var obj = doc.Objects.GetObjectList(ss);
+        var groups = new List<int>();
+        foreach (var o in obj)
+        {
+            cutLayer.obj.Add(new ObjRef(o));
+            cutLayer.cutLength += cutLayer.obj[-1].Curve().GetLength();
+
+            if (o.GroupCount > 1)
+            {
+                if (!groups.Contains(o.GetGroupList()[0]))
                 {
-                    // we have a grouped object
-                    int indi = singleObj.GetGroupList()[0];
-                    if (!groupInd.Contains(indi))
-                        groupInd.Add(indi);
+                    cutLayer.countObjGroups++;
+                    groups.Add(o.GetGroupList()[0]);
                 }
             }
-
-        // No curves, object invalid
-        if (CrvObjects.Count == 0)
-            _IsValid = false;
-
-        CrvObjects = tmp;
-    }
-
-    public List<string> CutLayers()
-    {
-        var cutLayers = new List<string>();
-
-        foreach (var i in CrvObjects)
-        {
-            string layerName = doc.Layers[i.Object().Attributes.LayerIndex].Name;
-            if (layerName.Contains("C_") && !cutLayers.Contains(layerName.Substring(2)))
-                cutLayers.Add(layerName.Substring(2));
+            cutLayer.countObjIndv++;
         }
-
-        // No cut layers, object is invalid
-        if (cutLayers.Count == 0)
-            _IsValid = false;
-
-        return cutLayers;
-    }
-
-    public double CutLengthByLayer(string layerName)
-    {
-        if (!_IsValid)
-            return 0;
-
-        double Tlength = 0.0;
-
-        foreach (var i in CrvObjects)
-            if (doc.Layers[i.Object().Attributes.LayerIndex].Name == "C_" + layerName)
-                Tlength += i.Curve().GetLength();
-
-        return (int)Tlength;
+        return cutLayer;
     }
 }
