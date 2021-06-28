@@ -149,6 +149,13 @@ namespace gjTools.Commands
             }
             else
             {
+                if (cutLayers == null)
+                {
+                    RhinoApp.WriteLine("No Cut layers were found for " + info.cutName);
+                    return Result.Cancel;
+                }
+                    
+
                 // Select only the objects needed
                 foreach (var cl in cutLayers)
                 {

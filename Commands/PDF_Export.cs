@@ -35,7 +35,6 @@ namespace gjTools.Commands
 
             public List<RhinoObject> obj;
             public BoundingBox bb;
-            public Line zoomObj;
 
             public PDF(RhinoDoc document)
             {
@@ -51,12 +50,11 @@ namespace gjTools.Commands
                 };
                 layoutName = "";
 
-                layer = new Layer();
+                layer = document.Layers[0];
                 doc = document;
 
                 obj = new List<RhinoObject>();
                 bb = new BoundingBox();
-                zoomObj = new Line();
             }
 
             public ViewCaptureSettings.ColorMode colorMode
@@ -106,16 +104,22 @@ namespace gjTools.Commands
 
             // Get user data
             var outType = (string)Dialogs.ShowListBox("PDF Output", "Choose a Type", outTypes);
-            if (outType == null)
+            if (outType == null || (outType == "ProtoNestings" && doc.Path == ""))
                 return Result.Cancel;
 
-            // see if we need a layer selector
-            if (outType == "LocalTemp")
+            // Regular Single Page output
+            if (outType != "EPExportLegacy" && outType != "EPExport" && outType !=  "Mylar")
             {
-                var layer = new List<string>();
-                layer.AddRange(Dialogs.ShowMultiListBox("Layers", "Select Parts", lt.getAllParentLayersStrings()));
-                if (layer.Count == 0)
+                var dial = Dialogs.ShowMultiListBox("Layers", "Select Parts", lt.getAllParentLayersStrings());
+                if (dial == null )
                     return Result.Cancel;
+
+                // get proto job path
+                string protoPath = sql[3].path;
+                if (outType == "ProtoNestings")
+                    protoPath = PrototypePath(doc);
+
+                var layer = new List<string>(dial);
 
                 //  Create all PDF objects
                 foreach (var l in layer)
@@ -124,63 +128,197 @@ namespace gjTools.Commands
                     page.pdfName = l;
                     page.layer = lt.CreateLayer(l);
 
-                    // TODO: for now assign the temp folder
-                    page.path = "D:\\Temp\\";
+                    // find the right path
+                    switch (outType)
+                    {
+                        case "LocalTemp":
+                            page.path = sql[3].path;
+                            break;
+                        case "MeasuredDrawing":
+                            page.path = sql[4].path + l + "\\";
+                            break;
+                        case "WorkingLocation":
+                            page.path = doc.Path.Replace(doc.Name, "");
+                            break;
+                        case "ProtoNestings":
+                            // Check the sticky info
+                            page.path = protoPath;
+                            break;
+                        case "MultiPagePDF":
+                            if (doc.Path != "")
+                            {
+                                page.pdfName = doc.Name;
+                                page.path = doc.Path.Replace(doc.Name, "");
+                            }
+                            else
+                            {
+                                page.pdfName = "MultiPage";
+                                page.path = sql[3].path;
+                            }
+                            break;
+                    }
 
-                    page = ZoomObject(page);
-                    doc.Objects.AddLine(page.zoomObj);
-                    PDFViewport(page);
-                    doc.Views.Redraw();
+                    pdfData.Add(page);
                 }
-            }
 
+
+                // Make the pdf files
+                RhinoView currentView = doc.Views.ActiveView;
+                RhinoView floatView = CreateViewport(doc);
+                currentView.Maximized = true;
+
+                if (outType == "MultiPagePDF")
+                    PDFMultiPage(pdfData, floatView);
+                else
+                    foreach (var pdf in pdfData)
+                        PDFViewport(pdf, floatView);
+
+                // delete the viewport and reset
+                floatView.Close();
+                doc.Views.ActiveView = currentView;
+                currentView.Maximized = true;
+
+                // Future Save out 3dm files instead of DWG
+                if (outType != "MultiPagePDF")
+                    foreach(var pdf in pdfData)
+                    {
+                        doc.Objects.UnselectAll();
+                        foreach (var o in pdf.obj)
+                            doc.Objects.Select(o.Id);
+                        
+                        MakeDWG(pdf.path + pdf.pdfName + ".dwg");
+                        //doc.ExportSelected(pdf.path + pdf.pdfName + ".3dm");
+                    }
+
+                // Set layer back
+                ShowAllLayers(doc);
+            }
+            else if (outType == "Mylar")
+            {
+                var page = new PDF(doc);
+                var layouts = doc.Views.GetPageViews();
+                if (layouts.Length == 0)
+                    return Result.Cancel;
+
+                var layoutNames = new List<string>();
+                foreach (var l in layouts)
+                    layoutNames.Add(l.MainViewport.Name);
+
+                var dial = (string)Dialogs.ShowListBox("Layout Maker", "Choose a layout", layoutNames);
+                if (dial == null)
+                    return Result.Cancel;
+
+                page.pdfName = dial;
+                page.layoutName = dial;
+                if (doc.Path != "")
+                    page.path = doc.Path.Replace(doc.Name, "");
+                else
+                    page.path = sql[3].path;
+                page.outputColor = 2;
+
+                PDFLayout(page);
+            }
+            
             return Result.Success;
         }
 
 
 
 
+        /// <summary>
+        /// Hides all layers aside from the one needed
+        /// </summary>
+        /// <param name="pdfData"></param>
+        public void HideLayers(PDF pdfData)
+        {
+            var lt = new LayerTools(pdfData.doc);
+            var refLayer = lt.CreateLayer("REF");
+            pdfData.doc.Layers.SetCurrentLayerIndex(refLayer.Index, true);
+            pdfData.layer.IsVisible = true;
+
+            foreach(var l in lt.getAllParentLayers())
+            {
+                if (l != pdfData.layer && l != refLayer)
+                    l.IsVisible = false;
+            }
+        }
+
+        /// <summary>
+        /// Does what it says
+        /// </summary>
+        /// <param name="doc"></param>
+        public void ShowAllLayers(RhinoDoc doc)
+        {
+            var lt = new LayerTools(doc);
+            var parents = lt.getAllParentLayers();
+            parents[parents.Count - 1].IsVisible = true;
+            doc.Layers.SetCurrentLayerIndex(parents[0].Index, true);
+            foreach (var l in parents)
+            {
+                l.IsVisible = true;
+                if (l.Name == "REF")
+                    doc.Layers.Delete(l);
+            }
+        }
+
+        /// <summary>
+        /// Finds the job path in rhino Stickies
+        /// </summary>
+        /// <returns></returns>
+        public string PrototypePath(RhinoDoc doc)
+        {
+            if (doc.Name != "")
+            {
+                var sql = new SQLTools();
+                var ind = new List<int>();
+                    ind.Add(1);
+                DataStore jobSlot = sql.queryDataStore(ind)[0];
+                string jobNumber = sql.queryJobSlots()[jobSlot.intValue - 1].job;
+                return doc.Path.Replace(doc.Name, "") + jobNumber + "\\NESTINGS\\";
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Send out the DXF file
+        /// </summary>
+        /// <param name="fullPath"></param>
+        public void MakeDWG(string fullPath)
+        {
+            RhinoApp.RunScript("_-Export \"" + fullPath + "\" Scheme \"Vomela\" _Enter", false);
+        }
+
+        public RhinoView CreateViewport(RhinoDoc doc, int width = 1100, int height = 850)
+        {
+            var rect = new System.Drawing.Rectangle(30, 30, width, height);
+            return doc.Views.Add("PDFExport", DefinedViewportProjection.Top, rect, true);
+        }
 
         /// <summary>
         /// Sends out PDF from viewport objects
         /// </summary>
         /// <param name="pdfData"></param>
-        public void PDFViewport(PDF pdfData)
+        public void PDFViewport(PDF pdfData, RhinoView view)
         {
-            var view = pdfData.doc.Views.GetViewList(true, false);
-            RhinoView top = view[0];
-            for (var i = 0; i < view.Length; i++)
-                if (view[i].MainViewport.Name == "Top")
-                    top = view[i];
+            // prep the zoom box
+            pdfData = LayerBounding(pdfData);
+            if (pdfData.obj.Count == 0)
+                return;
 
-
-            // see if the folder exists or create it
-            if (System.IO.Directory.Exists(pdfData.path))
-            {
-                System.IO.Directory.CreateDirectory(pdfData.path);
-            }
-            else
-            {
-                // directory exists, see if the pdf does, then delete
-                if (System.IO.File.Exists(pdfData.path + pdfData.pdfName + ".pdf"))
-                {
-                    System.IO.File.Delete(pdfData.path + pdfData.pdfName + ".pdf");
-                }
-            }
+            ClearPath(pdfData);
+            HideLayers(pdfData);
 
             // do the proper zooming
-            top.MainViewport.ZoomBoundingBox(pdfData.zoomObj.BoundingBox);
-            pdfData.doc.Views.Redraw();
+            view.MainViewport.ZoomBoundingBox(pdfData.bb);
 
             // Construct the PDF page
             var page = Rhino.FileIO.FilePdf.Create();
             var capture = new ViewCaptureSettings(
-                top, 
+                view, 
                 new System.Drawing.Size((int)pdfData.sheetSize[0] * pdfData.dpi, (int)pdfData.sheetSize[1] * pdfData.dpi),
                 pdfData.dpi
             );
             capture.OutputColor = pdfData.colorMode;
-
             page.AddPage(capture);
             page.Write(pdfData.path + pdfData.pdfName + ".pdf");
         }
@@ -191,16 +329,74 @@ namespace gjTools.Commands
         /// <param name="pdfdata"></param>
         public void PDFLayout(PDF pdfdata)
         {
+            ClearPath(pdfdata);
 
+            // time to get the layout
+            var view = pdfdata.doc.Views.GetPageViews();
+            RhinoPageView layout = view[0];
+            for (int i = 0; i < view.Length; i++)
+                if (view[i].MainViewport.Name == pdfdata.layoutName)
+                    layout = view[i];
+
+            var page = Rhino.FileIO.FilePdf.Create();
+            var capture = new ViewCaptureSettings(
+                layout,
+                new System.Drawing.Size((int)(layout.PageWidth * pdfdata.dpi), (int)(layout.PageHeight * pdfdata.dpi)),
+                pdfdata.dpi
+            );
+            capture.OutputColor = pdfdata.colorMode;
+            page.AddPage(capture);
+            page.Write(pdfdata.path + pdfdata.pdfName + ".pdf");
         }
 
         /// <summary>
         /// Makes a multi-page PDF file
         /// </summary>
-        /// <param name="pdfData"></param>
-        public void PDFMultiPage(List<PDF> pdfData)
+        /// <param name="pdfDatas"></param>
+        public void PDFMultiPage(List<PDF> pdfDatas, RhinoView view)
         {
+            ClearPath(pdfDatas[0]);
+            var page = Rhino.FileIO.FilePdf.Create();
 
+            // start the page loop
+            foreach (var p in pdfDatas)
+            {
+                // prep the zoom box
+                PDF pdfData = LayerBounding(p);
+                if (pdfData.obj.Count == 0)
+                    continue;
+
+                HideLayers(pdfData);
+
+                // do the proper zooming
+                view.MainViewport.ZoomBoundingBox(pdfData.bb);
+
+                // Construct the PDF page
+                var capture = new ViewCaptureSettings(
+                    view,
+                    new System.Drawing.Size((int)pdfData.sheetSize[0] * pdfData.dpi, (int)pdfData.sheetSize[1] * pdfData.dpi),
+                    pdfData.dpi
+                );
+                capture.OutputColor = pdfData.colorMode;
+                page.AddPage(capture);
+            }
+            
+            page.Write(pdfDatas[0].path + pdfDatas[0].pdfName + ".pdf");
+        }
+
+        /// <summary>
+        /// Checks if the file path is created or creates it
+        /// </summary>
+        /// <param name="pdfData"></param>
+        public void ClearPath(PDF pdfData)
+        {
+            if (!System.IO.Directory.Exists(pdfData.path))
+                // see if the folder exists or create it
+                System.IO.Directory.CreateDirectory(pdfData.path);
+            else
+                // directory exists, see if the pdf does, then delete
+                if (System.IO.File.Exists(pdfData.path + pdfData.pdfName + ".pdf"))
+                System.IO.File.Delete(pdfData.path + pdfData.pdfName + ".pdf");
         }
 
         /// <summary>
@@ -208,11 +404,12 @@ namespace gjTools.Commands
         /// </summary>
         /// <param name="pdfData"></param>
         /// <returns>modified PDF object</returns>
-        public PDF ZoomObject(PDF pdfData)
+        public PDF LayerBounding(PDF pdfData)
         {
             var objLayers = new List<Layer>();
+            if (pdfData.layer.GetChildren() != null)
                 objLayers.AddRange(pdfData.layer.GetChildren());
-                objLayers.Add(pdfData.layer);
+            objLayers.Add(pdfData.layer);
 
             // Get all objects
             foreach(var l in objLayers)
@@ -227,47 +424,12 @@ namespace gjTools.Commands
                 return pdfData;
 
             // Update the overall bounding box
+            pdfData.bb = pdfData.obj[0].Geometry.GetBoundingBox(true);
             foreach( var o in pdfData.obj)
                 pdfData.bb.Union(o.Geometry.GetBoundingBox(true));
-
-            // Check against the viewport resolution
-            var currentView = pdfData.doc.Views.ActiveView.ClientRectangle;
-        
-            double width = pdfData.bb.GetEdges()[0].Length;
-            double Height = pdfData.bb.GetEdges()[1].Length;
-
-            // make page sizes scaled to content
-            if (width / Height > 1.3)
-            {
-                // content wider than tall
-                width = (width / (pdfData.sheetSize[0] - 0.4)) * pdfData.sheetSize[0];
-                Height = (width / (pdfData.sheetSize[0] - 0.4)) * pdfData.sheetSize[1];
-            }
-            else
-            {
-                // content taller than wide
-                width = (Height / (pdfData.sheetSize[1] - 0.4)) * pdfData.sheetSize[0];
-                Height = (Height / (pdfData.sheetSize[1] - 0.4)) * pdfData.sheetSize[1];
-            }
-
-            // 1.3 based on the ratio of a landscape page
-            if ((currentView.Width / currentView.Height) < 1.3)
-            {
-                // portrait viewport
-                pdfData.zoomObj = new Line(
-                    new Point3d(pdfData.bb.Center.X, pdfData.bb.Center.Y - (Height / 2), 0),
-                    new Point3d(pdfData.bb.Center.X, pdfData.bb.Center.Y + (Height / 2), 0)
-                );
-            }
-            else
-            {
-                // landscape viewport
-                pdfData.zoomObj = new Line(
-                    new Point3d(pdfData.bb.Center.X - (width / 2), pdfData.bb.Center.Y, 0),
-                    new Point3d(pdfData.bb.Center.X + (width / 2), pdfData.bb.Center.Y, 0)
-                );
-            }
-
+            
+            // make it a smidge bigger
+            //pdfData.bb.Inflate(pdfData.bb.GetEdges()[1].Length * 0.01);
             return pdfData;
         }
     }
