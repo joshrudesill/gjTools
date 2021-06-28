@@ -19,7 +19,7 @@ namespace gjTools.Testing
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-
+            
             return Result.Success;
         }
     }
