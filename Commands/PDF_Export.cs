@@ -223,7 +223,7 @@ namespace gjTools.Commands
 
 
 
-        public void MakeEpXML(Curve nestBox, string path)
+        public void MakeEpXML(List<CutOp> cuts, string path)
         {
 
         }

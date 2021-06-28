@@ -50,15 +50,15 @@ namespace gjTools.Commands
     }
 
     [CommandStyle(Style.ScriptRunner)]
-    public class gjCAD_CutFile : Command
+    public class CAD_CutFile : Command
     {
-        public gjCAD_CutFile()
+        public CAD_CutFile()
         {
             Instance = this;
         }
 
         ///<summary>The only instance of the MyCommand command.</summary>
-        public static gjCAD_CutFile Instance { get; private set; }
+        public static CAD_CutFile Instance { get; private set; }
 
         public override string EnglishName => "gjCAD_CutFile";
 

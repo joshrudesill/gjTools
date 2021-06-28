@@ -41,6 +41,28 @@ public struct CutOp
                 return false;
         }
     }
+
+    public bool ContainsGroup
+    {
+        get
+        {
+            if (countObjGroups > 0)
+                return true;
+            else
+                return false;
+        }
+    }
+
+    public int Count
+    {
+        get
+        {
+            if (countObjGroups > 0)
+                return countObjGroups;
+            else
+                return countObjIndv;
+        }
+    }
 }
 
 public class CutOperations
@@ -206,5 +228,17 @@ public class CutOperations
         foreach (var c in cuts)
             cnt += c.countObjIndv;
         return cnt;
+    }
+    /// <summary>
+    /// Checks if any have a group count
+    /// </summary>
+    /// <param name="cuts"></param>
+    /// <returns></returns>
+    public bool GroupsPresent(List<CutOp> cuts)
+    {
+        foreach(var c in cuts)
+            if (c.ContainsGroup)
+                return true;
+        return false;
     }
 }
