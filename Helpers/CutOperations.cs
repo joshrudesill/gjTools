@@ -1,6 +1,5 @@
 ﻿using Rhino;
 using System.Collections.Generic;
-
 public class CutOperations
 {
     public List<Rhino.DocObjects.ObjRef> CrvObjects;
