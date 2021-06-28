@@ -31,10 +31,12 @@ namespace gjTools.Commands
             }
             BoundingBox bb;
             Rhino.DocObjects.RhinoObject.GetTightBoundingBox(ids, out bb);
-            Point3d[] c = bb.GetCorners();
+            
             double offset = 0.25;
             Rhino.Input.RhinoGet.GetNumber("Offset Distance?", true, ref offset);
-            var rect = new Rectangle3d(Plane.WorldXY, new Point3d(c[0].X - offset, c[0].Y - offset, 0), new Point3d(c[2].X + offset, c[2].Y + offset, 0));
+            bb.Inflate(offset);
+            var c = bb.GetCorners();
+            var rect = new Rectangle3d(Plane.WorldXY, new Point3d(c[0].X, c[0].Y, 0), new Point3d(c[2].X, c[2].Y, 0));
             int layerind = ids[0].Attributes.LayerIndex;
             doc.Layers.SetCurrentLayerIndex(layerind, true);
             doc.Objects.AddRectangle(rect);
