@@ -98,5 +98,16 @@ namespace gjTools
             }
             return go;
         }
+        public Rhino.Input.Custom.GetObject selectObject(string message)
+        {
+            Rhino.Input.Custom.GetObject go = new Rhino.Input.Custom.GetObject();
+            go.SetCommandPrompt(message);
+            Rhino.Input.GetResult gr = go.Get();
+            if (gr != Rhino.Input.GetResult.Object)
+            {
+                return null;
+            }
+            return go;
+        }
     }
 }
