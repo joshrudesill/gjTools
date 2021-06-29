@@ -39,6 +39,12 @@ namespace gjTools
             var lt = new LayerTools(doc);
             var cuts = co.FindCutLayers(new List<ObjRef>(obj.Objects()));
 
+            if (cuts.Count == 0)
+            {
+                RhinoApp.WriteLine("No cut objects were found...");
+                return Result.Cancel;
+            }
+
             // Time to collect the sheet input sizes
             var sheetHeight = numFromUser("Sheet Height", 48.0);
                 if (sheetHeight == -1) return Result.Cancel;
@@ -53,6 +59,8 @@ namespace gjTools
             Rectangle3d nestBox = new Rectangle3d(Plane.WorldXY, bottomLeft, topRight);
 
             Guid boxID = doc.Objects.AddRectangle(nestBox);
+            doc.Objects.FindId(boxID).Attributes.Name = "NestBox";
+            doc.Objects.FindId(boxID).CommitChanges();
 
             lt.AddObjectsToLayer(boxID, "NestBox", cuts[0].parentLayer.Name);
 

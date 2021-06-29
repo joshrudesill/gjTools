@@ -20,6 +20,9 @@ public struct PDF
     public int outputColor;
     private List<ViewCaptureSettings.ColorMode> _colorMode;
     public string layoutName;
+    public bool multiPage;
+    public bool makeCADFile;
+    public string CADFileName;
 
     public Layer layer;
     public RhinoDoc doc;
@@ -40,6 +43,9 @@ public struct PDF
                     ViewCaptureSettings.ColorMode.BlackAndWhite
                 };
         layoutName = "";
+        multiPage = false;
+        makeCADFile = true; // make one by default
+        CADFileName = pdfName + ".dwg";
 
         layer = document.Layers[0];
         doc = document;
@@ -56,6 +62,31 @@ public struct PDF
                 return _colorMode[outputColor];
             else
                 return _colorMode[0];
+        }
+    }
+    public List<RhinoObject> OnlyCutLayerObjects
+    {
+        get
+        {
+            var cl = layer.GetChildren();
+            var cutObj = new List<RhinoObject>();
+            var ind = new List<int>();
+            if (cl.Length == 0)
+                return cutObj;
+
+            foreach (var lay in cl)
+                if (lay.Name.Substring(0, 2) == "C_")
+                    ind.Add(lay.Index);
+
+            var ss = new ObjectEnumeratorSettings { ObjectTypeFilter = ObjectType.Curve | ObjectType.Annotation };
+
+            for (int i = 0; i < ind.Count; i++)
+            {
+                ss.LayerIndexFilter = ind[i];
+                cutObj.AddRange(doc.Objects.GetObjectList(ss));
+            }
+
+            return cutObj;
         }
     }
 }
@@ -81,6 +112,7 @@ namespace gjTools.Commands
             var sql = new SQLTools().queryLocations();
             var lt = new LayerTools(doc);
             var pdfData = new List<PDF>();
+            var pdfLayout = new List<PDF>();
 
             var outTypes = new List<string>
             {
@@ -143,6 +175,8 @@ namespace gjTools.Commands
                             page.path = protoPath;
                             break;
                         case "MultiPagePDF":
+                            page.multiPage = true;
+                            page.makeCADFile = false;
                             if (doc.Path != "")
                             {
                                 page.pdfName = doc.Name;
@@ -158,37 +192,6 @@ namespace gjTools.Commands
 
                     pdfData.Add(page);
                 }
-
-
-                // Make the pdf files
-                RhinoView currentView = doc.Views.ActiveView;
-                RhinoView floatView = CreateViewport(doc);
-
-                if (outType == "MultiPagePDF")
-                    PDFMultiPage(pdfData, floatView);
-                else
-                    foreach (var pdf in pdfData)
-                        PDFViewport(pdf, floatView);
-
-                // delete the viewport and reset
-                floatView.Close();
-                doc.Views.ActiveView = currentView;
-                currentView.Maximized = true;
-                
-                // Set layer back
-                ShowAllLayers(doc);
-
-                // Future Save out 3dm files instead of DWG
-                if (outType != "MultiPagePDF")
-                    foreach(var pdf in pdfData)
-                    {
-                        doc.Objects.UnselectAll();
-                        foreach (var o in pdf.obj)
-                            doc.Objects.Select(o.Id);
-                        
-                        MakeDWG(pdf.path + pdf.pdfName + ".dwg");
-                        //doc.ExportSelected(pdf.path + pdf.pdfName + ".3dm");
-                    }
             }
             else if (outType == "Mylar")
             {
@@ -213,19 +216,166 @@ namespace gjTools.Commands
                     page.path = sql[3].path;
                 page.outputColor = 2;
 
-                PDFLayout(page);
+                pdfLayout.Add(page);
             }
-            
+            else if (outType == "EPExport")
+            {
+                // output the New E&P within rhino
+                var cutLayers = new List<Layer>();
+                var mylarLayers = new List<Layer>();
+                var mylarLayouts = new List<RhinoView>();
+                var fileName = doc.Name.Substring(0, doc.Name.Length - 4);
+                var path = sql[5].path + fileName + "\\";
+                var parentLayers = lt.getAllParentLayers();
+                
+                foreach (Layer l in parentLayers)
+                {
+                    if (l.Name.Contains("CUT"))
+                        cutLayers.Add(l);
+                    if (l.Name.Contains("MYLAR"))
+                        mylarLayers.Add(l);
+                    if (l.Name == "Title Block")
+                    {
+                        var pdf = new PDF(doc);
+                        pdf.layer = l;
+                        pdf.obj.AddRange(doc.Objects.FindByLayer(l));
+                        pdf.path = path;
+                        pdf.pdfName = fileName + "_Page 1";
+                        pdf.makeCADFile = false;
+
+                        pdfData.Add(pdf);
+                    }
+                }
+
+                // to maintain order of pdf files
+                foreach(Layer l in mylarLayers)
+                {
+                    int pageNumber = pdfData.Count + 1;
+                    var pdf = new PDF(doc);
+                    pdf.layer = l;
+                    pdf.pdfName = fileName + "_Page " + pageNumber;
+                    pdf.path = path;
+                    pdf.makeCADFile = false;
+                    pdf.obj.AddRange(doc.Objects.FindByLayer(l));
+
+                    pdfData.Add(pdf);
+                }
+                foreach (Layer l in cutLayers)
+                {
+                    int pageNumber = pdfData.Count + 1;
+                    var pdf = new PDF(doc);
+                    pdf.layer = l;
+                    pdf.pdfName = fileName + "_Page " + pageNumber;
+                    pdf.path = path;
+                    pdf.CADFileName = fileName.Substring(0, fileName.Length - 1) + "_" + l.Name + ".dxf";
+                    pdf.obj.AddRange(doc.Objects.FindByLayer(l));
+
+                    pdfData.Add(pdf);
+                }
+
+                foreach (RhinoView layout in doc.Views.GetPageViews())
+                    if (layout.MainViewport.Name.Contains("MYLAR"))
+                    {
+                        var pdf = new PDF(doc);
+                        pdf.layoutName = layout.MainViewport.Name;
+                        pdf.pdfName = fileName.Substring(0, fileName.Length - 1) + "_" + pdf.layoutName;
+                        pdf.path = path;
+                        pdf.outputColor = 2;
+
+                        pdfLayout.Add(pdf);
+                    }
+
+                ClearPath(pdfData[0]);
+                ShowAllLayers(doc);
+                doc.Export(path + fileName + ".3dm");
+                MakeEpXML(doc, path, fileName);
+            }
+
+
+            // Make the pdf files
+            if (pdfData.Count > 0)
+            {
+                RhinoView currentView = doc.Views.ActiveView;
+                RhinoView floatView = CreateViewport(doc);
+
+                if (pdfData[0].multiPage)
+                    PDFMultiPage(pdfData, floatView);
+                else
+                    foreach (var pdf in pdfData)
+                    {
+                        PDFViewport(pdf, floatView);
+                        if (pdf.makeCADFile)
+                        {
+                            doc.Objects.UnselectAll();
+                            var selOb = pdf.obj;
+                            if (pdf.CADFileName.Contains(".dxf"))
+                                selOb = pdf.OnlyCutLayerObjects;
+
+                            foreach (var o in selOb)
+                                doc.Objects.Select(o.Id);
+
+                            MakeDWG(pdf.path + pdf.CADFileName);
+                            //doc.ExportSelected(pdf.path + pdf.pdfName + ".3dm");
+                        }
+                    }
+
+                // delete the viewport and reset
+                floatView.Close();
+                doc.Views.ActiveView = currentView;
+                currentView.Maximized = true;
+
+                // Set layers back
+                ShowAllLayers(doc);
+                doc.Views.Redraw();
+            }
+            // Make layouts if they exist
+            if (pdfLayout.Count > 0)
+            {
+                RhinoApp.WriteLine("Writing {0} Mylar Files, please Wait..", pdfLayout.Count);
+                foreach (PDF pdf in pdfLayout)
+                {
+                    PDFLayout(pdf);
+                    RhinoApp.WriteLine("Created: {0}.pdf", pdf.pdfName);
+                }
+            }
             return Result.Success;
         }
 
 
 
 
-
-        public void MakeEpXML(List<CutOp> cuts, string path)
+        /// <summary>
+        /// create the XML for E&P output
+        /// </summary>
+        /// <param name="cuts"></param>
+        /// <param name="nestBox"></param>
+        /// <param name="path"></param>
+        /// <param name="fileName"></param>
+        public bool MakeEpXML(RhinoDoc doc, string path, string fileName)
         {
+            var co = new CutOperations(doc);
+            var cuts = co.FindCutLayers("CUT");
+            int count = 0;
+            if (co.GroupsPresent(cuts))
+                count = co.CountGroups(cuts);
+            else
+                count = co.CountObjects(cuts);
 
+            var nestIndex = doc.Layers.FindByFullPath("CUT::NestBox", -1);
+            if (nestIndex == -1)
+                return false;
+            var nestBox = doc.Objects.FindByLayer(doc.Layers[nestIndex])[0];
+            BoundingBox bb = nestBox.Geometry.GetBoundingBox(true);
+
+            string xml = string.Format("<JDF>\n" +
+                "<DrawingNumber>{0}</DrawingNumber>\n" +
+                "<CADSheetWidth>{2}</CADSheetWidth>\n" +
+                "<CADSheetHeight>{3}</CADSheetHeight>\n" +
+                "<CADNumberUp>{1}</CADNumberUp>\n" +
+                "</JDF>", fileName, count, Math.Round(bb.GetEdges()[0].Length, 2), Math.Round(bb.GetEdges()[1].Length), 2);
+
+            System.IO.File.WriteAllText(path + fileName + ".xml", xml);
+            return true;
         }
 
         /// <summary>
@@ -291,6 +441,13 @@ namespace gjTools.Commands
             RhinoApp.RunScript("_-Export \"" + fullPath + "\" Scheme \"Vomela\" _Enter", false);
         }
 
+        /// <summary>
+        /// New floating viewport
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
+        /// <returns></returns>
         public RhinoView CreateViewport(RhinoDoc doc, int width = 1100, int height = 850)
         {
             var rect = new System.Drawing.Rectangle(30, 30, width, height);
