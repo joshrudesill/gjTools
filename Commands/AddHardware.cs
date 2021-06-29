@@ -23,7 +23,7 @@ namespace gjTools.Commands
 
             switch(hardwares.IndexOf((string)type))
             {
-                case 0:                 
+                case 0: 
                     addCleats();
                     break;
                 case 1: 
@@ -38,6 +38,8 @@ namespace gjTools.Commands
             var go = d.selectObject("Select an object to add cleats to");
             var rect = go.Object(0).Curve();
             var bb = rect.GetBoundingBox(true);
+            var corners = bb.GetCorners();
+            var edges = bb.GetEdges();
         }
         private void addAmGirlCleats()
         {

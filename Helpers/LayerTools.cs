@@ -197,6 +197,17 @@ public class LayerTools
         return null;
     }
 
+    public List<Layer> getAllSubLayers(Layer parentLayer)
+    {
+        var childLAyers = parentLayer.GetChildren();
+        if (childLAyers != null)
+        {
+            return new List<Rhino.DocObjects.Layer>(childLAyers);
+        }
+        return null;
+    }
+
+
     /// <summary>
     /// Just returns all parent layer objects
     /// </summary>
