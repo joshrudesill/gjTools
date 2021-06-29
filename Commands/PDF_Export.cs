@@ -163,7 +163,6 @@ namespace gjTools.Commands
                 // Make the pdf files
                 RhinoView currentView = doc.Views.ActiveView;
                 RhinoView floatView = CreateViewport(doc);
-                currentView.Maximized = true;
 
                 if (outType == "MultiPagePDF")
                     PDFMultiPage(pdfData, floatView);
@@ -175,6 +174,9 @@ namespace gjTools.Commands
                 floatView.Close();
                 doc.Views.ActiveView = currentView;
                 currentView.Maximized = true;
+                
+                // Set layer back
+                ShowAllLayers(doc);
 
                 // Future Save out 3dm files instead of DWG
                 if (outType != "MultiPagePDF")
@@ -187,9 +189,6 @@ namespace gjTools.Commands
                         MakeDWG(pdf.path + pdf.pdfName + ".dwg");
                         //doc.ExportSelected(pdf.path + pdf.pdfName + ".3dm");
                     }
-
-                // Set layer back
-                ShowAllLayers(doc);
             }
             else if (outType == "Mylar")
             {
@@ -224,7 +223,7 @@ namespace gjTools.Commands
 
 
 
-        public void MakeEpXML(Curve nestBox, string path)
+        public void MakeEpXML(List<CutOp> cuts, string path)
         {
 
         }

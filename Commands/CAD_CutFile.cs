@@ -50,15 +50,15 @@ namespace gjTools.Commands
     }
 
     [CommandStyle(Style.ScriptRunner)]
-    public class gjCAD_CutFile : Command
+    public class CAD_CutFile : Command
     {
-        public gjCAD_CutFile()
+        public CAD_CutFile()
         {
             Instance = this;
         }
 
         ///<summary>The only instance of the MyCommand command.</summary>
-        public static gjCAD_CutFile Instance { get; private set; }
+        public static CAD_CutFile Instance { get; private set; }
 
         public override string EnglishName => "gjCAD_CutFile";
 
@@ -277,7 +277,7 @@ namespace gjTools.Commands
         /// <returns></returns>
         public bool NestBoxCounter(RhinoDoc doc, Layer parentLayer)
         {
-            int nestLayerIndex = doc.Layers.FindByFullPath(parentLayer.Name + "NestBox", -1);
+            int nestLayerIndex = doc.Layers.FindByFullPath(parentLayer.Name + "::NestBox", -1);
             if (nestLayerIndex == -1)
             {
                 return false;
@@ -287,7 +287,7 @@ namespace gjTools.Commands
                     selSet.LayerIndexFilter = nestLayerIndex;
                     selSet.ObjectTypeFilter = ObjectType.Curve;
 
-                var nestCount = doc.Objects.GetObjectList(selSet) as List<RhinoObject>;
+                var nestCount = new List<RhinoObject>(doc.Objects.GetObjectList(selSet));
                 if (nestCount.Count > 1)
                     return true;
             }

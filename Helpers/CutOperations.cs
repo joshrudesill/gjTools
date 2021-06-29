@@ -41,6 +41,28 @@ public struct CutOp
                 return false;
         }
     }
+
+    public bool ContainsGroup
+    {
+        get
+        {
+            if (countObjGroups > 0)
+                return true;
+            else
+                return false;
+        }
+    }
+
+    public int Count
+    {
+        get
+        {
+            if (countObjGroups > 0)
+                return countObjGroups;
+            else
+                return countObjIndv;
+        }
+    }
 }
 
 public class CutOperations
@@ -64,6 +86,9 @@ public class CutOperations
     {
         var childLayers = parentLayer.GetChildren();
         var cutInfo = new List<CutOp>();
+        
+        if (childLayers == null)
+            return null;
 
         for (int i = 0;i < childLayers.Length; i++)
         {
@@ -84,6 +109,58 @@ public class CutOperations
             return null;
 
         return FindCutLayers(doc.Layers[pl]);
+    }
+    /// <summary>
+    /// Input objects are used instead of the entire layer
+    /// </summary>
+    /// <param name="objs"></param>
+    /// <returns></returns>
+    public List<CutOp> FindCutLayers(List<ObjRef> objs)
+    {
+        var cutLayers = new List<CutOp>();
+
+        // Find out how many cut layers there are
+        var CutList = new List<Layer>();
+        foreach (var o in objs)
+        {
+            int ind = o.Object().Attributes.LayerIndex;
+            if (doc.Layers[ind].Name.Substring(0, 2) == "C_")
+                if (!CutList.Contains(doc.Layers[ind]))
+                    CutList.Add(doc.Layers[ind]);
+        }
+
+        // cycle through cut layers and make CutOps
+        foreach (var cl in CutList)
+        {
+            var cut = new CutOp(doc);
+            cut.parentLayer = doc.Layers.FindId(cl.ParentLayerId);
+            cut.cutLayer = cl;
+            cut.cutLayerName = cl.Name.Substring(2);
+
+            var groups = new List<int>();
+            foreach (var o in objs)
+                if (doc.Layers[o.Object().Attributes.LayerIndex] == cl)
+                {
+                    if (o.Curve() != null)
+                    {
+                        cut.obj.Add(o);
+                        cut.cutLength += o.Curve().GetLength();
+                        cut.countObjIndv++;
+
+                        if (o.Object().GroupCount > 0)
+                        {
+                            if (!groups.Contains(o.Object().GetGroupList()[0]))
+                            {
+                                cut.countObjGroups++;
+                                groups.Add(o.Object().Attributes.LayerIndex);
+                            }
+                        }
+                    }
+                }
+            cutLayers.Add(cut);
+        }
+
+        return cutLayers;
     }
 
 
@@ -114,7 +191,7 @@ public class CutOperations
             cutLayer.obj.Add(new ObjRef(o));
             cutLayer.cutLength += cutLayer.obj[-1].Curve().GetLength();
 
-            if (o.GroupCount > 1)
+            if (o.GroupCount > 0)
             {
                 if (!groups.Contains(o.GetGroupList()[0]))
                 {
@@ -125,5 +202,43 @@ public class CutOperations
             cutLayer.countObjIndv++;
         }
         return cutLayer;
+    }
+
+
+    /// <summary>
+    /// Totals groups up from list of CutOps
+    /// </summary>
+    /// <param name="cuts"></param>
+    /// <returns></returns>
+    public int CountGroups(List<CutOp> cuts)
+    {
+        int cnt = 0;
+        foreach (var c in cuts)
+            cnt += c.countObjGroups;
+        return cnt;
+    }
+    /// <summary>
+    /// Totals objects up from list of CutOps
+    /// </summary>
+    /// <param name="cuts"></param>
+    /// <returns></returns>
+    public int CountObjects(List<CutOp> cuts)
+    {
+        int cnt = 0;
+        foreach (var c in cuts)
+            cnt += c.countObjIndv;
+        return cnt;
+    }
+    /// <summary>
+    /// Checks if any have a group count
+    /// </summary>
+    /// <param name="cuts"></param>
+    /// <returns></returns>
+    public bool GroupsPresent(List<CutOp> cuts)
+    {
+        foreach(var c in cuts)
+            if (c.ContainsGroup)
+                return true;
+        return false;
     }
 }

@@ -421,7 +421,7 @@ namespace gjTools
         /// <returns></returns>
         public bool insertDataStore(DataStore data)
         {
-            string que = string.Format("INSERT INTO dataStore (string, integer, float) VALUES (\"{0}\", {1}, {2})",
+            string que = string.Format("INSERT INTO dataStore (string, int, float) VALUES (\"{0}\", {1}, {2})",
                 data.stringValue, data.intValue, data.doubleValue);
             if (executeCommand(que) == 0)
                 return false;

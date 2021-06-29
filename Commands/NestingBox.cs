@@ -1,6 +1,7 @@
 ﻿using Rhino;
 using Rhino.Commands;
 using Rhino.Geometry;
+using Rhino.DocObjects;
 using Rhino.Input.Custom;
 using System;
 using System.Collections.Generic;
@@ -36,7 +37,7 @@ namespace gjTools
             // get object cut length object
             var co = new CutOperations(doc);
             var lt = new LayerTools(doc);
-            var cuts = co.FindCutLayers(lt.ObjLayer(obj.Object(0).ObjectId));
+            var cuts = co.FindCutLayers(new List<ObjRef>(obj.Objects()));
 
             // Time to collect the sheet input sizes
             var sheetHeight = numFromUser("Sheet Height", 48.0);
@@ -143,7 +144,6 @@ namespace gjTools
                 Math.Round(bb.GetEdges()[0].Length, 2) + 
                 "w x " + Math.Round(bb.GetEdges()[3].Length, 2) + "h)";
             
-            string itemLine = "Items up: ";
             int grpCount = 0;
             int objCount = 0;
             foreach (var c in cutInfo)
@@ -152,14 +152,11 @@ namespace gjTools
                 objCount += c.countObjIndv;
             }
 
-            if (grpCount > 0)
-                itemLine += grpCount;
-            else
-                itemLine += objCount;
+            string itemLine = (grpCount > 0) ? "Items up: " + grpCount : "Items up: " + objCount;
 
             itemLine += "    Kerf:";
             foreach (var l in cutInfo)
-                itemLine += " [" + l.cutLayerName + ": " + l.cutLength + "]";
+                itemLine += " [" + l.cutLayerName + ": " + Math.Round(l.cutLength) + "]";
 
             var creds = new SQLTools();
             string timeStamp = creds.queryVariableData()[0].userFirstName + "\n" + DateTime.UtcNow;
