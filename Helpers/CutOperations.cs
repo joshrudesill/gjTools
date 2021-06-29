@@ -189,7 +189,7 @@ public class CutOperations
         foreach (var o in obj)
         {
             cutLayer.obj.Add(new ObjRef(o));
-            cutLayer.cutLength += cutLayer.obj[-1].Curve().GetLength();
+            cutLayer.cutLength += cutLayer.obj[cutLayer.obj.Count - 1].Curve().GetLength();
 
             if (o.GroupCount > 0)
             {
