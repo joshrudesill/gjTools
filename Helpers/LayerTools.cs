@@ -222,6 +222,17 @@ public class LayerTools
         return parents;
     }
 
+    public List<gjTools.Helpers.LayerData> getAllLayerData()
+    {
+        var parents = getAllParentLayers();
+        var ltr = new List<gjTools.Helpers.LayerData>();
+        foreach (var layer in parents)
+        {
+            ltr.Add(new gjTools.Helpers.LayerData(layer, RhinoDoc.ActiveDoc));
+        }
+        return ltr;
+    }
+
     /// <summary>
     /// Just returns all parent layer names
     /// </summary>

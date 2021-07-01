@@ -45,53 +45,68 @@ namespace gjTools.Helpers
     }
     public struct LayerData
     {
-        public Dictionary<Layer, List<ObjectData>> layerdata;
-        private Layer parent;
-        private LayerTools lt;
+        public Tuple<Layer, List<Tuple<Layer, List<ObjectData>>>> layerdata;
+
+        private readonly Layer parent;
+        private readonly LayerTools lt;
         public LayerData(Layer layer, RhinoDoc doc)
         {
             parent = layer;
-            layerdata = new Dictionary<Layer, List<ObjectData>>();
             lt = new LayerTools(doc);
+            layerdata = Tuple.Create(new Layer(), new List<Tuple<Layer, List<ObjectData>>>());
             var sublayers = lt.getAllSubLayers(parent);
             if (sublayers == null)
             {
                 throw new Exception("Sublayer Exception: Parent layer contains no sublayers!");
             }
+            var tlta = new List<Tuple<Layer, List<ObjectData>>>();
             foreach (var sl in sublayers)
             {
-                RhinoApp.WriteLine("SubLayer");
-
                 var obs = doc.Objects.FindByLayer(sl);
                 var lta = new List<ObjectData>();
+                
                 if (obs != null)
                 {
                     foreach (var o in obs)
                     {
-                        RhinoApp.WriteLine("Adding object");
                         var od = new ObjectData(new ObjRef(o), parent, sl);
                         lta.Add(od);
                     }
-                    layerdata[parent] = lta;
+                    var tta = Tuple.Create(sl, lta);
+                    tlta.Add(tta);
                 }
                 else
                 {
-                    layerdata[parent] = null;
+                    var tta = Tuple.Create(sl, new List<ObjectData>());
+                    tlta.Add(tta);
                 }
             }
+            layerdata = Tuple.Create(parent, tlta);
         }
-        public List<Layer> getSublayers()
+        public List<Layer> getSubLayers()
         {
             var ltr = new List<Layer>();
-            foreach(var ld in layerdata)
+            foreach (var i in layerdata.Item2)
             {
-                ltr.Add(ld.Key);
+                ltr.Add(i.Item1);
             }
             return ltr;
         }
         public List<ObjectData> getAllObjectsOnSubLayer(Layer sl)
         {
-            return layerdata[sl];
+            List<ObjectData> lta = new List<ObjectData>();
+            foreach(var lay in layerdata.Item2)
+            {
+                if (lay.Item1 == sl)
+                {
+                    foreach(var ita in lay.Item2)
+                    {
+                        lta.Add(ita);
+                    }
+                    break;
+                }
+            }
+            return lta;
         }
         public IEnumerable<RhinoObject> getObjectOfType(Layer layer, ObjectType ot)
         {
@@ -100,6 +115,38 @@ namespace gjTools.Helpers
             oes.ObjectTypeFilter = ot;
             var doc = RhinoDoc.ActiveDoc;
             return doc.Objects.GetObjectList(oes);
+        }
+
+        public List<RhinoObject> getRhinoObjectsOnSubLayer(Layer sl)
+        {
+            List<RhinoObject> lta = new List<RhinoObject>();
+            foreach (var lay in layerdata.Item2)
+            {
+                if (lay.Item1 == sl)
+                {
+                    foreach (var ita in lay.Item2)
+                    {
+                        lta.Add(ita.rhObj);
+                    }
+                    break;
+                }
+            }
+            return lta;
+        }
+        public BoundingBox getBoundingBoxofParent()
+        {
+            BoundingBox bbtr;
+            List<RhinoObject> ltbb = new List<RhinoObject>();
+            foreach (var tl in layerdata.Item2)
+            {
+                foreach (var i in tl.Item2)
+                {
+                    ltbb.Add(i.rhObj);
+                }
+            }
+            ltbb.AddRange(RhinoDoc.ActiveDoc.Objects.FindByLayer(layerdata.Item1));
+            RhinoObject.GetTightBoundingBox(ltbb, out bbtr);
+            return bbtr;
         }
     }
 }
