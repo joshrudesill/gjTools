@@ -41,6 +41,7 @@ namespace gjTools.Commands
             Point3d pt = new Point3d(corners[3].X, corners[3].Y + edges[2].Length / 40, 0);
             Plane plane = doc.Views.ActiveView.ActiveViewport.ConstructionPlane();
             plane.Origin = pt;
+            doc.Layers.SetCurrentLayerIndex(doc.Layers.FindName(la.ToString()).Index, true);
             doc.Objects.AddText("PN: " + la.ToString(), plane, edges[2].Length / 500, "Arial", false, false);
             return Result.Success;
         }
