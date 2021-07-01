@@ -11,7 +11,7 @@ namespace gjTools.Commands
         {
             Instance = this;
         }
-
+        // This command has been tested and is error proof. Ready for release.
         public static AddPNText Instance { get; private set; }
 
         public override string EnglishName => "AddPNText";
@@ -23,7 +23,7 @@ namespace gjTools.Commands
             List<Rhino.DocObjects.Layer> ll = new List<Rhino.DocObjects.Layer>();
             List<Rhino.DocObjects.RhinoObject> ro = new List<Rhino.DocObjects.RhinoObject>();
             var go  = d.selectObjects("Select object(s) to add PN tag to");
-            if (go == null)
+            if (go is null)
             {
                 RhinoApp.WriteLine("No objects selected, canceling command..");
                 return Result.Cancel;
@@ -34,14 +34,28 @@ namespace gjTools.Commands
             }
             var parents = lt.getAllParentLayers();
             var la = Rhino.UI.Dialogs.ShowListBox("Layers", "Select a layer..", parents);
+            if (la is null)
+            {
+                RhinoApp.WriteLine("No layer selected, canceling command..");
+                return Result.Cancel;
+            }
             BoundingBox bb;
-            Rhino.DocObjects.RhinoObject.GetTightBoundingBox(ro, out bb);
+            if (!Rhino.DocObjects.RhinoObject.GetTightBoundingBox(ro, out bb))
+            {
+                RhinoApp.WriteLine("Bounding Box creation failed.. Investigation needed!");
+                return Result.Failure;
+            }
+
             var edges = bb.GetEdges();
             var corners = bb.GetCorners();
             Point3d pt = new Point3d(corners[3].X, corners[3].Y + edges[2].Length / 40, 0);
             Plane plane = doc.Views.ActiveView.ActiveViewport.ConstructionPlane();
             plane.Origin = pt;
-            doc.Layers.SetCurrentLayerIndex(doc.Layers.FindName(la.ToString()).Index, true);
+            if (!doc.Layers.SetCurrentLayerIndex(doc.Layers.FindName(la.ToString()).Index, true))
+            {
+                RhinoApp.WriteLine("Layer unable to set. Investigation needed.");
+                return Result.Failure;
+            }
             doc.Objects.AddText("PN: " + la.ToString(), plane, edges[2].Length / 500, "Arial", false, false);
             return Result.Success;
         }

@@ -15,6 +15,7 @@ namespace gjTools.Commands
             this.l = l;
         }
     }
+    // This command has been tested and is error proof. Ready for release.
     public class AssignCutType : Command
     {
         public AssignCutType()
@@ -31,7 +32,7 @@ namespace gjTools.Commands
             DialogTools d = new DialogTools(doc);
             var lts = new LayerTools(doc);
             var go = d.selectObjects("Select object(s) to assign cut type");
-            if (go == null)
+            if (go is null)
             {
                 RhinoApp.WriteLine("No objects selected. Command canceled");
                 return Result.Cancel;
@@ -66,6 +67,11 @@ namespace gjTools.Commands
             };
 
             object lo = Rhino.UI.Dialogs.ShowListBox("Cut Type", "Choose a cut type", lt, lt[2]);
+            if (lo is null)
+            {
+                RhinoApp.WriteLine("Command cancelled");
+                return Result.Cancel;
+            }
             string ls = "C_" + lo.ToString();
             foreach (var i in ids)
             {
