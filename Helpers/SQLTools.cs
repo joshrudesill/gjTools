@@ -349,6 +349,17 @@ namespace gjTools
             }
             return rList;
         }
+        public List<OEMColor> queryOEMColors(string search)
+        {
+            var res = new List<OEMColor>();
+            string que = string.Format("SELECT * FROM oemColors WHERE colorNum LIKE \"%{0}%\"", search);
+            var r = executeQuery(que);
+            while (r.Read())
+            {
+                res.Add(new OEMColor((string)r.GetValue(0), (string)r.GetValue(1), r.GetInt32(2)));
+            }
+            return res;
+        }
 
 
         /// <summary>
