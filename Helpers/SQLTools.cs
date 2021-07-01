@@ -466,8 +466,8 @@ namespace gjTools
         public bool updateJobSlot(JobSlot c)
         {
             string s = string.Format(
-                "UPDATE jobSlots SET slot = '{0}',job = '{1}',due = '{2}',description = '{3}',qty = '{4}',material = '{5}' WHERE slot = '{6}';", 
-                c.slot, c.job, c.due, c.description, c.quantity, c.material, c.slot
+                "UPDATE jobSlots SET slot = {0}, job = '{1}', due = '{2}', description = '{3}', qty = {4}, material = '{5}' WHERE slot = {0}", 
+                c.slot, c.job, c.due, c.description, c.quantity, c.material
             );
 
             int r = executeCommand(s);
