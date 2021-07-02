@@ -126,11 +126,6 @@ namespace gjTools.Commands
                 if (!PlaceProtoLabels(doc, p, _parentLayer))
                     break;
 
-            // ask if user wants to place labels for testing
-            foreach (var p in parts)
-                if (!PlaceProductionLabel(doc, p, _parentLayer, Point3d.Origin))
-                    break;
-
             return Result.Success;
         }
 
@@ -181,6 +176,9 @@ namespace gjTools.Commands
         /// <returns>True if the label was placed, False if user cancelled</returns>
         public bool PlaceProtoLabels(RhinoDoc doc, OEM_Label part, Layer parentLayer)
         {
+            if (!part.IsValid)
+                return false;
+
             var gp = new GetPoint();
                 gp.SetCommandPrompt(string.Format("Place label for {0} - {1}", part.drawingNumber, part.partName));
                 gp.Get();
