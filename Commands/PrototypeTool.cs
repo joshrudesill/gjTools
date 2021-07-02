@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using Rhino;
 using Rhino.Commands;
+using Rhino.Input.Custom;
+using Rhino.DocObjects;
+using Rhino.Geometry;
 using Rhino.UI;
 
 namespace gjTools.Commands
@@ -63,6 +66,7 @@ namespace gjTools.Commands
         public static PrototypeTool Instance { get; private set; }
 
         public override string EnglishName => "gjProtoUtility";
+        public Layer _parentLayer;
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
@@ -105,15 +109,163 @@ namespace gjTools.Commands
             if (res.Count == 0)
                 return Result.Cancel;
 
+            // add the title block
+            bool placed = PlaceTitleBlock(doc, res);
+            if (!placed)
+                return Result.Cancel;
+
+            // ask if user wants to place labels
+            foreach (var p in parts)
+            {
+                bool r = PlaceProtoLabels(doc, p, _parentLayer);
+                if (!r)
+                    break;
+            }
+            
 
             return Result.Success;
         }
 
 
 
+        /// <summary>
+        /// Create a Proto label within the parent::C_TEXT Layer
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="part"></param>
+        /// <param name="parentLayer"></param>
+        /// <returns>True if the label was placed, False if user cancelled</returns>
+        public bool PlaceProtoLabels(RhinoDoc doc, OEM_Label part, Layer parentLayer)
+        {
+            var gp = new GetPoint();
+                gp.SetCommandPrompt(string.Format("Place label for {0} - {1}", part.drawingNumber, part.partName));
+                gp.Get();
+
+            if (gp.CommandResult() != Result.Success)
+                return false;
+
+            var dt = new DrawTools(doc);
+            var ds = dt.StandardDimstyle();
+            var lt = new LayerTools(doc);
+
+            // create text cut layer
+            Layer C_TEXT = lt.CreateLayer("C_TEXT", parentLayer.Name);
+
+            // create the doc block
+            TextEntity docNo = dt.AddText( part.DOC, gp.Point(), ds, 0.75, 1, 1, 3 );
+            var docCrv = docNo.Explode();
+            BoundingBox docbb = docCrv[0].GetBoundingBox(true);
+            for (int i = 0;i < docCrv.Length; i++)
+            {
+                docCrv[i] = docCrv[i].ToPolyline(0.2, RhinoMath.ToRadians(15), 0, 0);
+                docbb.Union(docCrv[i].GetBoundingBox(true));
+            }
+            
+            // create the rectangle around the docnumber
+            var docRect = new Rectangle3d(Plane.WorldXY, docbb.GetCorners()[0], docbb.GetCorners()[2]).ToNurbsCurve().Offset(
+                Plane.WorldXY, 0.06, doc.ModelAbsoluteTolerance, CurveOffsetCornerStyle.Round);
+
+            // create the hatches
+            var docObject = new List<Curve>(docRect);
+            docObject.AddRange(docCrv);
+            var hatch = Hatch.Create(docObject, doc.HatchPatterns.FindName("Grid60").Index, 0, 0.15, doc.ModelAbsoluteTolerance);
+            foreach (var h in hatch)
+            {
+                var pieces = h.Explode();
+                foreach (var p in pieces)
+                    docObject.Add(p as Curve);
+            }
+
+            // make the information text
+            var partText = dt.AddText(
+                string.Format("{0} {1}\n{2}\n{3}\n{4}", part.year, part.customer, part.partName, part.drawingNumber, part.partsPerUnit),
+                new Point3d(docbb.GetCorners()[2].X + 0.131, docbb.GetCorners()[2].Y + 0.06, 0),
+                ds, 0.15, 0, 3, 0
+            );
+
+            // create a group and add stuff to it after added to the doc
+            var group = doc.Groups.Add();
+            foreach(var crv in docObject)
+            {
+                var id = doc.Objects.AddCurve(crv);
+                doc.Groups.AddToGroup(group, id);
+
+                var obj = doc.Objects.FindId(id);
+                obj.Attributes.LayerIndex = C_TEXT.Index;
+                obj.CommitChanges();
+            }
+            var textId = doc.Objects.AddText(partText);
+            doc.Groups.AddToGroup(group, textId);
+
+            var tobj = doc.Objects.FindId(textId);
+            tobj.Attributes.LayerIndex = C_TEXT.Index;
+            tobj.CommitChanges();
+
+            doc.Views.Redraw();
+            return true;
+        }
+
+        /// <summary>
+        /// places the scaled proto title block
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="textBlocks"></param>
+        /// <returns> true or false based on success</returns>
         public bool PlaceTitleBlock(RhinoDoc doc, List<string> textBlocks)
         {
             var dt = new DrawTools(doc);
+            var lt = new LayerTools(doc);
+
+            // get the nesting box
+            var go = new GetObject();
+                go.SetCommandPrompt("Select Nesting Box");
+                go.GeometryFilter = ObjectType.Curve;
+                go.Get();
+
+            if (go.CommandResult() != Result.Success)
+                return false;
+
+            var bb = go.Object(0).Curve().GetBoundingBox(true);
+            var fit = bb.GetEdges()[0].Length * 0.66;
+            var ds = dt.StandardDimstyle();
+
+            // make the text
+            TextEntity txt1 = dt.AddText(
+                textBlocks[0],
+                new Point3d(bb.GetCorners()[3].X, bb.GetCorners()[3].Y + 0.5, 0),
+                ds, 1, 0, 3, 6
+            );
+            var tbb = txt1.GetBoundingBox(true);
+            TextEntity txt2 = dt.AddText(
+                textBlocks[1],
+                new Point3d(tbb.GetCorners()[2].X, tbb.GetCorners()[2].Y, 0),
+                ds, 1, 0, 3, 0
+            );
+
+            Transform sc = Transform.Scale(tbb.GetCorners()[0], (txt1.GetBoundingBox(true).GetEdges()[0].Length + txt2.GetBoundingBox(true).GetEdges()[0].Length) / fit);
+            txt1.Transform(sc);
+            txt2.Transform(sc);
+
+            // make them the same layer
+            _parentLayer = lt.ObjLayer(go.Object(0).ObjectId);
+            if (_parentLayer.ParentLayerId != Guid.Empty)
+                _parentLayer = doc.Layers.FindId(_parentLayer.ParentLayerId);
+
+            // add the text
+            var txtGuid = new List<Guid> {
+                doc.Objects.AddText(txt1),
+                doc.Objects.AddText(txt2)
+            };
+
+            // change text layer
+            foreach(var g in txtGuid)
+            {
+                var obj = doc.Objects.FindId(g);
+                obj.Attributes.LayerIndex = _parentLayer.Index;
+                obj.CommitChanges();
+            }
+
+            doc.Views.Redraw();
             return true;
         }
 
