@@ -139,7 +139,7 @@ public class DrawTools : IDrawTools
     /// <returns></returns>
     public int StandardDimstyle()
     {
-        if (doc.DimStyles.FindName("LableMaker") != null)
+        if (doc.DimStyles.FindName("LabelMaker") != null)
         {
             // craete the dimstyle
             int dimStyleIntex = doc.DimStyles.Add("LabelMaker");
@@ -149,11 +149,9 @@ public class DrawTools : IDrawTools
             dimstyle.TextHeight = 0.14;
             dimstyle.Font = Rhino.DocObjects.Font.FromQuartetProperties("Consolas", false, false);
 
-            RhinoApp.WriteLine("Created a Standard Dimstyle");
             return dimstyle.Index;
         } else
         {
-            RhinoApp.WriteLine("Standard Dimstyle Exists");
             return doc.DimStyles.FindName("LabelMaker").Index;
         }
     }
