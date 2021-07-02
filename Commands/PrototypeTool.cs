@@ -52,7 +52,14 @@ namespace gjTools.Commands
         public string partsPerUnit { get { return rawLines[5]; } }
         public string DOC { get { return rawLines[6]; } }
         public string path { get { return rawLines[7]; } }
-        public string customerPartNumber { get { return rawLines[8]; } }
+        public string customerPartNumber { 
+            get {
+                if (rawLines.Count > 9)
+                    return rawLines[9];
+                else
+                    return "";
+            } 
+        }
     }
 
     public class PrototypeTool : Command
@@ -116,17 +123,54 @@ namespace gjTools.Commands
 
             // ask if user wants to place labels
             foreach (var p in parts)
-            {
-                bool r = PlaceProtoLabels(doc, p, _parentLayer);
-                if (!r)
+                if (!PlaceProtoLabels(doc, p, _parentLayer))
                     break;
-            }
-            
+
+            // ask if user wants to place labels for testing
+            foreach (var p in parts)
+                if (!PlaceProductionLabel(doc, p, _parentLayer, Point3d.Origin))
+                    break;
 
             return Result.Success;
         }
 
 
+
+
+
+        /// <summary>
+        /// creates a production style datamatrix label intended for E&P on target Layer
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="part"></param>
+        /// <param name="parentLayer"></param>
+        /// <returns>True if the label was placed, False if user cancelled</returns>
+        public bool PlaceProductionLabel(RhinoDoc doc, OEM_Label part, Layer targetLayer, Point3d pt)
+        {
+            if (!part.IsValid)
+                return false;
+
+            var dt = new DrawTools(doc);
+            var ds = dt.StandardDimstyle();
+
+            // make text
+            var Etxt = new List<TextEntity> {
+                dt.AddText(string.Format("{0}        <datamatrix,{0}>", part.drawingNumber), pt, ds, 0.16, 0, 3, 6),
+                dt.AddText(string.Format("{0}   {1} CUT DATE: <date,MM/dd/yyyy> <orderid>", part.customerPartNumber, part.partName), 
+                    new Point3d(pt.X, pt.Y - 0.25, 0), ds, 0.14, 0, 3, 0)
+            };
+
+            // add to the doc
+            foreach(var t in Etxt)
+            {
+                Guid id = doc.Objects.AddText(t);
+                var obj = doc.Objects.FindId(id);
+                obj.Attributes.LayerIndex = targetLayer.Index;
+                obj.CommitChanges();
+            }
+
+            return true;
+        }
 
         /// <summary>
         /// Create a Proto label within the parent::C_TEXT Layer
@@ -270,7 +314,7 @@ namespace gjTools.Commands
         }
 
         /// <summary>
-        /// Asks the user for information
+        /// Asks the user for information on the active prototype
         /// </summary>
         /// <param name="job"></param>
         /// <param name="parts"></param>
@@ -292,7 +336,7 @@ namespace gjTools.Commands
         }
 
         /// <summary>
-        /// presents the data before placing
+        /// presents the data before placing proto titleblock
         /// </summary>
         /// <param name="job"></param>
         /// <param name="parts"></param>
