@@ -1,5 +1,4 @@
 ﻿using Rhino;
-using Rhino.Geometry;
 using Rhino.DocObjects;
 using System.Collections.Generic;
 
@@ -174,15 +173,19 @@ public class CutOperations
     public CutOp CutLayerInfo(Layer childLayer)
     {
         //  We have a cut layer
-        var cutLayer = new CutOp(doc);
-        cutLayer.cutLayerName = childLayer.Name.Substring(2);
-        cutLayer.parentLayer = doc.Layers.FindId(childLayer.ParentLayerId);
-        cutLayer.cutLayer = childLayer;
+        var cutLayer = new CutOp(doc)
+        {
+            cutLayerName = childLayer.Name.Substring(2),
+            parentLayer = doc.Layers.FindId(childLayer.ParentLayerId),
+            cutLayer = childLayer
+        };
 
         // create a custome selection set
-        var ss = new ObjectEnumeratorSettings();
-            ss.LayerIndexFilter = childLayer.Index;
-            ss.ObjectTypeFilter = ObjectType.Curve;
+        var ss = new ObjectEnumeratorSettings
+        {
+            LayerIndexFilter = childLayer.Index,
+            ObjectTypeFilter = ObjectType.Curve
+        };
 
         var obj = doc.Objects.GetObjectList(ss);
         var groups = new List<int>();

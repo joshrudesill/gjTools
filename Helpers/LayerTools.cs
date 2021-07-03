@@ -189,9 +189,12 @@ public class LayerTools
         if (childLAyers != null) 
         {
             foreach (var l in childLAyers)
-                if (l.Name.Substring(0, 2) == "C_" || l.Name == "NestBox")
+            {
+                if (l.Name.Substring(0, 2) == "C_")
                     cutLayers.Add(l);
-
+                else if (l.Name == "NestBox" && includeNestBox)
+                    cutLayers.Add(l);
+            }
             return cutLayers;
         }
         return null;
@@ -202,7 +205,7 @@ public class LayerTools
         var childLAyers = parentLayer.GetChildren();
         if (childLAyers != null)
         {
-            return new List<Rhino.DocObjects.Layer>(childLAyers);
+            return new List<Layer>(childLAyers);
         }
         return null;
     }
@@ -228,7 +231,7 @@ public class LayerTools
         var ltr = new List<gjTools.Helpers.LayerData>();
         foreach (var layer in parents)
         {
-            ltr.Add(new gjTools.Helpers.LayerData(layer, RhinoDoc.ActiveDoc));
+            ltr.Add(new gjTools.Helpers.LayerData(layer, doc));
         }
         return ltr;
     }

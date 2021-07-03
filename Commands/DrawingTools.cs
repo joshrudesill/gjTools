@@ -109,7 +109,13 @@ namespace gjTools
 
                 if (diff <= tolerance)
                 {
+                    int layerIndex = doc.Objects.FindId(o.ObjectId).Attributes.LayerIndex;
                     Guid cir = doc.Objects.AddCircle(new Circle(bb.Center, bb.GetEdges()[0].Length / 2));
+                    
+                    var newObj = doc.Objects.FindId(cir);
+                        newObj.Attributes.LayerIndex = layerIndex;
+                        newObj.CommitChanges();
+                    
                     doc.Objects.Select(cir);
                     doc.Objects.Delete(o, true);
                     converted++;

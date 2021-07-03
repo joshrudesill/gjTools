@@ -12,12 +12,13 @@ namespace gjTools.Commands
     {
         public struct EPBlock
         {
-            private RhinoDoc doc;
-            private List<RhinoObject> obj;
-            public EPBlock(RhinoDoc document, List<RhinoObject> TitleBlock)
+            private readonly List<RhinoObject> obj;
+            public EPBlock(List<RhinoObject> TitleBlock)
             {
-                doc = document;
                 obj = TitleBlock;
+                foreach (var o in obj)
+                    if (o.ObjectType != ObjectType.Annotation)
+                        obj.Remove(o);
             }
             private string ToTextEntity(RhinoObject totxt)
             {
@@ -85,6 +86,12 @@ namespace gjTools.Commands
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             var lt = new LayerTools(doc);
+
+            var cutLayStr = (string)Rhino.UI.Dialogs.ShowListBox("Layer Selector", "Choose the Cut layer", lt.getAllParentLayersStrings());
+            if (cutLayStr == null)
+                return Result.Cancel;
+            Layer cutLayer = doc.Layers.FindName(cutLayStr);
+
             var titleBlocks = new ObjectEnumeratorSettings 
             {
                 LayerIndexFilter = lt.CreateLayer("Title Block").Index,
@@ -93,38 +100,19 @@ namespace gjTools.Commands
             var labelDots = new ObjectEnumeratorSettings
             {
                 ObjectTypeFilter = ObjectType.TextDot,
-                NameFilter = "EPLabel"
+                NameFilter = "EPLabel",
+                LayerIndexFilter = cutLayer.Index
             };
-
+            
             var txtObj = new List<RhinoObject>(doc.Objects.GetObjectList(titleBlocks));
             var txtDot = new List<RhinoObject>(doc.Objects.GetObjectList(labelDots));
 
             var blocks = SortGroups(doc, txtObj);
             
+            // see if dot exist, or create them
             if (txtDot.Count == 0)
             {
-                var cutLayStr = (string)Rhino.UI.Dialogs.ShowListBox("Layer Selector", "Choose the Cut layer", lt.getAllParentLayersStrings());
-                if (cutLayStr == null)
-                    return Result.Cancel;
-
-                var gp = new GetPoint();
-                    gp.SetCommandPrompt("Place the Label Markers");
-                    gp.Get();
-                Point3d pt = gp.Point();
-                Transform m = Transform.Translation(0, -2, 0);
-                foreach (var b in blocks)
-                {
-                    foreach (var p in b.GetPartNumbers)
-                    {
-                        var dot = new TextDot(p, pt);
-                        dot.FontHeight = 12;
-
-                        var id = doc.Objects.FindId(doc.Objects.AddTextDot(dot));
-                        id.Name = "EPLabel";
-                        id.Attributes.LayerIndex = doc.Layers.FindName(cutLayStr).Index;
-                        pt.Transform(m);
-                    }
-                }
+                MakeTextDots(doc, blocks, cutLayer);
                 doc.Views.Redraw();
                 return Result.Success;
             }
@@ -134,18 +122,31 @@ namespace gjTools.Commands
             foreach(var b in blocks)
             {
                 var version = b.GetVersion;
+                int count = 0;
                 foreach (var p in b.GetPartNumbers)
                 {
                     var pLabel = new OEM_Label(p);
+                    if (!pLabel.IsValid)
+                    {
+                        RhinoApp.WriteLine("No label Found for {0}", pLabel.drawingNumber);
+                        count++;
+                        continue;
+                    }
+
                     foreach (var d in txtDot)
                     {
                         var td = d.Geometry as TextDot;
-                        Layer llayer = lt.CreateLayer("C_TEXT-V" + version, doc.Layers[d.Attributes.LayerIndex].Name);
-                        labelMaker.PlaceProductionLabel(doc, pLabel, llayer, td.Point);
+                        if (td.SecondaryText == count.ToString())
+                        {
+                            Layer llayer = lt.CreateLayer("C_TEXT-VER-" + version, doc.Layers[d.Attributes.LayerIndex].Name);
+                            labelMaker.PlaceProductionLabel(doc, pLabel, llayer, td.Point);
+                        }
                     }
+                    count++;
                 }
             }
 
+            doc.Views.Redraw();
             return Result.Success;
         }
 
@@ -153,6 +154,52 @@ namespace gjTools.Commands
 
 
 
+        /// <summary>
+        /// Place the text dots
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="blocks"></param>
+        /// <param name="cutLayer"></param>
+        private void MakeTextDots(RhinoDoc doc, List<EPBlock> blocks, Layer cutLayer)
+        {
+            var gp = new GetPoint();
+                gp.SetCommandPrompt("Place the Label Markers");
+                gp.Get();
+
+            Point3d pt = gp.Point();
+            Transform m = Transform.Translation(0, -2, 0);
+
+            foreach (var b in blocks)
+            {
+                if (b.GetVersion != "A")
+                    continue;
+
+                int count = 0;
+                foreach (var p in b.GetPartNumbers)
+                {
+                    var dot = new TextDot(p, pt)
+                    {
+                        FontHeight = 12,
+                        FontFace = "Consolas",
+                        SecondaryText = count.ToString()
+                    };
+
+                    var id = doc.Objects.FindId(doc.Objects.AddTextDot(dot));
+                        id.Name = "EPLabel";
+                        id.Attributes.LayerIndex = cutLayer.Index;
+                        id.CommitChanges();
+                    pt.Transform(m);
+                    count++;
+                }
+            }
+        }
+
+        /// <summary>
+        /// pull apart the text objects on the title block layer by group
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="obj"></param>
+        /// <returns></returns>
         private List<EPBlock> SortGroups(RhinoDoc doc, List<RhinoObject> obj)
         {
             var groups = new List<int>();
@@ -166,7 +213,7 @@ namespace gjTools.Commands
 
             var blocks = new List<EPBlock>();
             foreach (int i in groups)
-                blocks.Add(new EPBlock(doc, new List<RhinoObject>(doc.Objects.FindByGroup(i))));
+                blocks.Add(new EPBlock(new List<RhinoObject>(doc.Objects.FindByGroup(i))));
 
             return blocks;
         }
