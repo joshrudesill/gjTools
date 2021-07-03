@@ -8,13 +8,8 @@ using Rhino;
 /// </summary>
 namespace gjTools
 {
-    interface IHelperFunctions
-    {
-        void showColorPallete();
-        void addColor();
-    }
 
-    class DialogTools : IHelperFunctions
+    class DialogTools
     {
         RhinoDoc m_doc;
         SQLTools sql;

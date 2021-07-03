@@ -23,7 +23,7 @@ namespace gjTools
         {
             var obj = new GetObject();
                 obj.SetCommandPrompt("Select Objects");
-                obj.GeometryFilter = Rhino.DocObjects.ObjectType.Curve;
+                obj.GeometryFilter = ObjectType.Curve;
                 obj.GetMultiple(1, 0);
 
             if (obj.CommandResult() != Result.Success)

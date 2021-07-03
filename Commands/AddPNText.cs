@@ -49,7 +49,7 @@ namespace gjTools.Commands
                         txt.CommitChanges();
                 }
             }
-
+            doc.Views.Redraw();
             return Result.Success;
         }
     }

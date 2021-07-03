@@ -1,7 +1,9 @@
-﻿using System;
+﻿using System.Drawing;
 using System.Collections.Generic;
 using Rhino;
 using Rhino.Commands;
+using Rhino.Input;
+using Rhino.DocObjects;
 
 namespace gjTools.Commands
 {
@@ -29,21 +31,11 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            DialogTools d = new DialogTools(doc);
-            var lts = new LayerTools(doc);
-            var go = d.selectObjects("Select object(s) to assign cut type");
-            if (go is null)
-            {
-                RhinoApp.WriteLine("No objects selected. Command canceled");
+            var lt = new LayerTools(doc);
+            if (RhinoGet.GetMultipleObjects("Select Objects To Assign a Cut Type", false, ObjectType.Curve, out ObjRef[] obj) != Result.Success)
                 return Result.Cancel;
-            }
-            List<RhObjLayer> ids = new List<RhObjLayer>();
-            for (int i = 0; i < go.ObjectCount; i++)
-            {
-                ids.Add(new RhObjLayer(go.Object(i).Object(), doc.Layers[go.Object(i).Object().Attributes.LayerIndex]));
-            }
             
-            var lt = new List<string> {
+            var cutName = new List<string> {
                 "EYES",
                 "VGROOVE", 
                 "THRU", 
@@ -54,39 +46,33 @@ namespace gjTools.Commands
                 "SCORE",
                 "OTHER" };
 
-            var lc = new List<System.Drawing.Color> { 
-                System.Drawing.Color.Black,
-                System.Drawing.Color.FromArgb(255,140,14,14), 
-                System.Drawing.Color.Red,
-                System.Drawing.Color.FromArgb(255,0,20,255), 
-                System.Drawing.Color.Black,
-                System.Drawing.Color.FromArgb(255,170,95,15),
-                System.Drawing.Color.FromArgb(255,200,0,200),
-                System.Drawing.Color.FromArgb(255,120,30,155),
-                System.Drawing.Color.Black
+            var cutColor = new List<Color> { 
+                Color.Black,
+                Color.FromArgb(255,140,14,14), 
+                Color.Red,
+                Color.FromArgb(255,0,20,255), 
+                Color.Black,
+                Color.FromArgb(255,170,95,15),
+                Color.FromArgb(255,200,0,200),
+                Color.FromArgb(255,120,30,155),
+                Color.Black
             };
 
-            object lo = Rhino.UI.Dialogs.ShowListBox("Cut Type", "Choose a cut type", lt, lt[2]);
-            if (lo is null)
-            {
-                RhinoApp.WriteLine("Command cancelled");
+            var cutType = (string)Rhino.UI.Dialogs.ShowListBox("Cut Type", "Choose a cut type", cutName, cutName[2]);
+            if (cutType is null)
                 return Result.Cancel;
-            }
-            string ls = "C_" + lo.ToString();
-            foreach (var i in ids)
+            
+            foreach (var o in obj)
             {
-                int li = i.l.Index;
+                var subObj = o.Object();
+                var objLayer = doc.Layers[subObj.Attributes.LayerIndex];
+                if (objLayer.ParentLayerId != System.Guid.Empty)
+                    objLayer = doc.Layers.FindId(objLayer.ParentLayerId);
 
-                var ilayer = doc.Layers[li];
-                if (ilayer.ParentLayerId != Guid.Empty)
-                {
-                    var player = doc.Layers.FindId(i.l.ParentLayerId);
-                    li = player.Index;
-                }
-                var ly = lts.CreateLayer(ls, doc.Layers[li].Name, lc[lt.IndexOf(lo.ToString())]);
+                Layer cutLayer = lt.CreateLayer("C_" + cutType, objLayer.Name, cutColor[cutName.IndexOf(cutType)]);
                 
-                i.r.Attributes.LayerIndex = ly.Index;
-                i.r.CommitChanges();
+                subObj.Attributes.LayerIndex = cutLayer.Index;
+                subObj.CommitChanges();
             }
             
             return Result.Success;
