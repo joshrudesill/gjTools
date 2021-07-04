@@ -23,21 +23,6 @@ public class LayerTools
     }
 
     /// <summary>
-    /// Makes a Top-Level Layer
-    /// </summary>
-    /// <param name="layerName"></param>
-    public Layer CreateLayer(string layerName)
-    {
-        if (doc.Layers.FindByFullPath(layerName, -1) == -1)
-        {
-            var i = doc.Layers.Add();
-            var newLayer = doc.Layers[i];
-                newLayer.Name = layerName;
-        }
-        return doc.Layers[doc.Layers.FindByFullPath(layerName, 0)];
-    }
-
-    /// <summary>
     /// Makes a Top-Level Layer with Color
     /// </summary>
     /// <param name="layerName"></param>
@@ -45,9 +30,24 @@ public class LayerTools
     /// <returns></returns>
     public Layer CreateLayer(string layerName, System.Drawing.Color color)
     {
-        Layer l = CreateLayer(layerName);
-              l.Color = color;
-        return l;
+        if (doc.Layers.FindByFullPath(layerName, -1) == -1)
+        {
+            var lay = new Layer();
+                lay.Name = layerName;
+                lay.Color = color;
+            int layInd = doc.Layers.Add(lay);
+            return doc.Layers[layInd];
+        }
+        return doc.Layers[doc.Layers.FindByFullPath(layerName, 0)];
+    }
+
+    /// <summary>
+    /// Makes a Top-Level Layer
+    /// </summary>
+    /// <param name="layerName"></param>
+    public Layer CreateLayer(string layerName)
+    {
+        return CreateLayer(layerName, System.Drawing.Color.Black);
     }
 
     /// <summary>
@@ -56,18 +56,20 @@ public class LayerTools
     /// <param name="layerName"></param>
     /// <param name="parent"></param>
     /// <returns></returns>
-    public Layer CreateLayer(string layerName, string parent)
+    public Layer CreateLayer(string layerName, string parent, System.Drawing.Color color)
     {
-        if (doc.Layers.FindByFullPath(parent, -1) == -1)
-            CreateLayer(parent);
-        
+        Layer paren = CreateLayer(parent);
+
         if (doc.Layers.FindByFullPath(parent + "::" + layerName, -1) == -1)
         {
-            Guid pl = doc.Layers[doc.Layers.FindByFullPath(parent, 0)].Id;
-
-            // Child Doesnt Exist
-            Layer newLayer = CreateLayer(layerName);
-                  newLayer.ParentLayerId = pl;
+            Layer lay = new Layer
+            {
+                ParentLayerId = paren.Id,
+                Name = layerName,
+                Color = color
+            };
+            int layInd = doc.Layers.Add(lay);
+            return doc.Layers[layInd];
         }
 
         return doc.Layers[doc.Layers.FindByFullPath(parent + "::" + layerName, 0)];
@@ -81,11 +83,9 @@ public class LayerTools
     /// <param name="parent"></param>
     /// <param name="color"></param>
     /// <returns></returns>
-    public Layer CreateLayer(string layerName, string parent, System.Drawing.Color color)
+    public Layer CreateLayer(string layerName, string parent)
     {
-        Layer l = CreateLayer(layerName, parent);
-              l.Color = color;
-        return l;
+        return CreateLayer(layerName, parent, System.Drawing.Color.Black);
     }
 
     /// <summary>

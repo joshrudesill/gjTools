@@ -9,9 +9,9 @@ namespace gjTools.Commands
 {
     struct RhObjLayer
     {
-        public Rhino.DocObjects.RhinoObject r;
-        public Rhino.DocObjects.Layer l;
-        public RhObjLayer(Rhino.DocObjects.RhinoObject r, Rhino.DocObjects.Layer l)
+        public RhinoObject r;
+        public Layer l;
+        public RhObjLayer(RhinoObject r, Layer l)
         {
             this.r = r;
             this.l = l;
