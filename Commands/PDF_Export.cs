@@ -353,19 +353,23 @@ namespace gjTools.Commands
         /// <param name="fileName"></param>
         public bool MakeEpXML(RhinoDoc doc, string path, string fileName)
         {
-            var co = new CutOperations(doc);
-            var cuts = co.FindCutLayers("CUT");
-            int count = 0;
-            if (co.GroupsPresent(cuts))
-                count = co.CountGroups(cuts);
-            else
-                count = co.CountObjects(cuts);
+            var lt = new LayerTools(doc);
+            var cutLayers = lt.getAllCutLayers(lt.CreateLayer("CUT"), true);
+            var obj = new List<RhinoObject>();
+            RhinoObject nestBox;
+            var ss = new ObjectEnumeratorSettings { ObjectTypeFilter = ObjectType.Curve };
+            foreach(var l in cutLayers)
+            {
+                ss.LayerIndexFilter = l.Index;
+                if (l.Name == "NestBox")
+                    nestBox = doc.Objects.FindByLayer(l)[0];
+                else
+                    obj.AddRange(doc.Objects.GetObjectList(ss));
+            }
+            var cuts = new CutSort(obj);
+            int count = (cuts.groupCount > 0) ? cuts.groupCount : cuts.obj.Count;
 
-            var nestIndex = doc.Layers.FindByFullPath("CUT::NestBox", -1);
-            if (nestIndex == -1)
-                return false;
-            var nestBox = doc.Objects.FindByLayer(doc.Layers[nestIndex])[0];
-            BoundingBox bb = nestBox.Geometry.GetBoundingBox(true);
+            RhinoObject.GetTightBoundingBox(cuts.GetRhinoObjects, out BoundingBox bb);
 
             string xml = string.Format("<JDF>\n" +
                 "<DrawingNumber>{0}</DrawingNumber>\n" +

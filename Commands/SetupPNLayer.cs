@@ -1,7 +1,9 @@
-﻿using System;
-using Rhino;
+﻿using Rhino;
 using Rhino.Commands;
 using System.Collections.Generic;
+using Rhino.DocObjects;
+using Rhino.Input;
+
 namespace gjTools.Commands
 {
     public class SetupPNLayer : Command
@@ -17,26 +19,22 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            DialogTools d = new DialogTools(doc);
-            LayerTools lt = new LayerTools(doc);
-            var go = d.selectObjects("Select object(s) to setup PN layer");
-            if (go == null)
-            {
-                RhinoApp.WriteLine("No objects selected. Command canceled");
+            if (RhinoGet.GetMultipleObjects("Select object(s) to setup PN layer", false, ObjectType.AnyObject, out ObjRef[] go) != Result.Success)
                 return Result.Cancel;
-            }
+
+            LayerTools lt = new LayerTools(doc);
 
             var rl = new List<RhObjLayer>();
-            var ro = new List<Rhino.DocObjects.RhinoObject>();
+            var ro = new List<RhinoObject>();
 
-            var parent = new Rhino.DocObjects.Layer();
+            var parent = new Layer();
 
             bool pnfound = false;
-            for (int i = 0; i < go.ObjectCount; i++)
+            for (int i = 0; i < go.Length; i++)
             {
-                if (go.Object(i).Object().ObjectType == Rhino.DocObjects.ObjectType.Annotation && !pnfound)
+                if (go[i].Object().ObjectType == ObjectType.Annotation && !pnfound)
                 {
-                    var t = go.Object(i).TextEntity().PlainText;
+                    var t = go[i].TextEntity().PlainText;
                     if (t.Substring(0, 3) == "PN:")
                     {
                         pnfound = true;
@@ -44,15 +42,15 @@ namespace gjTools.Commands
                     var tf = t.Remove(0, 4);
                     parent  = lt.CreateLayer(tf);
                 }
-                else if(lt.isObjectOnCutLayer(go.Object(i).Object()))
+                else if(lt.isObjectOnCutLayer(go[i].Object()))
                 {
-                    var o = go.Object(i).Object();
-                    var l = lt.ObjLayer(go.Object(i).Object());
+                    var o = go[i].Object();
+                    var l = lt.ObjLayer(go[i].Object());
                     rl.Add(new RhObjLayer(o, l));
                 }
                 else
                 {
-                    ro.Add(go.Object(i).Object());
+                    ro.Add(go[i].Object());
                 }
             }
             foreach (var o in rl)
