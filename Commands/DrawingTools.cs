@@ -133,8 +133,8 @@ namespace gjTools
         /// <returns></returns>
         public bool PartBoundries(RhinoDoc doc)
         {
-            var gt = new DrawTools(doc);
-            List<string> selections = gt.SelParentLayers(true);
+            var lt = new LayerTools(doc);
+            List<string> selections = lt.getAllParentLayersStrings();
 
             foreach (string sel in selections)
             {
