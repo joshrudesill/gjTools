@@ -24,14 +24,14 @@ namespace gjTools.Commands
             var lt = new LayerTools(doc);
             var parts = Dialogs.ShowMultiListBox("Layer Selector", "Add PN Tag to", lt.getAllParentLayersStrings());
 
-            foreach(var p in parts)
+            foreach (var p in parts)
             {
                 var layers = new List<Layer> { lt.CreateLayer(p) };
                 layers.AddRange(lt.getAllSubLayers(layers[0]));
 
                 var obj = new List<RhinoObject>();
                 var ss = new ObjectEnumeratorSettings();
-                foreach(var l in layers)
+                foreach (var l in layers)
                 {
                     ss.LayerIndexFilter = l.Index;
                     obj.AddRange(doc.Objects.GetObjectList(ss));
@@ -44,9 +44,9 @@ namespace gjTools.Commands
                     // create text object
                     var dt = new DrawTools(doc);
                     var ds = dt.StandardDimstyle();
-                    var txt = doc.Objects.FindId(doc.Objects.AddText(dt.AddText("PN: " + p, bb.GetCorners()[3], ds, justVert:6)));
-                        txt.Attributes.LayerIndex = layers[0].Index;
-                        txt.CommitChanges();
+                    var txt = doc.Objects.FindId(doc.Objects.AddText(dt.AddText("PN: " + p, bb.GetCorners()[3], ds, justVert: 6)));
+                    txt.Attributes.LayerIndex = layers[0].Index;
+                    txt.CommitChanges();
                 }
             }
             doc.Views.Redraw();

@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using Rhino;
 using Rhino.Commands;
 using System.Collections.Generic;
@@ -23,12 +24,12 @@ namespace gjTools.Commands
             var hardwares = new List<string> { "Cleats", "American Girl Cleats" };
             var type = Rhino.UI.Dialogs.ShowListBox("Add Hardware", "Choose a type of hardware to add..", hardwares);
 
-            switch(hardwares.IndexOf((string)type))
+            switch (hardwares.IndexOf((string)type))
             {
-                case 0: 
+                case 0:
                     addCleats();
                     break;
-                case 1: 
+                case 1:
                     addAmGirlCleats();
                     break;
             }

@@ -11,54 +11,15 @@ namespace gjTools
 {
     public struct CutSort
     {
-        public List<ObjRef> obj;
-        public List<int> objLayerIndex;
-        public List<double> objCutLength;
-        private readonly RhinoDoc doc;
+        public readonly List<ObjRef> obj;
+        public readonly List<int> objLayerIndex;
+        public readonly List<double> objCutLength;
+        private RhinoDoc doc;
 
-        public int groupCount;
-        public int parentLayerIndex;
+        public readonly int groupCount;
+        public readonly int parentLayerIndex;
 
-        public CutSort(List<RhinoObject> selections)
-        {
-            obj = new List<ObjRef>();
-            objLayerIndex = new List<int>();
-            objCutLength = new List<double>();
-            groupCount = 0;
-            parentLayerIndex = -1;
-            doc = selections[0].Document;
-
-            // Sort the objects
-            var uniqueGroup = new List<int>();
-            foreach (var o in selections)
-            {
-                Layer objLayer = doc.Layers[o.Attributes.LayerIndex];
-
-                if (objLayer.Name.Substring(0, 2) == "C_")
-                {
-                    if (parentLayerIndex == -1)
-                    {
-                        // get the parent of one object
-                        if (objLayer.ParentLayerId != Guid.Empty)
-                            parentLayerIndex = doc.Layers.FindId(objLayer.ParentLayerId).Index;
-                    }
-
-                    // add object to lists
-                    var objR = new ObjRef(o);
-                    obj.Add(objR);
-                    objLayerIndex.Add(objLayer.Index);
-                    objCutLength.Add(Math.Round(objR.Curve().GetLength(), 1));
-
-                    // check groups
-                    var group = o.Attributes.GetGroupList();
-                    if (group != null && !uniqueGroup.Contains(group[0]))
-                        uniqueGroup.Add(group[0]);
-                }
-            }
-            groupCount = uniqueGroup.Count;
-        }
-
-        public CutSort(List<ObjRef> selections)
+        public CutSort(ObjRef[] selections)
         {
             obj = new List<ObjRef>();
             objLayerIndex = new List<int>();
@@ -150,7 +111,7 @@ namespace gjTools
                 return Result.Cancel;
 
             var lt = new LayerTools(doc);
-            var cuts = new CutSort(new List<ObjRef>(obj.Objects()));
+            var cuts = new CutSort(obj.Objects());
 
             RhinoObject.GetTightBoundingBox(cuts.GetRhinoObjects, out BoundingBox bb);
             
