@@ -39,6 +39,7 @@ namespace gjTools.Commands
                 RhinoApp.WriteLine("No layer selected, canceling command..");
                 return Result.Cancel;
             }
+            
             BoundingBox bb;
             if (!Rhino.DocObjects.RhinoObject.GetTightBoundingBox(ro, out bb))
             {

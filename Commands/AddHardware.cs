@@ -64,10 +64,11 @@ namespace gjTools.Commands
             Plane p2 = RhinoDoc.ActiveDoc.Views.ActiveView.ActiveViewport.ConstructionPlane();
             p2.Origin = rectta2.Center;
             DrawTools dt = new DrawTools(RhinoDoc.ActiveDoc);
-            var t1 = dt.AddText("CLEAT", rectta.Center, dt.StandardDimstyle(), 0.1, 0, 1, 3);
-            dt.AddText("CLEAT", rectta2.Center, dt.StandardDimstyle(), 0.1, 0, 1, 3);
-            RhinoDoc.ActiveDoc.Objects.AddText("CLEAT", p, 0.1, "Arial", false, false, TextJustification.MiddleCenter);
-            RhinoDoc.ActiveDoc.Objects.AddText("SPACER", p2, 0.1, "Arial", false, false, TextJustification.MiddleCenter);
+            var t1 = dt.AddText("CLEAT", rectta.Center, dt.StandardDimstyle(), 1, 0, 1, 3);
+            var t2 = dt.AddText("SPACER", rectta2.Center, dt.StandardDimstyle(), 1, 0, 1, 3);
+            RhinoDoc.ActiveDoc.Objects.AddText(t1);
+            RhinoDoc.ActiveDoc.Objects.AddText(t2);
+            RhinoDoc.ActiveDoc.Views.Redraw();
         }
         private void addAmGirlCleats()
         {

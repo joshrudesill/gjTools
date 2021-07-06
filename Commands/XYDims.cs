@@ -38,7 +38,7 @@ namespace gjTools.Commands
             Rhino.DocObjects.DimensionStyle ds = doc.DimStyles.Current;
             AnnotationType at = AnnotationType.Rotated;
             string s = "Dimension Level";       
-            double dimlevel = 1;                
+            double dimlevel = 1;
             Rhino.Input.RhinoGet.GetNumber(s, true, ref dimlevel, 0, 3);
                                                 
             Plane p = new Plane(new Point3d(0, 0, 0), new Point3d(0, 1, 0), new Point3d(1, 0, 0));
