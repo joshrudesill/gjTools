@@ -24,39 +24,30 @@ namespace gjTools.Commands
             var lt = new LayerTools(doc);
             var parts = Dialogs.ShowMultiListBox("Layer Selector", "Add PN Tag to", lt.getAllParentLayersStrings());
 
-            foreach(var p in parts)
+            foreach (var p in parts)
             {
-                RhinoApp.WriteLine("No objects selected, canceling command..");
-                return Result.Cancel;
-            }
-            for(int i = 0; i < go.ObjectCount; i++)
-            {
-                ro.Add(go.Object(i).Object());
-            }
-            var parents = lt.getAllParentLayers();
-            var la = Rhino.UI.Dialogs.ShowListBox("Layers", "Select a layer..", parents);
-            if (la is null)
-            {
-                RhinoApp.WriteLine("No layer selected, canceling command..");
-                return Result.Cancel;
-            }
-            
-            BoundingBox bb;
-            if (!Rhino.DocObjects.RhinoObject.GetTightBoundingBox(ro, out bb))
-            {
-                RhinoApp.WriteLine("Bounding Box creation failed.. Investigation needed!");
-                return Result.Failure;
-            }
+                var layers = new List<Layer> { lt.CreateLayer(p) };
+                layers.AddRange(lt.getAllSubLayers(layers[0]));
 
-            var edges = bb.GetEdges();
-            var corners = bb.GetCorners();
-            Point3d pt = new Point3d(corners[3].X, corners[3].Y + edges[2].Length / 40, 0);
-            Plane plane = doc.Views.ActiveView.ActiveViewport.ConstructionPlane();
-            plane.Origin = pt;
-            if (!doc.Layers.SetCurrentLayerIndex(doc.Layers.FindName(la.ToString()).Index, true))
-            {
-                RhinoApp.WriteLine("Layer unable to set. Investigation needed.");
-                return Result.Failure;
+                var obj = new List<RhinoObject>();
+                var ss = new ObjectEnumeratorSettings();
+                foreach (var l in layers)
+                {
+                    ss.LayerIndexFilter = l.Index;
+                    obj.AddRange(doc.Objects.GetObjectList(ss));
+                }
+
+                if (obj.Count > 0)
+                {
+                    RhinoObject.GetTightBoundingBox(obj, out BoundingBox bb);
+
+                    // create text object
+                    var dt = new DrawTools(doc);
+                    var ds = dt.StandardDimstyle();
+                    var txt = doc.Objects.FindId(doc.Objects.AddText(dt.AddText("PN: " + p, bb.GetCorners()[3], ds, justVert: 6)));
+                    txt.Attributes.LayerIndex = layers[0].Index;
+                    txt.CommitChanges();
+                }
             }
             doc.Views.Redraw();
             return Result.Success;
