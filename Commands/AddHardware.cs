@@ -3,11 +3,13 @@ using Rhino;
 using Rhino.Commands;
 using System.Collections.Generic;
 using Rhino.Geometry;
+using Rhino.DocObjects;
+using Rhino.Input;
+
 namespace gjTools.Commands
 {
     public class AddHardware : Command
     {
-        DialogTools d;
         public AddHardware()
         {
             Instance = this;
@@ -18,7 +20,6 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            d = new DialogTools(doc);
             var hardwares = new List<string> { "Cleats", "American Girl Cleats" };
             var type = Rhino.UI.Dialogs.ShowListBox("Add Hardware", "Choose a type of hardware to add..", hardwares);
 

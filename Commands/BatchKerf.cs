@@ -39,7 +39,6 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            DialogTools d = new DialogTools(doc);
             LayerTools lt = new LayerTools(doc);
             var parents = lt.getAllParentLayers();
             var parentsString = new List<string>();

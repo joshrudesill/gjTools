@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Rhino;
 using Rhino.Geometry;
 using Rhino.DocObjects;
+
 namespace gjTools.Helpers
 {
     public struct ObjectData

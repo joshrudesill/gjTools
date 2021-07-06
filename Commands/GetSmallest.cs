@@ -3,6 +3,9 @@ using Rhino;
 using Rhino.Commands;
 using System.Collections.Generic;
 using Rhino.Geometry;
+using Rhino.Input;
+using Rhino.DocObjects;
+
 namespace gjTools.Commands
 {
     struct BRotation
@@ -38,30 +41,19 @@ namespace gjTools.Commands
         /// <returns></returns>
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            DialogTools d = new DialogTools(doc);
-            var go = d.selectObjects("Select object to get smallest rotation..");
-            if (go == null)
-            {
-                RhinoApp.WriteLine("No objects selected. Command canceled");
+            if (RhinoGet.GetMultipleObjects("Select object to get smallest rotation..", false, ObjectType.AnyObject, out ObjRef[] ids) != Result.Success)
                 return Result.Cancel;
-            }
-            List<Rhino.DocObjects.ObjRef> ids = new List<Rhino.DocObjects.ObjRef>();
+
             List<BRotation> brl = new List<BRotation>();
 
-            for (int i = 0; i < go.ObjectCount; i++)
-            {
-                Rhino.DocObjects.ObjRef robj = go.Object(i);
-                ids.Add(robj);
-            }
             BoundingBox bb;
             BoundingBox bbt;
 
-            var idsol = new List<Rhino.DocObjects.RhinoObject>();
+            var idsol = new List<RhinoObject>();
             foreach (var o in ids)
-            {
                 idsol.Add(o.Object());
-            }
-            Rhino.DocObjects.RhinoObject.GetTightBoundingBox(idsol, out bb);
+            
+            RhinoObject.GetTightBoundingBox(idsol, out bb);
             brl.Add(new BRotation(0, bb.Area));
             
             double rotation = (2 * Math.PI) / 7200;
@@ -78,7 +70,7 @@ namespace gjTools.Commands
                     o1.Transform(xf);
                     idsol.Add(doc.Objects.FindId(doc.Objects.AddCurve(o1)));
                 }
-                Rhino.DocObjects.RhinoObject.GetTightBoundingBox(idsol, out bbt);
+                RhinoObject.GetTightBoundingBox(idsol, out bbt);
                 brl.Add(new BRotation(j * rotation, bbt.Area));
                 foreach(var u in idsol)
                 {

@@ -109,7 +109,13 @@ namespace gjTools
 
                 if (diff <= tolerance)
                 {
+                    int layerIndex = doc.Objects.FindId(o.ObjectId).Attributes.LayerIndex;
                     Guid cir = doc.Objects.AddCircle(new Circle(bb.Center, bb.GetEdges()[0].Length / 2));
+                    
+                    var newObj = doc.Objects.FindId(cir);
+                        newObj.Attributes.LayerIndex = layerIndex;
+                        newObj.CommitChanges();
+                    
                     doc.Objects.Select(cir);
                     doc.Objects.Delete(o, true);
                     converted++;
@@ -127,8 +133,8 @@ namespace gjTools
         /// <returns></returns>
         public bool PartBoundries(RhinoDoc doc)
         {
-            var gt = new DrawTools(doc);
-            List<string> selections = gt.SelParentLayers(true);
+            var lt = new LayerTools(doc);
+            List<string> selections = lt.getAllParentLayersStrings();
 
             foreach (string sel in selections)
             {

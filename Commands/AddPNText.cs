@@ -3,6 +3,9 @@ using Rhino;
 using Rhino.Commands;
 using System.Collections.Generic;
 using Rhino.Geometry;
+using Rhino.UI;
+using Rhino.DocObjects;
+
 namespace gjTools.Commands
 {
     public class AddPNText : Command
@@ -18,12 +21,10 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            DialogTools d = new DialogTools(doc);
-            LayerTools lt = new LayerTools(doc);
-            List<Rhino.DocObjects.Layer> ll = new List<Rhino.DocObjects.Layer>();
-            List<Rhino.DocObjects.RhinoObject> ro = new List<Rhino.DocObjects.RhinoObject>();
-            var go  = d.selectObjects("Select object(s) to add PN tag to");
-            if (go is null)
+            var lt = new LayerTools(doc);
+            var parts = Dialogs.ShowMultiListBox("Layer Selector", "Add PN Tag to", lt.getAllParentLayersStrings());
+
+            foreach(var p in parts)
             {
                 RhinoApp.WriteLine("No objects selected, canceling command..");
                 return Result.Cancel;
@@ -57,7 +58,7 @@ namespace gjTools.Commands
                 RhinoApp.WriteLine("Layer unable to set. Investigation needed.");
                 return Result.Failure;
             }
-            doc.Objects.AddText("PN: " + la.ToString(), plane, edges[2].Length / 500, "Arial", false, false);
+            doc.Views.Redraw();
             return Result.Success;
         }
     }
