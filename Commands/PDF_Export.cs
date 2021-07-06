@@ -53,54 +53,7 @@ public struct PDF
         obj = new List<RhinoObject>();
         bb = new BoundingBox();
     }
-    private List<Layer> GetSubLayers()
-    {
-        var lays = new List<Layer> { layer };
-        if (layer.GetChildren().Length > 0)
-            lays.AddRange(layer.GetChildren());
-        return lays;
-    }
-    private List<RhinoObject> GetLayerObjs()
-    {
-        var ss = new ObjectEnumeratorSettings();
-        var objs = new List<RhinoObject>();
-        foreach (var l in GetSubLayers())
-        {
-            ss.LayerIndexFilter = l.Index;
-            objs.AddRange(doc.Objects.GetObjectList(ss));
-        }
-        return objs;
-    }
-    private List<RhinoObject> GetCutLayerObjs()
-    {
-        var ss = new ObjectEnumeratorSettings();
-        var objs = new List<RhinoObject>();
-        foreach (var l in GetSubLayers())
-        {
-            if (l.Name.Contains("C_"))
-            {
-                ss.LayerIndexFilter = l.Index;
-                objs.AddRange(doc.Objects.GetObjectList(ss));
-            }
-        }
-        return objs;
-    }
-    public BoundingBox AllObjBounding
-    {
-        get
-        {
-            RhinoObject.GetTightBoundingBox(GetLayerObjs(), out BoundingBox bb);
-            return bb;
-        }
-    }
-    public BoundingBox CutObjBounding
-    {
-        get
-        {
-            RhinoObject.GetTightBoundingBox(GetCutLayerObjs(), out BoundingBox bb);
-            return bb;
-        }
-    }
+
     public ViewCaptureSettings.ColorMode colorMode
     {
         get
@@ -132,7 +85,7 @@ public struct PDF
                 ss.LayerIndexFilter = ind[i];
                 cutObj.AddRange(doc.Objects.GetObjectList(ss));
             }
-            
+
             return cutObj;
         }
     }
