@@ -8,139 +8,141 @@ using Rhino.Display;
 using Rhino.Geometry;
 
 
-/// <summary>
-/// Holds all of the data needed to make a PDF file
-/// </summary>
-public struct PDF
-{
-    public string pdfName;
-    public string path;
-    public int dpi;
-    public List<double> sheetSize;
-    public int outputColor;
-    private List<ViewCaptureSettings.ColorMode> _colorMode;
-    public string layoutName;
-    public bool multiPage;
-    public bool makeCADFile;
-    public string CADFileName;
 
-    public Layer layer;
-    public RhinoDoc doc;
-
-    public List<RhinoObject> obj;
-    public BoundingBox bb;
-
-    public PDF(RhinoDoc document)
-    {
-        pdfName = "";
-        path = "";
-        dpi = 600;
-        sheetSize = new List<double> { 11.0, 8.5 };
-        outputColor = 0;
-        _colorMode = new List<ViewCaptureSettings.ColorMode> {
-                    ViewCaptureSettings.ColorMode.DisplayColor,
-                    ViewCaptureSettings.ColorMode.PrintColor,
-                    ViewCaptureSettings.ColorMode.BlackAndWhite
-                };
-        layoutName = "";
-        multiPage = false;
-        makeCADFile = true; // make one by default
-        CADFileName = pdfName + ".dwg";
-
-        layer = document.Layers[0];
-        doc = document;
-
-        obj = new List<RhinoObject>();
-        bb = new BoundingBox();
-    }
-    private List<Layer> GetSubLayers()
-    {
-        var lays = new List<Layer> { layer };
-        if (layer.GetChildren().Length > 0)
-            lays.AddRange(layer.GetChildren());
-        return lays;
-    }
-    private List<RhinoObject> GetLayerObjs()
-    {
-        var ss = new ObjectEnumeratorSettings();
-        var objs = new List<RhinoObject>();
-        foreach (var l in GetSubLayers())
-        {
-            ss.LayerIndexFilter = l.Index;
-            objs.AddRange(doc.Objects.GetObjectList(ss));
-        }
-        return objs;
-    }
-    private List<RhinoObject> GetCutLayerObjs()
-    {
-        var ss = new ObjectEnumeratorSettings();
-        var objs = new List<RhinoObject>();
-        foreach (var l in GetSubLayers())
-        {
-            if (l.Name.Contains("C_"))
-            {
-                ss.LayerIndexFilter = l.Index;
-                objs.AddRange(doc.Objects.GetObjectList(ss));
-            }
-        }
-        return objs;
-    }
-    public BoundingBox AllObjBounding
-    {
-        get
-        {
-            RhinoObject.GetTightBoundingBox(GetLayerObjs(), out BoundingBox bb);
-            return bb;
-        }
-    }
-    public BoundingBox CutObjBounding
-    {
-        get
-        {
-            RhinoObject.GetTightBoundingBox(GetCutLayerObjs(), out BoundingBox bb);
-            return bb;
-        }
-    }
-    public ViewCaptureSettings.ColorMode colorMode
-    {
-        get
-        {
-            if (outputColor < 3)
-                return _colorMode[outputColor];
-            else
-                return _colorMode[0];
-        }
-    }
-    public List<RhinoObject> OnlyCutLayerObjects
-    {
-        get
-        {
-            var cl = layer.GetChildren();
-            var cutObj = new List<RhinoObject>();
-            var ind = new List<int>();
-            if (cl.Length == 0)
-                return cutObj;
-
-            foreach (var lay in cl)
-                if (lay.Name.Substring(0, 2) == "C_")
-                    ind.Add(lay.Index);
-
-            var ss = new ObjectEnumeratorSettings { ObjectTypeFilter = ObjectType.Curve | ObjectType.Annotation };
-
-            for (int i = 0; i < ind.Count; i++)
-            {
-                ss.LayerIndexFilter = ind[i];
-                cutObj.AddRange(doc.Objects.GetObjectList(ss));
-            }
-            
-            return cutObj;
-        }
-    }
-}
 
 
 namespace gjTools.Commands
 {
+    /// <summary>
+    /// Holds all of the data needed to make a PDF file
+    /// </summary>
+    public struct PDF
+    {
+        public string pdfName;
+        public string path;
+        public int dpi;
+        public List<double> sheetSize;
+        public int outputColor;
+        private List<ViewCaptureSettings.ColorMode> _colorMode;
+        public string layoutName;
+        public bool multiPage;
+        public bool makeCADFile;
+        public string CADFileName;
+
+        public Layer layer;
+        public RhinoDoc doc;
+
+        public List<RhinoObject> obj;
+        public BoundingBox bb;
+
+        public PDF(RhinoDoc document)
+        {
+            pdfName = "";
+            path = "";
+            dpi = 600;
+            sheetSize = new List<double> { 11.0, 8.5 };
+            outputColor = 0;
+            _colorMode = new List<ViewCaptureSettings.ColorMode> {
+                    ViewCaptureSettings.ColorMode.DisplayColor,
+                    ViewCaptureSettings.ColorMode.PrintColor,
+                    ViewCaptureSettings.ColorMode.BlackAndWhite
+                };
+            layoutName = "";
+            multiPage = false;
+            makeCADFile = true; // make one by default
+            CADFileName = pdfName + ".dwg";
+
+            layer = document.Layers[0];
+            doc = document;
+
+            obj = new List<RhinoObject>();
+            bb = new BoundingBox();
+        }
+        private List<Layer> GetSubLayers()
+        {
+            var lays = new List<Layer> { layer };
+            if (layer.GetChildren().Length > 0)
+                lays.AddRange(layer.GetChildren());
+            return lays;
+        }
+        private List<RhinoObject> GetLayerObjs()
+        {
+            var ss = new ObjectEnumeratorSettings();
+            var objs = new List<RhinoObject>();
+            foreach (var l in GetSubLayers())
+            {
+                ss.LayerIndexFilter = l.Index;
+                objs.AddRange(doc.Objects.GetObjectList(ss));
+            }
+            return objs;
+        }
+        private List<RhinoObject> GetCutLayerObjs()
+        {
+            var ss = new ObjectEnumeratorSettings();
+            var objs = new List<RhinoObject>();
+            foreach (var l in GetSubLayers())
+            {
+                if (l.Name.Contains("C_"))
+                {
+                    ss.LayerIndexFilter = l.Index;
+                    objs.AddRange(doc.Objects.GetObjectList(ss));
+                }
+            }
+            return objs;
+        }
+        public BoundingBox AllObjBounding
+        {
+            get
+            {
+                RhinoObject.GetTightBoundingBox(GetLayerObjs(), out BoundingBox bb);
+                return bb;
+            }
+        }
+        public BoundingBox CutObjBounding
+        {
+            get
+            {
+                RhinoObject.GetTightBoundingBox(GetCutLayerObjs(), out BoundingBox bb);
+                return bb;
+            }
+        }
+        public ViewCaptureSettings.ColorMode colorMode
+        {
+            get
+            {
+                if (outputColor < 3)
+                    return _colorMode[outputColor];
+                else
+                    return _colorMode[0];
+            }
+        }
+        public List<RhinoObject> OnlyCutLayerObjects
+        {
+            get
+            {
+                var cl = layer.GetChildren();
+                var cutObj = new List<RhinoObject>();
+                var ind = new List<int>();
+                if (cl.Length == 0)
+                    return cutObj;
+
+                foreach (var lay in cl)
+                    if (lay.Name.Substring(0, 2) == "C_")
+                        ind.Add(lay.Index);
+
+                var ss = new ObjectEnumeratorSettings { ObjectTypeFilter = ObjectType.Curve | ObjectType.Annotation };
+
+                for (int i = 0; i < ind.Count; i++)
+                {
+                    ss.LayerIndexFilter = ind[i];
+                    cutObj.AddRange(doc.Objects.GetObjectList(ss));
+                }
+
+                return cutObj;
+            }
+        }
+    }
+
     [CommandStyle(Style.ScriptRunner)]
     public class PDF_Export : Command
     {
@@ -203,6 +205,8 @@ namespace gjTools.Commands
                 {
                     var page = new PDF(doc);
                     page.pdfName = l;
+                    page.CADFileName = l + ".dxf";
+
                     page.layer = lt.CreateLayer(l);
 
                     // find the right path
@@ -362,7 +366,7 @@ namespace gjTools.Commands
                                 doc.Objects.Select(o.Id);
 
                             MakeDWG(pdf.path + pdf.CADFileName);
-                            //doc.ExportSelected(pdf.path + pdf.pdfName + ".3dm");
+                            doc.ExportSelected(pdf.path + pdf.pdfName + ".3dm");
                         }
                     }
 
