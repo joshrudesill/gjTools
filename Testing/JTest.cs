@@ -17,12 +17,18 @@ namespace gjTools
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            int li = 0;
-            bool b = true;
-            Rhino.UI.Dialogs.ShowSelectLayerDialog(ref li, "Test", false, false, ref b);
-            var lo = new Helpers.LayerData(doc.Layers[li], doc);
-            RhinoApp.WriteLine("hold");
+            Point3d p;
+            var e = new IMouseCallback();
+            var q = Rhino.Input.RhinoGet.GetPoint("t", true, out p);
+            var r = e.Get();
             return Result.Success;
+        }
+    }
+    public class IMouseCallback : Rhino.Input.Custom.GetPoint
+    {
+        protected override void OnMouseDown(Rhino.Input.Custom.GetPointMouseEventArgs e)
+        {
+               RhinoApp.WriteLine("MOUSE DOWN");
         }
     }
 }
