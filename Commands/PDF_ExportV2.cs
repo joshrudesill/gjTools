@@ -278,7 +278,9 @@ namespace gjTools.Commands
                 else
                     obj.AddRange(doc.Objects.GetObjectList(ss));
             }
-            var cuts = new CutSort(obj);
+            var objrefs = new List<ObjRef>();
+            foreach(var oref in obj){ objrefs.Add(new ObjRef(oref)); }
+            var cuts = new CutSort(objrefs);
             int count = (cuts.groupCount > 0) ? cuts.groupCount : cuts.obj.Count;
 
             RhinoObject.GetTightBoundingBox(cuts.GetRhinoObjects, out BoundingBox bb);

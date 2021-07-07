@@ -19,7 +19,7 @@ namespace gjTools
         public readonly int groupCount;
         public readonly int parentLayerIndex;
 
-        public CutSort(ObjRef[] selections)
+        public CutSort(List<ObjRef> selections)
         {
             obj = new List<ObjRef>();
             objLayerIndex = new List<int>();
