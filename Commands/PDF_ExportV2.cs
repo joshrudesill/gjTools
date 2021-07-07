@@ -46,7 +46,7 @@ public struct ePDF
 
         parentLay = parent;
         doc = document;
-        view = document.Views.ActiveView;
+        view = document.Views.Find("Top", true);
     }
 
     private List<Layer> GetSubLayers()
@@ -97,6 +97,7 @@ public struct ePDF
         get
         {
             RhinoObject.GetTightBoundingBox(GetLayerObjs(), out BoundingBox bb);
+            bb.Inflate(bb.GetEdges()[0].Length * 0.02);
             return bb;
         }
     }
@@ -105,6 +106,7 @@ public struct ePDF
         get
         {
             RhinoObject.GetTightBoundingBox(GetCutLayerObjs(), out BoundingBox bb);
+            bb.Inflate(bb.GetEdges()[0].Length * 0.02);
             return bb;
         }
     }
@@ -117,10 +119,7 @@ public struct ePDF
                     ViewCaptureSettings.ColorMode.PrintColor,
                     ViewCaptureSettings.ColorMode.BlackAndWhite
                 };
-            if (PDFcolorMode < 3)
-                return _colorMode[PDFcolorMode];
-            else
-                return _colorMode[0];
+            return _colorMode[PDFcolorMode];
         }
     }
 }
@@ -128,15 +127,15 @@ public struct ePDF
 namespace gjTools.Commands
 {
     [CommandStyle(Style.ScriptRunner)]
-    public class ePDF_Export : Command
+    public class EPDF_Export : Command
     {
-        public ePDF_Export()
+        public EPDF_Export()
         {
             Instance = this;
         }
 
         ///<summary>Makes my PDF Files</summary>
-        public static ePDF_Export Instance { get; private set; }
+        public static EPDF_Export Instance { get; private set; }
 
         public override string EnglishName => "gjePDFExport";
 
@@ -160,7 +159,7 @@ namespace gjTools.Commands
             };
 
             var noWorkingPathOptions = outTypes;
-            if (doc.Path.Length < 4)
+            if (doc.Path == null)
                 noWorkingPathOptions.RemoveRange(5, 4);
 
             // Get user data
@@ -180,7 +179,7 @@ namespace gjTools.Commands
             }
             
             // See if page layouts need to be chosen
-            if (outType == outTypes[2] || outType == outTypes[2])
+            if (outType == outTypes[2] || outType == outTypes[3])
             {
                 var views = doc.Views.GetPageViews();
                 var viewStrings = new List<string>();
@@ -197,13 +196,15 @@ namespace gjTools.Commands
                         page.IsLayout = true;
                         page.makeDwg = false;
                         page.view = views[viewStrings.IndexOf(p)];
+                        page.pdfName = page.view.MainViewport.Name;
                     page = DeterminePath(page, outType, outTypes, sql);
                     pdfData.Add(page);
                 }
             }
 
             // EPExport to be completed with a function
-            // pdfData = EPExport();
+            if (outType == outTypes[6])
+                pdfData = EPExport(doc, lt, sql);
 
             // Sort the output types
             var PDFviewPages = new List<ePDF>();
@@ -220,8 +221,7 @@ namespace gjTools.Commands
             if (PDFviewPages.Count > 0)
             {
                 // change the viewport resolution
-                var activeView = doc.Views.ActiveView;
-                doc.Views.FourViewLayout(true);
+                var activeView = doc.Views.Find("Top", true);
                 activeView.Size = new System.Drawing.Size(1100, 850);
 
                 if (outType == outTypes[4])
@@ -248,11 +248,86 @@ namespace gjTools.Commands
                     PDFLayout(p);
             }
 
+            // Make a CAD file?
+            foreach (var p in pdfData)
+            {
+                doc.Objects.UnselectAll();
+                if (p.makeDxf)
+                {
+                    p.SelectObjects(true);
+                    MakeDWG(p.path + p.CADFileName + ".dxf");
+                }
+                if (p.makeDwg && outType != outTypes[4])
+                {
+                    p.SelectObjects(false);
+                    MakeDWG(p.path + p.CADFileName + ".dwg");
+                    doc.ExportSelected(p.path + p.pdfName + ".3dm");
+                }
+            }
+
             return Result.Success;
         }
 
 
 
+
+        public List<ePDF> EPExport(RhinoDoc doc, LayerTools lt, SQLTools sql)
+        {
+            var pdfData = new List<ePDF>();
+            var cut = new List<ePDF>();
+            var mylar = new List<ePDF>();
+            var fn = doc.Name.Substring(0, doc.Name.Length - 4);
+            var path = sql.queryLocations()[5].path + fn + "\\";
+            int pNo = 2;
+
+            foreach (var l in lt.getAllParentLayers())
+            {
+                if (l.Name == "Title Block")
+                    pdfData.Add(new ePDF(doc, l) {
+                        makeDwg = false,
+                        path = path,
+                        pdfName = fn + "_Page 1"
+                    });
+            }
+            foreach (var l in lt.getAllParentLayers())
+            { 
+                if (l.Name.Contains("MYLAR"))
+                {
+                    mylar.Add(new ePDF(doc, l)
+                    {
+                        makeDwg = false,
+                        path = path,
+                        pdfName = fn + "_Page " + pNo
+                    });
+                    pNo++;
+                }
+            }
+            foreach (var l in lt.getAllParentLayers())
+            {
+                if (l.Name.Contains("CUT"))
+                {
+                    cut.Add(new ePDF(doc, l)
+                    {
+                        makeDwg = false,
+                        makeDxf = true,
+                        CADFileName = fn.Substring(0, fn.Length - 2) + "_" + l.Name,
+                        path = path,
+                        pdfName = fn + "_Page " + pNo
+                    });
+                    pNo++;
+                }
+            }
+            foreach(var v in doc.Views.GetPageViews())
+            {
+                pdfData.Add(new ePDF(doc, doc.Layers[0]) { 
+                    
+                });
+            }
+
+
+
+            return pdfData;
+        }
 
         /// <summary>
         /// create the XML for E&P output
@@ -384,7 +459,7 @@ namespace gjTools.Commands
             var page = Rhino.FileIO.FilePdf.Create();
             var capture = new ViewCaptureSettings(
                 pdfData.view, 
-                new System.Drawing.Size((int)pdfData.sheetSize[0] * pdfData.dpi, (int)pdfData.sheetSize[1] * pdfData.dpi),
+                new System.Drawing.Size((int)(pdfData.sheetSize[0] * pdfData.dpi), (int)(pdfData.sheetSize[1] * pdfData.dpi)),
                 pdfData.dpi
             );
             capture.OutputColor = pdfData.colorMode;
@@ -428,14 +503,15 @@ namespace gjTools.Commands
 
                 // do the proper zooming
                 p.view.MainViewport.ZoomBoundingBox(p.AllObjBounding);
-
-                // Construct the PDF page
                 var capture = new ViewCaptureSettings(
                     p.view,
-                    new System.Drawing.Size((int)p.sheetSize[0] * p.dpi, (int)p.sheetSize[1] * p.dpi),
+                    new System.Drawing.Size((int)(p.sheetSize[0] * p.dpi), (int)(p.sheetSize[1] * p.dpi)),
                     p.dpi
-                );
-                capture.OutputColor = p.colorMode;
+                )
+                {
+                    OutputColor = p.colorMode
+                };
+                // Construct the PDF page
                 page.AddPage(capture);
             }
             
