@@ -207,6 +207,7 @@ namespace gjTools.Commands
             // EPExport to be completed with a function
             // pdfData = EPExport();
 
+            // Sort the output types
             var PDFviewPages = new List<ePDF>();
             var PDFlayoutPages = new List<ePDF>();
             foreach (var p in pdfData)
@@ -217,19 +218,37 @@ namespace gjTools.Commands
                     PDFviewPages.Add(p);
             }
 
-            // change the viewport resolution
+            // Viewport PDF Maker
             if (PDFviewPages.Count > 0)
             {
-                // Viewport PDF Maker
+                // change the viewport resolution
                 var activeView = doc.Views.ActiveView;
                 doc.Views.FourViewLayout(true);
                 activeView.Size = new System.Drawing.Size(1100, 850);
 
-                foreach (var p in PDFviewPages)
-                    PDFViewport(p);
+                if (outType == outTypes[4])
+                {
+                    PDFMultiPage(PDFviewPages);
+                }
+                else
+                {
+                    foreach (var p in PDFviewPages)
+                    {
+                        HideLayers(p, lt);
+                        PDFViewport(p);
+                    }
+                }
+
+                ShowAllLayers(lt);
+                activeView.Maximized = true;
             }
             
-
+            // Layout PDF Maker
+            if (PDFlayoutPages.Count > 0)
+            {
+                foreach (var p in PDFlayoutPages)
+                    PDFLayout(p);
+            }
 
             return Result.Success;
         }
@@ -279,35 +298,28 @@ namespace gjTools.Commands
         /// Hides all layers aside from the one needed
         /// </summary>
         /// <param name="pdfData"></param>
-        public void HideLayers(ePDF pdfData)
+        public void HideLayers(ePDF pdfData, LayerTools lt)
         {
-            var lt = new LayerTools(pdfData.doc);
-            var refLayer = lt.CreateLayer("REF");
-            pdfData.doc.Layers.SetCurrentLayerIndex(refLayer.Index, true);
-            pdfData.layer.IsVisible = true;
+            pdfData.parentLay.IsVisible = true;
+            pdfData.doc.Layers.SetCurrentLayerIndex(pdfData.parentLay.Index, true);
 
             foreach(var l in lt.getAllParentLayers())
-            {
-                if (l != pdfData.layer && l != refLayer)
+                if (l != pdfData.parentLay)
                     l.IsVisible = false;
-            }
         }
 
         /// <summary>
         /// Does what it says
         /// </summary>
         /// <param name="doc"></param>
-        public void ShowAllLayers(RhinoDoc doc)
+        public void ShowAllLayers(LayerTools lt)
         {
-            var lt = new LayerTools(doc);
-            var parents = lt.getAllParentLayers();
-            parents[parents.Count - 1].IsVisible = true;
-            doc.Layers.SetCurrentLayerIndex(parents[0].Index, true);
-            foreach (var l in parents)
+            var plays = lt.getAllParentLayers();
+            foreach (var l in plays)
             {
                 l.IsVisible = true;
-                if (l.Name == "REF")
-                    doc.Layers.Delete(l);
+                if (l == plays[0])
+                    lt.doc.Layers.SetCurrentLayerIndex(l.Index, true);
             }
         }
 
@@ -364,7 +376,6 @@ namespace gjTools.Commands
         public void PDFViewport(ePDF pdfData)
         {
             ClearPath(pdfData);
-            HideLayers(pdfData);
 
             // do the proper zooming
             pdfData.view.MainViewport.ZoomBoundingBox(pdfData.AllObjBounding);
@@ -388,17 +399,11 @@ namespace gjTools.Commands
         public void PDFLayout(ePDF pdfdata)
         {
             ClearPath(pdfdata);
-
-            // time to get the layout
-            var view = pdfdata.doc.Views.GetPageViews();
-            RhinoPageView layout = view[0];
-            for (int i = 0; i < view.Length; i++)
-                if (view[i].MainViewport.Name == pdfdata.layoutName)
-                    layout = view[i];
+            var layout = (RhinoPageView)pdfdata.view;
 
             var page = Rhino.FileIO.FilePdf.Create();
             var capture = new ViewCaptureSettings(
-                layout,
+                pdfdata.view,
                 new System.Drawing.Size((int)(layout.PageWidth * pdfdata.dpi), (int)(layout.PageHeight * pdfdata.dpi)),
                 pdfdata.dpi
             );
@@ -411,7 +416,7 @@ namespace gjTools.Commands
         /// Makes a multi-page PDF file
         /// </summary>
         /// <param name="pdfDatas"></param>
-        public void PDFMultiPage(List<ePDF> pdfDatas, RhinoView view)
+        public void PDFMultiPage(List<ePDF> pdfDatas)
         {
             ClearPath(pdfDatas[0]);
             var page = Rhino.FileIO.FilePdf.Create();
@@ -419,23 +424,18 @@ namespace gjTools.Commands
             // start the page loop
             foreach (var p in pdfDatas)
             {
-                // prep the zoom box
-                PDF pdfData = LayerBounding(p);
-                if (pdfData.obj.Count == 0)
-                    continue;
-
-                HideLayers(pdfData);
+                HideLayers(p, new LayerTools(pdfDatas[0].doc));
 
                 // do the proper zooming
-                view.MainViewport.ZoomBoundingBox(pdfData.bb);
+                p.view.MainViewport.ZoomBoundingBox(p.AllObjBounding);
 
                 // Construct the PDF page
                 var capture = new ViewCaptureSettings(
-                    view,
-                    new System.Drawing.Size((int)pdfData.sheetSize[0] * pdfData.dpi, (int)pdfData.sheetSize[1] * pdfData.dpi),
-                    pdfData.dpi
+                    p.view,
+                    new System.Drawing.Size((int)p.sheetSize[0] * p.dpi, (int)p.sheetSize[1] * p.dpi),
+                    p.dpi
                 );
-                capture.OutputColor = pdfData.colorMode;
+                capture.OutputColor = p.colorMode;
                 page.AddPage(capture);
             }
             
