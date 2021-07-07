@@ -9,126 +9,124 @@ using Rhino.Geometry;
 
 
 
-
-
-namespace gjTools.Commands
+/// <summary>
+/// Holds all of the data needed to make a PDF file
+/// </summary>
+public struct ePDF
 {
-    /// <summary>
-    /// Holds all of the data needed to make a PDF file
-    /// </summary>
-    public struct ePDF
+    public Layer parentLay;
+    public RhinoDoc doc;
+    public RhinoView view;
+
+    public string pdfName;
+    public string path;
+
+    // if the cad filename differs from PDF
+    public bool makeDxf;
+    public bool makeDwg;
+    public bool IsLayout;
+    public string CADFileName;
+
+    public List<double> sheetSize;
+    public int PDFcolorMode;
+    public int dpi;
+
+    public ePDF(RhinoDoc document, Layer parent)
     {
-        public Layer parentLay;
-        public RhinoDoc doc;
-        public RhinoView view;
+        pdfName = parent.Name;
+        path = "";
+        dpi = 600;
+        sheetSize = new List<double> { 11.0, 8.5 };
+        PDFcolorMode = 0;
+        CADFileName = parent.Name;
 
-        public string pdfName;
-        public string path;
+        makeDwg = true;
+        makeDxf = false;
+        IsLayout = false;
 
-        // if the cad filename differs from PDF
-        public bool makeDxf;
-        public bool makeDwg;
-        public bool IsLayout;
-        public string CADFileName;
+        parentLay = parent;
+        doc = document;
+        view = document.Views.ActiveView;
+    }
 
-        public List<double> sheetSize;
-        public int PDFcolorMode;
-        public int dpi;
-
-        public ePDF(RhinoDoc document, Layer parent)
+    private List<Layer> GetSubLayers()
+    {
+        var lays = new List<Layer> { parentLay };
+        if (parentLay.GetChildren().Length > 0)
+            lays.AddRange(parentLay.GetChildren());
+        return lays;
+    }
+    private List<RhinoObject> GetLayerObjs()
+    {
+        var ss = new ObjectEnumeratorSettings();
+        var objs = new List<RhinoObject>();
+        foreach (var l in GetSubLayers())
         {
-            pdfName = parent.Name;
-            path = "";
-            dpi = 600;
-            sheetSize = new List<double> { 11.0, 8.5 };
-            PDFcolorMode = 0;
-            CADFileName = parent.Name;
-
-            makeDwg = true;
-            makeDxf = false;
-            IsLayout = false;
-
-            parentLay = parent;
-            doc = document;
-            view = document.Views.ActiveView;
+            ss.LayerIndexFilter = l.Index;
+            objs.AddRange(doc.Objects.GetObjectList(ss));
         }
-
-        private List<Layer> GetSubLayers()
+        return objs;
+    }
+    private List<RhinoObject> GetCutLayerObjs()
+    {
+        var ss = new ObjectEnumeratorSettings();
+        var objs = new List<RhinoObject>();
+        foreach (var l in GetSubLayers())
         {
-            var lays = new List<Layer> { parentLay };
-            if (parentLay.GetChildren().Length > 0)
-                lays.AddRange(parentLay.GetChildren());
-            return lays;
-        }
-        private List<RhinoObject> GetLayerObjs()
-        {
-            var ss = new ObjectEnumeratorSettings();
-            var objs = new List<RhinoObject>();
-            foreach (var l in GetSubLayers())
+            if (l.Name.Contains("C_"))
             {
                 ss.LayerIndexFilter = l.Index;
                 objs.AddRange(doc.Objects.GetObjectList(ss));
             }
-            return objs;
         }
-        private List<RhinoObject> GetCutLayerObjs()
+        return objs;
+    }
+    public void SelectObjects(bool cutLinesOnly = true)
+    {
+        var ids = new List<Guid>();
+        if (cutLinesOnly)
+            foreach (var o in GetCutLayerObjs())
+                ids.Add(o.Id);
+        else
+            foreach (var o in GetLayerObjs())
+                ids.Add(o.Id);
+        doc.Objects.Select(ids);
+    }
+    public BoundingBox AllObjBounding
+    {
+        get
         {
-            var ss = new ObjectEnumeratorSettings();
-            var objs = new List<RhinoObject>();
-            foreach (var l in GetSubLayers())
-            {
-                if (l.Name.Contains("C_"))
-                {
-                    ss.LayerIndexFilter = l.Index;
-                    objs.AddRange(doc.Objects.GetObjectList(ss));
-                }
-            }
-            return objs;
+            RhinoObject.GetTightBoundingBox(GetLayerObjs(), out BoundingBox bb);
+            return bb;
         }
-        public void SelectObjects(bool cutLinesOnly = true)
+    }
+    public BoundingBox CutObjBounding
+    {
+        get
         {
-            var ids = new List<Guid>();
-            if (cutLinesOnly)
-                foreach (var o in GetCutLayerObjs())
-                    ids.Add(o.Id);
-            else
-                foreach (var o in GetLayerObjs())
-                    ids.Add(o.Id);
-            doc.Objects.Select(ids);
+            RhinoObject.GetTightBoundingBox(GetCutLayerObjs(), out BoundingBox bb);
+            return bb;
         }
-        public BoundingBox AllObjBounding
+    }
+    public ViewCaptureSettings.ColorMode colorMode
+    {
+        get
         {
-            get
-            {
-                RhinoObject.GetTightBoundingBox(GetLayerObjs(), out BoundingBox bb);
-                return bb;
-            }
-        }
-        public BoundingBox CutObjBounding
-        {
-            get
-            {
-                RhinoObject.GetTightBoundingBox(GetCutLayerObjs(), out BoundingBox bb);
-                return bb;
-            }
-        }
-        public ViewCaptureSettings.ColorMode colorMode
-        {
-            get
-            {
-                var _colorMode = new List<ViewCaptureSettings.ColorMode> {
+            var _colorMode = new List<ViewCaptureSettings.ColorMode> {
                     ViewCaptureSettings.ColorMode.DisplayColor,
                     ViewCaptureSettings.ColorMode.PrintColor,
                     ViewCaptureSettings.ColorMode.BlackAndWhite
                 };
-                if (PDFcolorMode < 3)
-                    return _colorMode[PDFcolorMode];
-                else
-                    return _colorMode[0];
-            }
+            if (PDFcolorMode < 3)
+                return _colorMode[PDFcolorMode];
+            else
+                return _colorMode[0];
         }
     }
+}
 
+namespace gjTools.Commands
+{
     [CommandStyle(Style.ScriptRunner)]
     public class ePDF_Export : Command
     {
