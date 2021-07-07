@@ -1,7 +1,7 @@
 ﻿using Rhino;
 using Rhino.Geometry;
-using Rhino.DocObjects;
 using Rhino.Input.Custom;
+using System;
 using System.Collections.Generic;
 
 /// <summary>
@@ -12,6 +12,7 @@ interface IDrawTools
 {
     void hideDynamicDraw();
     bool CheckPolylines(GetObject obj, bool showPreview = true);
+    List<string> SelParentLayers(bool multiSel = true);
 }
 
 interface ICutOperations
@@ -59,7 +60,7 @@ public class DrawTools : IDrawTools
     /// <param name="obj"></param>
     /// <param name="showPreview"></param>
     /// <returns>return true or false if the line can be used as cut line</returns>
-    public bool CheckPolylines(List<ObjRef> obj, bool showPreview = true)
+    public bool CheckPolylines(List<Rhino.DocObjects.ObjRef> obj, bool showPreview = true)
     {
         var Curves = new List<Curve>();
         for (var i = 0; i <= obj.Count - 1; i++)
@@ -106,10 +107,36 @@ public class DrawTools : IDrawTools
     }
 
 
+
+    /// <summary>
+    /// asks user to select layer or layers depending on multiSel val
+    /// returns selected layers
+    /// </summary>
+    /// <param name="multiSel"></param>
+    /// <returns></returns>
+    public List<string> SelParentLayers(bool multiSel=true)
+    {
+        var lays = new List<string>(doc.Layers.Count);
+        string clay = doc.Layers.CurrentLayer.Name;
+        var pts = new List<string>();
+
+        foreach (var l in doc.Layers)
+            if (l.ParentLayerId == Guid.Empty)
+                lays.Add(l.Name);
+
+        if (multiSel)
+            pts.AddRange(Rhino.UI.Dialogs.ShowMultiListBox("Layers", "Choose Layer/s", lays));
+        else
+            pts.Add((string)Rhino.UI.Dialogs.ShowListBox("Layers", "Choose a Layer", lays, clay));
+
+        return pts;
+    }
+
+
     /// <summary>
     /// creates the default label dimstyle used all over
     /// </summary>
-    /// <returns>The STD Dimstyle index</returns>
+    /// <returns></returns>
     public int StandardDimstyle()
     {
         if (doc.DimStyles.FindName("LabelMaker") != null)
@@ -120,7 +147,7 @@ public class DrawTools : IDrawTools
 
             dimstyle.DimensionScale = 1;
             dimstyle.TextHeight = 0.14;
-            dimstyle.Font = Font.FromQuartetProperties("Consolas", false, false);
+            dimstyle.Font = Rhino.DocObjects.Font.FromQuartetProperties("Consolas", false, false);
 
             return dimstyle.Index;
         } else
@@ -153,21 +180,21 @@ public class DrawTools : IDrawTools
         bool bold = true ? (fontStyle == 1 || fontStyle == 3) : false;
         bool italic = true ? (fontStyle == 2) : false;
 
-        var H = TextHorizontalAlignment.Auto;
+        var H = Rhino.DocObjects.TextHorizontalAlignment.Auto;
         switch (justHoriz)
         {
-            case 0: H = TextHorizontalAlignment.Left; break;
-            case 1: H = TextHorizontalAlignment.Center; break;
-            case 2: H = TextHorizontalAlignment.Right; break;
+            case 0: H = Rhino.DocObjects.TextHorizontalAlignment.Left; break;
+            case 1: H = Rhino.DocObjects.TextHorizontalAlignment.Center; break;
+            case 2: H = Rhino.DocObjects.TextHorizontalAlignment.Right; break;
             default: break;
         }
 
-        var V = TextVerticalAlignment.Top;
+        var V = Rhino.DocObjects.TextVerticalAlignment.Top;
         switch (justVert)
         {
-            case 0: V = TextVerticalAlignment.Top; break;
-            case 3: V = TextVerticalAlignment.Middle; break;
-            case 6: V = TextVerticalAlignment.Bottom; break;
+            case 0: V = Rhino.DocObjects.TextVerticalAlignment.Top; break;
+            case 3: V = Rhino.DocObjects.TextVerticalAlignment.Middle; break;
+            case 6: V = Rhino.DocObjects.TextVerticalAlignment.Bottom; break;
             default: break;
         }
 
@@ -175,7 +202,7 @@ public class DrawTools : IDrawTools
             txtEntity.TextHorizontalAlignment = H;
             txtEntity.TextVerticalAlignment = V;
             txtEntity.TextHeight = height;
-            txtEntity.Font = Font.FromQuartetProperties("Consolas", bold, italic);
+            txtEntity.Font = Rhino.DocObjects.Font.FromQuartetProperties("Consolas", bold, italic);
 
         return txtEntity;
     }
