@@ -268,7 +268,7 @@ namespace gjTools.Commands
                 return false;
 
             var bb = go.Object(0).Curve().GetBoundingBox(true);
-            var fit = bb.GetEdges()[0].Length * 0.66;
+            var fit = bb.GetEdges()[0].Length * 0.7;
             var ds = dt.StandardDimstyle();
 
             // make the text
@@ -285,8 +285,8 @@ namespace gjTools.Commands
             );
 
             Transform sc = Transform.Scale(tbb.GetCorners()[0], fit / (txt1.GetBoundingBox(true).GetEdges()[0].Length + txt2.GetBoundingBox(true).GetEdges()[0].Length));
-            txt1.Transform(sc);
-            txt2.Transform(sc);
+            txt1.Transform(sc, doc.DimStyles[ds]);
+            txt2.Transform(sc, doc.DimStyles[ds]);
 
             // make them the same layer
             _parentLayer = lt.ObjLayer(go.Object(0).ObjectId);

@@ -8,6 +8,16 @@ using Rhino.Input.Custom;
 
 namespace gjTools.Commands
 {
+    public struct CutObj
+    {
+        public RhinoDoc doc;
+        public Layer parentLayer;
+
+        public string cutType;
+        public string cutName;
+        public string path;
+        public DrawTools dt;
+    }
     public struct CutData
     {
         public string cutType;
