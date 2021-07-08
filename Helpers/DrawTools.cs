@@ -139,7 +139,7 @@ public class DrawTools : IDrawTools
     /// <returns></returns>
     public int StandardDimstyle()
     {
-        if (doc.DimStyles.FindName("LabelMaker") != null)
+        if (doc.DimStyles.FindName("LabelMaker") == null)
         {
             // craete the dimstyle
             int dimStyleIntex = doc.DimStyles.Add("LabelMaker");

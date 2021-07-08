@@ -284,7 +284,7 @@ namespace gjTools.Commands
                 ds, 1, 0, 3, 0
             );
 
-            Transform sc = Transform.Scale(tbb.GetCorners()[0], (txt1.GetBoundingBox(true).GetEdges()[0].Length + txt2.GetBoundingBox(true).GetEdges()[0].Length) / fit);
+            Transform sc = Transform.Scale(tbb.GetCorners()[0], fit / (txt1.GetBoundingBox(true).GetEdges()[0].Length + txt2.GetBoundingBox(true).GetEdges()[0].Length));
             txt1.Transform(sc);
             txt2.Transform(sc);
 

@@ -133,6 +133,7 @@ namespace gjTools.Commands
                     return Result.Cancel;
 
                 doc.Objects.UnselectAll(true);
+                doc.Views.Redraw();
                 foreach (var o in go.Objects())
                 {
                     if (info.lt.ObjLayer(o.ObjectId).Name.Substring(0, 2) == "C_" || info.lt.ObjLayer(o.ObjectId).Name == "NestBox")
