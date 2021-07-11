@@ -235,7 +235,7 @@ namespace gjTools
             // build the text values
             string partNumber = "PN: " + doc.Layers[cuts.parentLayerIndex].Name;
             
-            string path = (doc.Name == "") ? "File Not Saved" : "Path: " + doc.Path;
+            string path = (doc.Name == null) ? "File Not Saved" : "Path: " + doc.Path;
 
             string shtSizeInfo = string.Format("Sheet Size: {0}w x {1}h   (Part Area: {2}w x {3}h)",
                 nestBox.Width, nestBox.Height, Math.Round(bb.GetEdges()[0].Length, 2), Math.Round(bb.GetEdges()[3].Length, 2));
@@ -244,7 +244,7 @@ namespace gjTools
 
             itemLine += "    Kerf:";
             foreach (var l in cuts.GetCutLayerIndexes)
-                itemLine += string.Format(" [ {0}: {1} ]", doc.Layers[l].Name.Substring(2), cuts.CutLength(l));
+                itemLine += string.Format(" [{0}: {1}]", doc.Layers[l].Name.Substring(2), cuts.CutLength(l));
 
             var creds = new SQLTools();
             string timeStamp = creds.queryVariableData()[0].userFirstName + "\n" + DateTime.UtcNow;

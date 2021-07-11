@@ -33,7 +33,6 @@ namespace gjTools
             if (operation == null)
                 return Result.Cancel;
 
-
             if (operation == options[0])
                 PartBoundries(doc);
 
