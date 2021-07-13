@@ -27,6 +27,7 @@ namespace gjTools.Commands
             if (Mode == null)
                 return Result.Cancel;
 
+            // Enter Code
             if (Mode == "Use Code")
             {
                 var code = "FORCAD:56.000073.00002.00000000000000000010000000000000300000001.00000000000018.291318.291323.95800000001";
@@ -44,14 +45,40 @@ namespace gjTools.Commands
         public Banner ParseCode(string Code, Banner BData)
         {
             int byt = 7;
-            var snip = new List<string>();
+            var snip = new List<double>();
             
             for (int i = 1; i < Code.Length / byt; i++)
+                snip.Add(double.Parse(Code.Substring(byt * i, byt)));
+
+            BData.LiveArea(snip[0], snip[1]);
+
+            // top finishing
+            if (snip[2] > 0 || snip[7] > 0)
             {
-                var str = Code.Substring(byt * i, byt);
-                snip.Add(str);
+                BData.TopSize = (snip[2] > 0) ? snip[2] : snip[7];
+                BData.topFinish = (snip[2] > 0) ? edgeType.pocket : edgeType.hem;
             }
-            Dialogs.ShowListBox("Test", "Test", snip);
+            // bottom finishing
+            if (snip[3] > 0 || snip[8] > 0)
+            {
+                BData.BottSize = (snip[3] > 0) ? snip[3] : snip[8];
+                BData.bottFinish = (snip[3] > 0) ? edgeType.pocket : edgeType.hem;
+            }
+            // Side Finishing
+            if (snip[9] > 0)
+            {
+                BData.sideFinish = edgeType.hem;
+                BData.SideSize = snip[9];
+            }
+
+            // Grommet Data
+            BData.gromTopSpace = snip[10];
+            BData.gromBottSpace = snip[11];
+            BData.gromSideSpace = snip[12];
+
+            // Folded Banner?
+            if (snip[13] > 0)
+                BData.DoubleSided = true;
 
             return BData;
         }
@@ -60,6 +87,8 @@ namespace gjTools.Commands
         public struct Banner
         {
             public string partNum;
+
+            public bool DoubleSided;
 
             private Rectangle3d _CutSize;
             private Rectangle3d _LiveArea;
@@ -72,12 +101,22 @@ namespace gjTools.Commands
             public double TopSize;
             public double BottSize;
 
-            public double gromFromEdge { get { return 0.563; } }
-            public double stitchExtra { get { return 0.25; } }
             public double GromDiameter { get { return 0.75; } }
+            public double gromFromEdge { get { return 0.563; } }
+            public double gromTopSpace;
+            public double gromSideSpace;
+            public double gromBottSpace;
+
+            public double stitchExtra;
+            
             public Rectangle3d LiveArea(double width, double height)
             {
                 _LiveArea = new Rectangle3d(Plane.WorldXY, width, height);
+                topFinish = edgeType.raw;
+                bottFinish = edgeType.raw;
+                sideFinish = edgeType.raw;
+                stitchExtra = 0.25;
+                DoubleSided = false;
                 return _LiveArea;
             }
         }

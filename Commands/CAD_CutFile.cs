@@ -362,9 +362,20 @@ namespace gjTools.Commands
 
             // check for Non-Polylines
             var dt = new DrawTools(info.doc);
-            var obj = info.doc.Objects.GetSelectedObjects(false, false);
+            var obj = new List<RhinoObject>(info.doc.Objects.GetSelectedObjects(false, false));
 
-            return RhinoApp.RunScript($"_-Export \"{info.path}{info.cutName}.dxf\" Scheme \"Vomela\" _Enter", false);
+            if (!dt.CheckPolylines(obj, true))
+            {
+                var tmp = "";
+                Rhino.Input.RhinoGet.GetString("Not all lines are Polylines...", true, ref tmp);
+            }
+            else
+            {
+                return RhinoApp.RunScript($"_-Export \"{info.path}{info.cutName}.dxf\" Scheme \"Vomela\" _Enter", false);
+            }
+
+            dt.hideDynamicDraw();
+            return false;
         }
 
         /// <summary>
