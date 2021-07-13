@@ -60,6 +60,22 @@ public class DrawTools : IDrawTools
     /// <param name="obj"></param>
     /// <param name="showPreview"></param>
     /// <returns>return true or false if the line can be used as cut line</returns>
+    public bool CheckPolylines(List<Rhino.DocObjects.RhinoObject> obj, bool showPreview = true)
+    {
+        var Curves = new List<Curve>();
+        for (var i = 0; i <= obj.Count - 1; i++)
+            if ((Curve)obj[i].Geometry != null)
+                Curves.Add(obj[i].Geometry as Curve);
+
+        return CheckPolylines(Curves, showPreview);
+    }
+
+    /// <summary>
+    /// Highlights the lines green=Good, Red=Bad
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <param name="showPreview"></param>
+    /// <returns>return true or false if the line can be used as cut line</returns>
     public bool CheckPolylines(List<Rhino.DocObjects.ObjRef> obj, bool showPreview = true)
     {
         var Curves = new List<Curve>();

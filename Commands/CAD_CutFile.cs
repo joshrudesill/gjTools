@@ -359,7 +359,12 @@ namespace gjTools.Commands
                 RhinoApp.WriteLine("The Above Cut Directory is not available, No CutFile was Made..");
                 return false;
             }
-            return RhinoApp.RunScript($"_-Export \"{info.path}\\{info.cutName}.dxf\" Scheme \"Vomela\" _Enter", false);
+
+            // check for Non-Polylines
+            var dt = new DrawTools(info.doc);
+            var obj = info.doc.Objects.GetSelectedObjects(false, false);
+
+            return RhinoApp.RunScript($"_-Export \"{info.path}{info.cutName}.dxf\" Scheme \"Vomela\" _Enter", false);
         }
 
         /// <summary>
