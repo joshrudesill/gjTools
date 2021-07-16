@@ -67,8 +67,12 @@ namespace gjTools.Commands
                 new Point2d(bb.GetEdges()[0].Length * scale, bb.GetEdges()[1].Length * scale), 
                 Rhino.Display.DefinedViewportProjection.Top);
 
-            var dViewPort = detail.Viewport;
-            dViewPort.ZoomBoundingBox(bb);
+            layout.SetPageAsActive();               //activate the page
+            doc.Views.ActiveView = layout;          //set the viewport to see the page
+            layout.SetActiveDetail(detail.Id);      //set the detail to active viewport
+            detail.Viewport.ZoomBoundingBox(bb);    // make the zoomyzoom
+            layout.SetPageAsActive();               // make the page active again
+            doc.Views.ActiveView = layout;
 
             detail.DetailGeometry.SetScale(1, doc.ModelUnitSystem, scale, doc.PageUnitSystem);
             detail.Attributes.LayerIndex = lay.Index;
