@@ -47,6 +47,8 @@ namespace gjTools.Commands
                 int.TryParse(newValues[3], out newcut);
                 creds.cutNumber = newcut;
 
+                sql.updateVariableData(creds);
+
                 return true;
             }
             return false;
