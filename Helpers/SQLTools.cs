@@ -18,28 +18,13 @@ namespace gjTools
     // Custom structs for return types from database
     public struct CustomBlurb
     {
-        public CustomBlurb(int id, string blurb)
+        public CustomBlurb(int ids, string blurbs)
         {
-            _id = id;
-            _blurb = blurb;
+            id = ids;
+            blurb = blurbs;
         }
-        private readonly int _id;
-        private readonly string _blurb;
-        public string blurb
-        {
-            get
-            {
-                return _blurb;
-            }
-            
-        }
-        public int id
-        {
-            get
-            {
-                return _id;
-            }
-        }
+        public int id;
+        public string blurb;
     }
     public struct OEMColor
     {
