@@ -26,7 +26,7 @@
   
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DocumentationFile></DocumentationFile>
-    <OutputPath></OutputPath>
+    <OutputPath>C:\Gtools_RhinoENV\</OutputPath>
   </PropertyGroup>
   
 </Project>

@@ -247,7 +247,7 @@ namespace gjTools
         
         public SQLTools()
         {
-            connectionString = "Data Source=gToolsDatabase.db";
+            connectionString = "Data Source=C:\\Gtools_RhinoENV\\gjToolsDatabase.db";
             con = new SQLiteConnection(connectionString);
             con.Open();
         }
