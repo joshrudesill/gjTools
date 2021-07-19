@@ -405,7 +405,7 @@ namespace gjTools
         /// <returns></returns>
         public bool updateDataStore(DataStore data)
         {
-            string que = string.Format("UPDATE dataStore SET string = '{1}', int = {2}, float = {3}, ProgName = {4} WHERE id = {0}", 
+            string que = string.Format("UPDATE dataStore SET string = '{1}', int = {2}, float = {3}, ProgName = '{4}' WHERE id = {0}", 
                 data.DBindex, data.stringValue, data.intValue, data.doubleValue, data.ProgName);
             if (executeCommand(que) == 0)
                 return false;
