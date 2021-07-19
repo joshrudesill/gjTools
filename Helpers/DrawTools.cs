@@ -64,7 +64,7 @@ public class DrawTools : IDrawTools
     {
         var Curves = new List<Curve>();
         for (var i = 0; i <= obj.Count - 1; i++)
-            if ((Curve)obj[i].Geometry != null)
+            if (obj[i].Geometry.ObjectType == Rhino.DocObjects.ObjectType.Curve)
                 Curves.Add(obj[i].Geometry as Curve);
 
         return CheckPolylines(Curves, showPreview);
