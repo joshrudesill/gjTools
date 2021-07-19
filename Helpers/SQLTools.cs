@@ -224,12 +224,14 @@ namespace gjTools
         public string stringValue;
         public int intValue;
         public double doubleValue;
-        public DataStore(int i, string sv, int iv, double dv)
+        public string ProgName;
+        public DataStore(int i, string sv, int iv, double dv, string owner)
         {
             _index = i;
             stringValue = sv;
             intValue = iv;
             doubleValue = dv;
+            ProgName = owner;
         }
         public int DBindex
         {
@@ -390,7 +392,7 @@ namespace gjTools
             SQLiteDataReader r = executeQuery(que);
             while (r.Read())
             {
-                ds.Add(new DataStore(r.GetInt32(0), r.GetString(1), r.GetInt32(2), r.GetFloat(3)));
+                ds.Add(new DataStore(r.GetInt32(0), r.GetString(1), r.GetInt32(2), r.GetFloat(3), r.GetString(4)));
             }
             return ds;
         }
@@ -403,8 +405,8 @@ namespace gjTools
         /// <returns></returns>
         public bool updateDataStore(DataStore data)
         {
-            string que = string.Format("UPDATE dataStore SET string = '{1}', int = {2}, float = {3} WHERE id = {0}", 
-                data.DBindex, data.stringValue, data.intValue, data.doubleValue);
+            string que = string.Format("UPDATE dataStore SET string = '{1}', int = {2}, float = {3}, ProgName = {4} WHERE id = {0}", 
+                data.DBindex, data.stringValue, data.intValue, data.doubleValue, data.ProgName);
             if (executeCommand(que) == 0)
                 return false;
             else

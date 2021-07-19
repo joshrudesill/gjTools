@@ -22,11 +22,16 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            int dimlevel = 1;
+            var sql = new SQLTools();
+            var data = sql.queryDataStore(new List<int> { 13 })[0];
+            int dimlevel = data.intValue;
 
             var obj = CollectObjects(ref dimlevel);
             if (obj.Count == 0)
                 return Result.Cancel;
+
+            // write the dimlevel to the datastore
+            sql.updateDataStore(new DataStore(data.DBindex, " ", dimlevel, 0.0, EnglishName));
 
             //  Get the needed layer
             var lay = GetObjectData(obj, out BoundingBox bb);
