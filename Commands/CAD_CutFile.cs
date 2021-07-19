@@ -71,8 +71,7 @@ namespace gjTools.Commands
 
             foreach (var o in GetCutObjects)
             {
-                var bb = o.Geometry.GetBoundingBox(true);
-                if (nestBB.Contains(bb, false))
+                if (nestBB.Contains(o.Geometry.GetBoundingBox(true), false))
                     obj.Add(o);
             }
             return obj;

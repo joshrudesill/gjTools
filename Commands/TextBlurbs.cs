@@ -49,6 +49,11 @@ namespace gjTools.Commands
         }
 
 
+        /// <summary>
+        /// Used to present the blurbs to be modified
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="sql"></param>
         public void ManageBlurbs(RhinoDoc doc, SQLTools sql)
         {
             var blurbs = sql.queryCustomBlurbs();
@@ -73,10 +78,14 @@ namespace gjTools.Commands
             }
         }
 
+        /// <summary>
+        /// Checks the path for the company and determines their version of RH/LH
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="blurbs"></param>
         public void RHLHSwap(RhinoDoc doc, List<string> blurbs)
         {
             string designation = "LH";
-
             if (blurbs.Contains("RH"))
                 designation = "RH";
 
@@ -84,15 +93,27 @@ namespace gjTools.Commands
             if (doc.Path != null)
             {
                 var path = doc.Path.Replace(doc.Name, "");
-                
-                // do search here and add to the designation
-            }
 
+                // do search here and add to the designation
+                if (path.Contains("PACIFIC COACHWORKS") || path.Contains("THOR MOTORCOACH"))
+                    designation = (designation == "RH") ? "CS/RH" : "RS/LH";
+                else if (path.Contains("NORTHWOOD MFG") || path.Contains("ECLIPSE RV"))
+                    designation = (designation == "RH") ? "PS/RH" : "DS/LH";
+                else if (path.Contains("JAYCO"))
+                    designation = (designation == "RH") ? "DS/RH" : "ODS/LH";
+                else if (path.Contains("OUTDOORS RV"))
+                    designation = (designation == "RH") ? "DS/RH" : "RS/LH";
+            }
 
             // add the text
             AddBlurb(doc, designation);
         }
 
+        /// <summary>
+        /// Makes the Text entity and adds to the document
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="blurb"></param>
         public void AddBlurb(RhinoDoc doc, string blurb)
         {
             var dt = new DrawTools(doc);
