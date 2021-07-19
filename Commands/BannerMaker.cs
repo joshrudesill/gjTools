@@ -18,7 +18,7 @@ namespace gjTools.Commands
         ///<summary>The only instance of the MyCommand command.</summary>
         public static BannerMaker Instance { get; private set; }
 
-        public override string EnglishName => "gjBannerMaker";
+        public override string EnglishName => "BannerMaker";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {

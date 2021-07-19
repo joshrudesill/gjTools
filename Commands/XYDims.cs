@@ -18,7 +18,7 @@ namespace gjTools.Commands
 
         public static XYDims Instance { get; private set; }
 
-        public override string EnglishName => "gjXYDims";
+        public override string EnglishName => "XYDims";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {

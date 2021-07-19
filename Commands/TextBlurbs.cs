@@ -20,7 +20,7 @@ namespace gjTools.Commands
         ///<summary>The only instance of the MyCommand command.</summary>
         public static TextBlurbs Instance { get; private set; }
 
-        public override string EnglishName => "gjTextBlurbs";
+        public override string EnglishName => "TextBlurbs";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {

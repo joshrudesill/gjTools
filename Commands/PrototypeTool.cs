@@ -72,7 +72,7 @@ namespace gjTools.Commands
         ///<summary>The only instance of the MyCommand command.</summary>
         public static PrototypeTool Instance { get; private set; }
 
-        public override string EnglishName => "gjProtoUtility";
+        public override string EnglishName => "ProtoUtility";
         public Layer _parentLayer;
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)

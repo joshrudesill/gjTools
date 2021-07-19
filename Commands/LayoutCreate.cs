@@ -18,7 +18,7 @@ namespace gjTools.Commands
         ///<summary>The only instance of the MyCommand command.</summary>
         public static LayoutCreate Instance { get; private set; }
 
-        public override string EnglishName => "gjLayoutCreate";
+        public override string EnglishName => "LayoutCreate";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
