@@ -5,10 +5,10 @@ using Rhino.Commands;
 using Rhino.Geometry;
 using Rhino.DocObjects;
 using Rhino.Input;
+using Rhino.Input.Custom;
 
 namespace gjTools.Commands
 {
-#region Class
     public class XYDims : Command
     {
         public XYDims()
@@ -18,38 +18,135 @@ namespace gjTools.Commands
 
         public static XYDims Instance { get; private set; }
 
-        public override string EnglishName => "gjXYDims";
+        public override string EnglishName => "XYDims";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            if (RhinoGet.GetMultipleObjects("Select object(s) to get dims", false, ObjectType.AnyObject, out ObjRef[] go) != Result.Success)
+            var sql = new SQLTools();
+            var data = sql.queryDataStore(new List<int> { 13 })[0];
+            int dimlevel = data.intValue;
+
+            var obj = CollectObjects(ref dimlevel);
+            if (obj.Count == 0)
                 return Result.Cancel;
 
-            List<RhinoObject> ids = new List<RhinoObject>();
-            for (int i = 0; i < go.Length; i++)
-                ids.Add(go[i].Object());
-            
-            BoundingBox bb;
-            RhinoObject.GetTightBoundingBox(ids, out bb);
-            Point3d[] ps = bb.GetCorners();     
-            DimensionStyle ds = doc.DimStyles.Current;
-            AnnotationType at = AnnotationType.Rotated;
-            string s = "Dimension Level";       
-            double dimlevel = 1;                
-            RhinoGet.GetNumber(s, true, ref dimlevel, 0, 3);
-                                                
-            Plane p = new Plane(new Point3d(0, 0, 0), new Point3d(0, 1, 0), new Point3d(1, 0, 0));
-            var dimension = LinearDimension.Create(at, ds, p, new Vector3d(1,0,0), ps[0], ps[3], new Point3d(ps[0].X - (2 * dimlevel), 0, 0), 0.0);
-                                                
-            p.Rotate(Math.PI / 2, new Vector3d(0, 0, 1));
-            var dimensionX = LinearDimension.Create(at, ds, p, new Vector3d(1, 0, 0), ps[0], ps[1], new Point3d(0, ps[0].Y - (2 * dimlevel), 0), 0.0);
-                                                
-            doc.Objects.AddLinearDimension(dimension);
-            doc.Objects.AddLinearDimension(dimensionX);
+            // write the dimlevel to the datastore
+            sql.updateDataStore(new DataStore(data.DBindex, " ", dimlevel, 0.0, EnglishName));
+
+            //  Get the needed layer
+            var lay = GetObjectData(obj, out BoundingBox bb);
+
+            // create the dimensions
+            Point3d[] pts = bb.GetCorners();
+
+            // add the dims to the drawing and swap the layer
+            var dims = new List<Guid> { 
+                doc.Objects.AddLinearDimension(MakeDim(doc.DimStyles.Current, pts[3], pts[2], dimlevel)), 
+                doc.Objects.AddLinearDimension(MakeDim(doc.DimStyles.Current, pts[0], pts[3], dimlevel, true))
+            };
+            foreach(var d in dims)
+            {
+                var o = doc.Objects.FindId(d);
+                    o.Attributes.LayerIndex = lay.Index;
+                    o.CommitChanges();
+            }
                                                     
             doc.Views.Redraw();                     
             return Result.Success;                  
-        }                                           
-    }                                               
-}                                                   
-#endregion                                          
+        }
+
+
+
+        /// <summary>
+        /// Makes a linear dimension 
+        /// <para>Vertical Dim extends to the left</para>
+        /// <para>Horizontal Dim extends above</para>
+        /// </summary>
+        /// <param name="ds"></param>
+        /// <param name="start"></param>
+        /// <param name="end"></param>
+        /// <param name="dimlevel"></param>
+        /// <param name="dimVertical"></param>
+        /// <returns></returns>
+        public LinearDimension MakeDim(DimensionStyle ds, Point3d start, Point3d end, int dimlevel = 1, bool dimVertical = false)
+        {
+            Plane p = Plane.WorldXY;
+            Vector3d v = Vector3d.XAxis;
+            Point3d offset = start;
+                    offset.X += start.DistanceTo(end) / 2;
+                    offset.Y += (ds.TextHeight * ds.DimensionScale * 2.25) * dimlevel;
+
+            if (dimVertical)
+            {
+                p = new Plane(start, Vector3d.YAxis, Vector3d.XAxis);
+                v = Vector3d.YAxis;
+                offset = start;
+                offset.Y += start.DistanceTo(end) / 2;
+                offset.X -= (ds.TextHeight * ds.DimensionScale * 2) * dimlevel;
+            }
+
+            return LinearDimension.Create( AnnotationType.Aligned, ds, p, v, start, end, offset, 0 );
+        }
+
+        /// <summary>
+        /// Ask for user input either a number and/or the objects
+        /// <para>TODO: make dimlevel part of the datastore in the database</para>
+        /// </summary>
+        /// <param name="dimLevel"></param>
+        /// <returns></returns>
+        public List<ObjRef> CollectObjects(ref int dimLevel)
+        {
+            var obj = new List<ObjRef>();
+
+            // TODO: make dimlevel part of the datastore in the database
+
+            var go = new GetObject();
+                go.SetCommandPrompt($"Select Objects <Dim Level = {dimLevel}>");
+                go.AcceptNumber(true, false);
+                go.GroupSelect = true;
+
+            while (true)
+            {
+                var res = go.GetMultiple(1, 0);
+                if (res == GetResult.Number)
+                {
+                    dimLevel = (int)go.Number();
+                    go.SetCommandPrompt($"Select Objects <Dim Level = {dimLevel}>");
+                }
+                else if (res == GetResult.Object)
+                {
+                    obj.AddRange(go.Objects());
+                    break;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            return obj;
+        }
+
+        /// <summary>
+        /// Get the parent layer and produce a bounding box from input geometry
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="bb"></param>
+        /// <returns></returns>
+        public Layer GetObjectData(List<ObjRef> obj, out BoundingBox bb)
+        {
+            var doc = obj[0].Object().Document;
+
+            var lay = doc.Layers[obj[0].Object().Attributes.LayerIndex];
+            if (lay.ParentLayerId != Guid.Empty)
+                lay = doc.Layers.FindId(lay.ParentLayerId);
+
+            // collect the objects
+            bb = obj[0].Geometry().GetBoundingBox(true);
+            foreach (var o in obj)
+                bb.Union(o.Geometry().GetBoundingBox(true));
+
+            return lay;
+        }
+    }
+}

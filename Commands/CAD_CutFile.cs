@@ -57,13 +57,22 @@ namespace gjTools.Commands
                 return obj;
             }
         }
-        public List<Guid> GetCutObjInNestBox (RhinoObject nestBox)
+        public List<Guid> GetCutObjInNestBoxID(RhinoObject nestBox)
         {
             var obj = new List<Guid>();
-            foreach(var o in GetCutObjects)
+            foreach (var o in GetCutObjInNestBox(nestBox))
+                obj.Add(o.Id);
+            return obj;
+        }
+        public List<RhinoObject> GetCutObjInNestBox(RhinoObject nestBox)
+        {
+            var obj = new List<RhinoObject>();
+            var nestBB = nestBox.Geometry.GetBoundingBox(false);
+
+            foreach (var o in GetCutObjects)
             {
-                if (nestBox.Geometry.GetBoundingBox(true).Contains(o.Geometry.GetBoundingBox(true)))
-                    obj.Add(o.Id);
+                if (nestBB.Contains(o.Geometry.GetBoundingBox(true), false))
+                    obj.Add(o);
             }
             return obj;
         }
@@ -197,10 +206,9 @@ namespace gjTools.Commands
             // make the cut display box
             MakeCutNameText(info, NestingBox);
             doc.Objects.UnselectAll();
-            doc.Objects.Select(info.GetCutObjInNestBox(NestingBox));
 
             // Make the DXF
-            MakeDXF(info);
+            MakeDXF(info, NestingBox);
 
             doc.Views.Redraw();
             return Result.Success;
@@ -350,7 +358,7 @@ namespace gjTools.Commands
         /// </summary>
         /// <param name="info"></param>
         /// <returns>True if the file output is successfull</returns>
-        public bool MakeDXF(CutData info)
+        public bool MakeDXF(CutData info, RhinoObject nestbox)
         {
             if (!System.IO.Directory.Exists(info.path))
             {
@@ -362,19 +370,21 @@ namespace gjTools.Commands
 
             // check for Non-Polylines
             var dt = new DrawTools(info.doc);
-            var obj = new List<RhinoObject>(info.doc.Objects.GetSelectedObjects(false, false));
+            var obj = info.GetCutObjInNestBox(nestbox);
 
             if (!dt.CheckPolylines(obj, true))
             {
                 var tmp = "";
                 Rhino.Input.RhinoGet.GetString("Not all lines are Polylines...", true, ref tmp);
+                dt.hideDynamicDraw();
             }
             else
             {
+                dt.hideDynamicDraw();
+                info.doc.Objects.Select(info.GetCutObjInNestBoxID(nestbox));
                 return RhinoApp.RunScript($"_-Export \"{info.path}{info.cutName}.dxf\" Scheme \"Vomela\" _Enter", false);
             }
-
-            dt.hideDynamicDraw();
+            
             return false;
         }
 

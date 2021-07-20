@@ -29,7 +29,7 @@ namespace gjTools.Commands
         ObjRef nestboxref;
         public static ZundEyes Instance { get; private set; }
 
-        public override string EnglishName => "gjZundEyes";
+        public override string EnglishName => "ZundEyes";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {

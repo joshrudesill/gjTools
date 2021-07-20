@@ -18,28 +18,13 @@ namespace gjTools
     // Custom structs for return types from database
     public struct CustomBlurb
     {
-        public CustomBlurb(int id, string blurb)
+        public CustomBlurb(int ids, string blurbs)
         {
-            _id = id;
-            _blurb = blurb;
+            id = ids;
+            blurb = blurbs;
         }
-        private readonly int _id;
-        private readonly string _blurb;
-        public string blurb
-        {
-            get
-            {
-                return _blurb;
-            }
-            
-        }
-        public int id
-        {
-            get
-            {
-                return _id;
-            }
-        }
+        public int id;
+        public string blurb;
     }
     public struct OEMColor
     {
@@ -239,12 +224,14 @@ namespace gjTools
         public string stringValue;
         public int intValue;
         public double doubleValue;
-        public DataStore(int i, string sv, int iv, double dv)
+        public string ProgName;
+        public DataStore(int i, string sv, int iv, double dv, string owner)
         {
             _index = i;
             stringValue = sv;
             intValue = iv;
             doubleValue = dv;
+            ProgName = owner;
         }
         public int DBindex
         {
@@ -262,7 +249,7 @@ namespace gjTools
         
         public SQLTools()
         {
-            connectionString = "Data Source=gToolsDatabase.db";
+            connectionString = "Data Source=C:\\Gtools_RhinoENV\\gjToolsDatabase.db";
             con = new SQLiteConnection(connectionString);
             con.Open();
         }
@@ -405,7 +392,7 @@ namespace gjTools
             SQLiteDataReader r = executeQuery(que);
             while (r.Read())
             {
-                ds.Add(new DataStore(r.GetInt32(0), r.GetString(1), r.GetInt32(2), r.GetFloat(3)));
+                ds.Add(new DataStore(r.GetInt32(0), r.GetString(1), r.GetInt32(2), r.GetFloat(3), r.GetString(4)));
             }
             return ds;
         }
@@ -418,8 +405,8 @@ namespace gjTools
         /// <returns></returns>
         public bool updateDataStore(DataStore data)
         {
-            string que = string.Format("UPDATE dataStore SET string = '{1}', int = {2}, float = {3} WHERE id = {0}", 
-                data.DBindex, data.stringValue, data.intValue, data.doubleValue);
+            string que = string.Format("UPDATE dataStore SET string = '{1}', int = {2}, float = {3}, ProgName = '{4}' WHERE id = {0}", 
+                data.DBindex, data.stringValue, data.intValue, data.doubleValue, data.ProgName);
             if (executeCommand(que) == 0)
                 return false;
             else

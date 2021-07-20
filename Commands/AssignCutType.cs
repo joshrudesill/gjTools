@@ -32,7 +32,7 @@ namespace gjTools.Commands
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             var lt = new LayerTools(doc);
-            if (RhinoGet.GetMultipleObjects("Select Objects To Assign a Cut Type", false, ObjectType.Curve, out ObjRef[] obj) != Result.Success)
+            if (RhinoGet.GetMultipleObjects("Select Objects To Assign a Cut Type", false, ObjectType.Curve | ObjectType.Annotation, out ObjRef[] obj) != Result.Success)
                 return Result.Cancel;
             
             var cutName = new List<string> {

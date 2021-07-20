@@ -17,7 +17,7 @@ namespace gjTools
         ///<summary>The only instance of the MyCommand command.</summary>
         public static DrawingTools Instance { get; private set; }
 
-        public override string EnglishName => "gjdrawingTools";
+        public override string EnglishName => "DrawingTools";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {

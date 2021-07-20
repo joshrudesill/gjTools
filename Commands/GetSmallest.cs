@@ -31,7 +31,7 @@ namespace gjTools.Commands
         /// <summary>
         /// eng name
         /// </summary>
-        public override string EnglishName => "gjGetSmallest";
+        public override string EnglishName => "GetSmallest";
 
         /// <summary>
         /// Class

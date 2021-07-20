@@ -137,7 +137,7 @@ namespace gjTools.Commands
         ///<summary>Makes my PDF Files</summary>
         public static EPDF_Export Instance { get; private set; }
 
-        public override string EnglishName => "gjPDFExport";
+        public override string EnglishName => "PDFExport";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {

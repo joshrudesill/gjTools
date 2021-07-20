@@ -1,6 +1,8 @@
 ﻿using System;
 using Rhino;
 using Rhino.Commands;
+using gjTools.Helpers;
+using Rhino.DocObjects;
 using System.Collections.Generic;
 using Rhino.Geometry;
 namespace gjTools.Commands
@@ -11,99 +13,56 @@ namespace gjTools.Commands
         {
             Instance = this;
         }
-        public struct LayerRhObjList
-        {
-            public Rhino.DocObjects.Layer rLayer;
-            public Rhino.DocObjects.Layer cLayers;
-            public Rhino.DocObjects.RhinoObject[] oList;
-            public LayerRhObjList(Rhino.DocObjects.Layer rLayer, Rhino.DocObjects.RhinoObject[] oList, Rhino.DocObjects.Layer cLayers)
-            {
-                this.rLayer = rLayer;
-                this.oList = oList;
-                this.cLayers = cLayers;
-            }
-        }
-        public struct EmbeddedLO
-        {
-            public Rhino.DocObjects.Layer pLayer;
-            public List<LayerRhObjList> rl;
-            public EmbeddedLO(Rhino.DocObjects.Layer pLayer, List<LayerRhObjList> rl)
-            {
-                this.pLayer = pLayer;
-                this.rl = rl;
-            }
-        }
+
         public static BatchKerf Instance { get; private set; }
 
-        public override string EnglishName => "gjBatchKerf";
+        public override string EnglishName => "BatchKerf";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            LayerTools lt = new LayerTools(doc);
-            var parents = lt.getAllParentLayers();
-            var parentsString = new List<string>();
-            var layerobj = new List<LayerRhObjList>();
-            var embeddedl = new List<EmbeddedLO>();
-            foreach (var p in parents)
+            var lt = new LayerTools(doc);
+            var ld = lt.getAllLayerData();
+            var ldp = new List<string>();
+            var ldsorted = new List<LayerData>();
+            foreach (var lad in ld)
             {
-                parentsString.Add(p.Name);
+                ldp.Add(lad.layerdata.Item1.Name);
             }
-            var la = Rhino.UI.Dialogs.ShowMultiListBox("Layers", "Select a layer..", parentsString);
+            var la = Rhino.UI.Dialogs.ShowMultiListBox("Layers", "Select a layer..", ldp);
             if (la == null)
             {
                 RhinoApp.WriteLine("Cancelled.");
                 return Result.Cancel;
             }
-            parents.Clear();
-            foreach(var i in la)
+            foreach (var j in ld)
             {
-                var path = doc.Layers.FindByFullPath(i, -1);
-                parents.Add(doc.Layers[path]);
-            }
-            foreach (var ly in parents)
-            {
-                var eo = new EmbeddedLO();
-                layerobj = new List<LayerRhObjList>();
-                var clayers = lt.getAllCutLayers(ly, false);
-                if (clayers == null)
+                if (new List<string>(la).Contains(j.layerdata.Item1.Name))
                 {
-                    RhinoApp.WriteLine("FAILED: No cut layers on one or more layers!");
-                    return Result.Failure;
+                    ldsorted.Add(j);
                 }
-                foreach (var cl in clayers)
-                {
-                    layerobj.Add(new LayerRhObjList(ly, doc.Objects.FindByLayer(cl), cl));
-                }
-                eo = new EmbeddedLO(ly, layerobj);
-                embeddedl.Add(eo);
             }
-            foreach (var lo in embeddedl)
+            foreach(var lds in ldsorted)
             {
-                string kerf = "";
-                BoundingBox bb;
-                var colist = new List<Rhino.DocObjects.RhinoObject>();
-                foreach (var rl in lo.rl)
+                string sta = "";
+                foreach (var sl in lds.layerdata.Item2)
                 {
-                    kerf += rl.cLayers.Name + ": ";
-                    int length = 0;
-                    foreach (var cr in rl.oList)
+                    sta += sl.Item1.Name + ": ";
+                    int kerf = 0;
+                    foreach (var ob in sl.Item2)
                     {
-                        var crv = new Rhino.DocObjects.ObjRef(cr).Curve();
-                        if (crv == null)
+                        if (ob.obRef.Curve() != null)
                         {
-                            RhinoApp.WriteLine("FAILED: Non-curve on cut layer! Check for annotations!");
-                            return Result.Failure;
+                            kerf += (int)ob.obRef.Curve().GetLength();
                         }
-                        length += (int)crv.GetLength();
-                        colist.Add(cr);
                     }
-                    kerf += length.ToString() + "\n";
+                    sta += kerf.ToString() + "\n";
                 }
-                Rhino.DocObjects.RhinoObject.GetTightBoundingBox(colist, out bb);
+                var bb = lds.getBoundingBoxofParent();
                 var crns = bb.GetCorners();
                 Plane plane = doc.Views.ActiveView.ActiveViewport.ConstructionPlane();
                 plane.Origin = crns[2];
-                doc.Objects.AddText(kerf, plane, bb.GetEdges()[2].Length / 500, "Arial", false, false, TextJustification.BottomRight);
+                doc.Layers.SetCurrentLayerIndex(lds.layerdata.Item1.Index, true);
+                doc.Objects.AddText(sta, plane, bb.GetEdges()[2].Length / 500, "Arial", false, false, TextJustification.BottomRight);
             }
             doc.Views.Redraw();
             return Result.Success;

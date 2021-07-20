@@ -72,7 +72,7 @@ namespace gjTools.Commands
         ///<summary>The only instance of the MyCommand command.</summary>
         public static PrototypeTool Instance { get; private set; }
 
-        public override string EnglishName => "gjProtoUtility";
+        public override string EnglishName => "ProtoUtility";
         public Layer _parentLayer;
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
@@ -98,7 +98,7 @@ namespace gjTools.Commands
             // write values back to the database
             sql.updateJobSlot(new JobSlot(slot.intValue, newJobVals[0], newJobVals[1], newJobVals[2], int.Parse(newJobVals[3]), newJobVals[4]));
             for (var i = 0; i < newParts.Count; i++)
-                sql.updateDataStore(new DataStore(SQL_Rows[i + 1], newParts[i].ToUpper(), 0, 0.0));
+                sql.updateDataStore(new DataStore(SQL_Rows[i + 1], newParts[i].ToUpper(), 0, 0.0, EnglishName));
             foreach ( var p in newParts)
             {
                 var label = new OEM_Label(p);
