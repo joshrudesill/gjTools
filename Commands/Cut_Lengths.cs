@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Rhino;
+using Rhino.Geometry;
 using Rhino.Commands;
 using Rhino.DocObjects;
 using Rhino.Input;
@@ -17,6 +18,7 @@ namespace gjTools.Commands
         {
             private List<ObjRef> _obj;
             private int _CutIterator;
+
             /// <summary>
             /// This isnt available until you load objects in
             /// </summary>
@@ -61,14 +63,36 @@ namespace gjTools.Commands
             }
 
             /// <summary>
-            /// Each time this is read, it progresses to the next cut type or null if none
+            /// Gets cut layers from selected objects
             /// </summary>
-            public double NextCutType
+            public List<Layer> GetCutLayers
             {
                 get
                 {
-                    return 0.25;
+                    var lays = new List<Layer>();
+                    foreach(var o in _obj)
+                    {
+                        var obLay = doc.Layers[o.Object().Attributes.LayerIndex];
+                        if (!lays.Contains(obLay) && obLay.Name.Substring(0, 2) == "C_")
+                            lays.Add(obLay);
+                    }
+                    return lays;
                 }
+            }
+
+            /// <summary>
+            /// Does what it says
+            /// </summary>
+            /// <param name="cutLayer"></param>
+            /// <returns></returns>
+            public int GetCutLength(Layer cutLayer)
+            {
+                double cutLength = 0;
+                foreach(var o in _obj)
+                    if (o.Curve() != null && cutLayer.Index == o.Object().Attributes.LayerIndex)
+                        cutLength += o.Curve().GetLength();
+
+                return (int)cutLength;
             }
         }
 
@@ -88,7 +112,38 @@ namespace gjTools.Commands
             if (RhinoGet.GetMultipleObjects("Select Objects", false, ObjectType.Curve, out ObjRef[] obj) != Result.Success)
                 return Result.Cancel;
 
+            var objCt = new CutLengths();
+                objCt.obj = new List<ObjRef>(obj);
+
+            // get the kerf from the selected
+            MakeTextColored(objCt, Point3d.Origin);
+
             return Result.Success;
+        }
+
+
+
+        /// <summary>
+        /// Makes the cut length block by Color
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="pt"></param>
+        public void MakeTextColored(CutLengths obj, Point3d pt)
+        {
+            var dt = new DrawTools(obj.doc);
+            var ds = dt.StandardDimstyle();
+
+            if (pt == Point3d.Origin)
+                RhinoGet.GetPoint("Place CutLengths", false, out pt);
+
+            foreach (var l in obj.GetCutLayers)
+            {
+                var objId = obj.doc.Objects.AddText(dt.AddText(l.Name.Substring(2) + ": " + obj.GetCutLength(l), pt, ds, 1, 0, 0, 6));
+                var rObj = obj.doc.Objects.FindId(objId);
+                    rObj.Attributes.ObjectColor = l.Color;
+                    rObj.CommitChanges();
+                pt.Y += 1.5;
+            }
         }
     }
 }
