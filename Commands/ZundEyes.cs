@@ -2,6 +2,8 @@
 using Rhino.Commands;
 using Rhino.Geometry;
 using System;
+using Rhino.DocObjects;
+using System.Collections.Generic;
 namespace gjTools.Commands
 {
     public class ZundEyes : Command
@@ -10,73 +12,61 @@ namespace gjTools.Commands
         {
             Instance = this;
         }
+        int spacingDivNumber = 24;
+        double spacingFromSide = (0.65 * 2);
 
+        int l2index;
+        int l1index;
+
+        double topD;
+        double numEyesT;
+        double spacingT;
+
+        double sideD;
+        double numEyesS;
+        double spacingS;
+
+        ObjRef nestboxref;
         public static ZundEyes Instance { get; private set; }
 
         public override string EnglishName => "ZundEyes";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            const Rhino.DocObjects.ObjectType filter = Rhino.DocObjects.ObjectType.Curve;
-            Rhino.DocObjects.ObjRef objref;
-            Result rc = Rhino.Input.RhinoGet.GetOneObject("Select box to add eyes to..", false, filter, out objref);
-            Curve crv = objref.Curve();
-            BoundingBox bb = crv.GetBoundingBox(true);
-
-            //----Layering----//
-            
-            
-            int layer = objref.Object().Attributes.LayerIndex;
-            Rhino.DocObjects.Layer pli = doc.Layers[layer];
-            if (pli.ParentLayerId != Guid.Empty)
+            const ObjectType filter = ObjectType.Curve;
+            List<RhinoObject> robj = new List<RhinoObject>();
+            Result rc = Rhino.Input.RhinoGet.GetMultipleObjects("Select box(es) to add eyes to..", false, filter, out ObjRef[] objref);
+            if (rc != Result.Success) { return Result.Cancel; }
+            BoundingBox bb = objref[0].Geometry().GetBoundingBox(true);
+            bool nestbox = false;
+            nestboxref = objref[0];
+            foreach (var or in objref)
             {
-                var player = doc.Layers.FindId(pli.ParentLayerId);
-                pli = player;
+                bb.Union(or.Geometry().GetBoundingBox(true));
+                if (!nestbox && doc.Layers[or.Object().Attributes.LayerIndex].Name == "NestBox")
+                {
+                    nestbox = true;
+                    nestboxref = or;
+                }
             }
-            Rhino.DocObjects.Layer l1 = new Rhino.DocObjects.Layer();
-            l1.Name = "C_EYES";
-            l1.ParentLayerId = pli.Id;
-            int l1index = doc.Layers.Add(l1);
+            //----Layering----//
 
-            Rhino.DocObjects.Layer l2 = new Rhino.DocObjects.Layer();
-            l2.Name = "EYE_FILL";
-            l2.ParentLayerId = pli.Id;
-            int l2index = doc.Layers.Add(l2);
+            createLayers(doc);
 
             // Get corners
             Point3d[] corners = bb.GetCorners();
 
             //------ Math -------//
-            double topD = Math.Abs(corners[3].X - corners[2].X);
-            double numEyesT = Math.Floor((topD - 1.3) / 24);
-            double spacingT = (topD - 1.3) / (numEyesT);
-            //----------------------
-            double sideD = Math.Abs(corners[3].Y - corners[0].Y);
-            double numEyesS = Math.Floor((sideD - 1.3) / 24);
-            double spacingS = (sideD - 1.3) / (numEyesS);
-            //--------------------------------
+            calcPlacement(corners);
 
-            Point3d first = new Point3d((corners[3].X + 0.65), (corners[3].Y - 0.65), 0);
-            doc.Layers.SetCurrentLayerIndex(l1index, true);
-            for (int i = 0; i < numEyesT + 1; i++)
-            {
-                Circle c1 = new Circle(first, 0.125);
-                createHatchOnLayer(c1, l2index, l1index, doc);
-                for (int j = 0; j < numEyesS; j++)
-                {
-                    first.Y -= spacingS;
-                    Circle c2 = new Circle(first, 0.125);
-                    createHatchOnLayer(c2, l2index, l1index, doc);
-                }
-                first.Y = corners[3].Y - 0.65;
-                first.X += spacingT;
-            }
-            Circle fc = new Circle(new Point3d(corners[1].X - 1.65, corners[1].Y + 0.65, 0), 0.125);
-            createHatchOnLayer(fc, l2index, l1index, doc);
+            //----------------Draw Eyes----------------//
+            drawEyes(corners, doc);
 
             doc.Views.Redraw();
             return Result.Success;
         }
+
+
 
         /// <summary>
         /// Internal use only. Private function
@@ -93,6 +83,58 @@ namespace gjTools.Commands
             doc.Layers.SetCurrentLayerIndex(layer1, true);
             doc.Objects.AddHatch(hatches[0]);
             doc.Layers.SetCurrentLayerIndex(layer2, true);
+        }
+        void createLayers(RhinoDoc doc)
+        {
+            int layer = nestboxref.Object().Attributes.LayerIndex;
+            Layer pli = doc.Layers[layer];
+            if (pli.ParentLayerId != Guid.Empty)
+            {
+                var player = doc.Layers.FindId(pli.ParentLayerId);
+                pli = player;
+            }
+            Layer l1 = new Layer();
+            l1.Name = "C_EYES";
+            l1.ParentLayerId = pli.Id;
+            l1index = doc.Layers.Add(l1);
+
+            Layer l2 = new Layer();
+            l2.Name = "EYE_FILL";
+            l2.ParentLayerId = pli.Id;
+            l2index = doc.Layers.Add(l2);
+        }
+        void calcPlacement(Point3d[] corners)
+        {
+            topD = Math.Abs(corners[3].X - corners[2].X);
+            numEyesT = Math.Floor((topD - spacingFromSide) / spacingDivNumber);
+            if (numEyesT < 1) { numEyesT = 1; }
+            spacingT = (topD - spacingFromSide) / (numEyesT);
+            //----------------------
+            sideD = Math.Abs(corners[3].Y - corners[0].Y);
+            numEyesS = Math.Floor((sideD - spacingFromSide) / spacingDivNumber);
+            if (numEyesS < 1) { numEyesS = 1; }
+            if (numEyesS > 2) { numEyesS = 2; }
+            spacingS = (sideD - spacingFromSide) / (numEyesS);
+        }
+        void drawEyes(Point3d[] corners, RhinoDoc doc)
+        {
+            Point3d first = new Point3d((corners[3].X + (spacingFromSide / 2)), (corners[3].Y - (spacingFromSide / 2)), 0);
+            doc.Layers.SetCurrentLayerIndex(l1index, true);
+            for (int i = 0; i < numEyesT + 1; i++)
+            {
+                Circle c1 = new Circle(first, 0.125);
+                createHatchOnLayer(c1, l2index, l1index, doc);
+                for (int j = 0; j < numEyesS; j++)
+                {
+                    first.Y -= spacingS;
+                    Circle c2 = new Circle(first, 0.125);
+                    createHatchOnLayer(c2, l2index, l1index, doc);
+                }
+                first.Y = corners[3].Y - 0.65;
+                first.X += spacingT;
+            }
+            Circle fc = new Circle(new Point3d(corners[1].X - 1 - (spacingFromSide / 2), corners[1].Y + (spacingFromSide / 2), 0), 0.125);
+            createHatchOnLayer(fc, l2index, l1index, doc);
         }
     }
 }
