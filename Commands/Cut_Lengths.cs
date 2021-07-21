@@ -19,7 +19,8 @@ namespace gjTools.Commands
             private List<ObjRef> _obj;
 
             /// <summary>
-            /// This isnt available until you load objects in
+            /// This isnt available until you load 
+            /// <para>objects in or assign it yourself</para>
             /// </summary>
             public RhinoDoc doc;
 
@@ -98,6 +99,8 @@ namespace gjTools.Commands
             }
         }
 
+
+
         public Cut_Lengths()
         {
             Instance = this;
@@ -122,6 +125,8 @@ namespace gjTools.Commands
 
             return Result.Success;
         }
+
+
 
 
 
