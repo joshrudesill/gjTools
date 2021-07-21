@@ -64,22 +64,18 @@ namespace gjTools.Commands
             /// <summary>
             /// Gets cut layers from selected objects
             /// </summary>
-            public List<Layer> GetCutLayers
+            public List<string> GetCutLayers
             {
                 get
                 {
-                    var lays = new List<Layer>();
                     var laysName = new List<string>();
                     foreach(var o in _obj)
                     {
                         var obLay = doc.Layers[o.Object().Attributes.LayerIndex];
                         if (!laysName.Contains(obLay.Name) && obLay.Name.Substring(0, 2) == "C_")
-                        {
-                            lays.Add(obLay);
-
-                        }
+                            laysName.Add(obLay.Name);
                     }
-                    return lays;
+                    return laysName;
                 }
             }
 
@@ -88,12 +84,17 @@ namespace gjTools.Commands
             /// </summary>
             /// <param name="cutLayer"></param>
             /// <returns></returns>
-            public int GetCutLength(Layer cutLayer)
+            public int GetCutLength(string cutLayer, out Layer layer)
             {
                 double cutLength = 0;
+                layer = null;
                 foreach(var o in _obj)
-                    if (o.Curve() != null && cutLayer.Index == o.Object().Attributes.LayerIndex)
+                    if (o.Curve() != null && cutLayer == doc.Layers[o.Object().Attributes.LayerIndex].Name)
+                    {
                         cutLength += o.Curve().GetLength();
+                        if (layer == null)
+                            layer = doc.Layers[o.Object().Attributes.LayerIndex];
+                    }
 
                 return (int)cutLength;
             }
@@ -145,14 +146,14 @@ namespace gjTools.Commands
 
             foreach (var l in obj.GetCutLayers)
             {
-                var objId = obj.doc.Objects.AddText(dt.AddText(l.Name.Substring(2) + ": " + obj.GetCutLength(l), pt, ds, 1, 0, 2, 6));
+                var objId = obj.doc.Objects.AddText(dt.AddText(l.Substring(2) + ": " + obj.GetCutLength(l, out Layer lay), pt, ds, 1, 0, 2, 6));
                 var rObj = obj.doc.Objects.FindId(objId);
                     rObj.Attributes.PlotColorSource = ObjectPlotColorSource.PlotColorFromObject;
-                    rObj.Attributes.PlotColor = l.Color;
-                    rObj.Attributes.ObjectColor = l.Color;
+                    rObj.Attributes.PlotColor = lay.Color;
+                    rObj.Attributes.ObjectColor = lay.Color;
                     rObj.Attributes.ColorSource = ObjectColorSource.ColorFromObject;
                     rObj.CommitChanges();
-                pt.Y += 1.75;
+                pt.Y -= 1.75;
             }
         }
     }

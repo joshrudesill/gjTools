@@ -247,7 +247,7 @@ namespace gjTools
                 itemLine += string.Format(" [{0}: {1}]", doc.Layers[l].Name.Substring(2), cuts.CutLength(l));
 
             var creds = new SQLTools();
-            string timeStamp = creds.queryVariableData()[0].userFirstName + "\n" + DateTime.UtcNow;
+            string timeStamp = creds.queryVariableData()[0].userFirstName + "\n" + DateTime.Now;
 
             var tool = new DrawTools(doc);
             int ds = tool.StandardDimstyle();

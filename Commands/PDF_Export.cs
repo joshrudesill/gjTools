@@ -531,8 +531,12 @@ namespace gjTools.Commands
                 // Construct the PDF page
                 page.AddPage(capture);
             }
-            
-            page.Write(pdfDatas[0].path + pdfDatas[0].pdfName + ".pdf");
+
+            var pdfName = pdfDatas[0];
+            if (pdfDatas[0].doc.Name != null)
+                pdfName.pdfName = pdfDatas[0].doc.Name.Replace(".3dm", "");
+
+            page.Write(pdfName.path + pdfName.pdfName + ".pdf");
         }
 
         /// <summary>
