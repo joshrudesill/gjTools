@@ -158,7 +158,7 @@ namespace gjTools.Commands
                 "WorkingLocation"   // 8
             };
 
-            var noWorkingPathOptions = outTypes;
+            var noWorkingPathOptions = new List<string>(outTypes);
             if (doc.Path == null)
                 noWorkingPathOptions.RemoveRange(5, 4);
 
@@ -426,7 +426,7 @@ namespace gjTools.Commands
         private ePDF DeterminePath(ePDF page, string ot, List<string> otVal, SQLTools sql)
         {
             var dbLocation = sql.queryLocations();
-            var workingLocation = (page.doc.Path != "") ? page.doc.Path.Replace(page.doc.Name, "") : dbLocation[3].path;
+            var workingLocation = (page.doc.Path != null) ? page.doc.Path.Replace(page.doc.Name, "") : dbLocation[3].path;
 
             // Prototype path
             if (ot == otVal[7])
