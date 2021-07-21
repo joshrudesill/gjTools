@@ -18,6 +18,8 @@ namespace gjTools.Commands
         int l2index;
         int l1index;
 
+        
+
         double topD;
         double numEyesT;
         double spacingT;
@@ -26,13 +28,19 @@ namespace gjTools.Commands
         double numEyesS;
         double spacingS;
 
+        LayerTools lt = new LayerTools(RhinoDoc.ActiveDoc);
+
         ObjRef nestboxref;
+
+        List<Curve> cl = new List<Curve>();
         public static ZundEyes Instance { get; private set; }
 
         public override string EnglishName => "ZundEyes";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
+            int currentLayer = doc.Layers.CurrentLayerIndex;
+            RhinoApp.WriteLine("TEST");
             const ObjectType filter = ObjectType.Curve;
             List<RhinoObject> robj = new List<RhinoObject>();
             Result rc = Rhino.Input.RhinoGet.GetMultipleObjects("Select box(es) to add eyes to..", false, filter, out ObjRef[] objref);
@@ -61,6 +69,7 @@ namespace gjTools.Commands
 
             //----------------Draw Eyes----------------//
             drawEyes(corners, doc);
+            doc.Layers.SetCurrentLayerIndex(currentLayer, true);
 
             doc.Views.Redraw();
             return Result.Success;
@@ -75,15 +84,7 @@ namespace gjTools.Commands
         /// <param name="layer1"></param>
         /// <param name="layer2"></param>
         /// <param name="doc"></param>
-        void createHatchOnLayer(Circle c, int layer1, int layer2, RhinoDoc doc)
-        {
-            doc.Objects.AddCircle(c);
-            var cu = c.ToNurbsCurve();
-            var hatches = Hatch.Create(cu, doc.HatchPatterns.CurrentHatchPatternIndex, 0, 1.0, 1.0);
-            doc.Layers.SetCurrentLayerIndex(layer1, true);
-            doc.Objects.AddHatch(hatches[0]);
-            doc.Layers.SetCurrentLayerIndex(layer2, true);
-        }
+        
         void createLayers(RhinoDoc doc)
         {
             int layer = nestboxref.Object().Attributes.LayerIndex;
@@ -93,15 +94,11 @@ namespace gjTools.Commands
                 var player = doc.Layers.FindId(pli.ParentLayerId);
                 pli = player;
             }
-            Layer l1 = new Layer();
-            l1.Name = "C_EYES";
-            l1.ParentLayerId = pli.Id;
-            l1index = doc.Layers.Add(l1);
 
-            Layer l2 = new Layer();
-            l2.Name = "EYE_FILL";
-            l2.ParentLayerId = pli.Id;
-            l2index = doc.Layers.Add(l2);
+            l1index = lt.CreateLayer("C_EYES", pli.Name, System.Drawing.Color.Red).Index;
+            l2index = lt.CreateLayer("EYE_FILL", pli.Name, System.Drawing.Color.Black).Index;
+            
+
         }
         void calcPlacement(Point3d[] corners)
         {
@@ -123,18 +120,34 @@ namespace gjTools.Commands
             for (int i = 0; i < numEyesT + 1; i++)
             {
                 Circle c1 = new Circle(first, 0.125);
-                createHatchOnLayer(c1, l2index, l1index, doc);
+                cl.Add(c1.ToNurbsCurve());
                 for (int j = 0; j < numEyesS; j++)
                 {
                     first.Y -= spacingS;
                     Circle c2 = new Circle(first, 0.125);
-                    createHatchOnLayer(c2, l2index, l1index, doc);
+                    cl.Add(c2.ToNurbsCurve());
                 }
                 first.Y = corners[3].Y - 0.65;
                 first.X += spacingT;
             }
             Circle fc = new Circle(new Point3d(corners[1].X - 1 - (spacingFromSide / 2), corners[1].Y + (spacingFromSide / 2), 0), 0.125);
-            createHatchOnLayer(fc, l2index, l1index, doc);
+            cl.Add(fc.ToNurbsCurve());
+            Hatch[] hl = Hatch.Create(cl, doc.HatchPatterns.CurrentHatchPatternIndex, 0, 1.0, 1.0);
+            
+            foreach (var c in cl)
+            {
+                Guid newob = doc.Objects.Add(c);
+                RhinoObject ro = doc.Objects.FindId(newob);
+                ro.Attributes.LayerIndex = l1index;
+                ro.CommitChanges();
+            }
+            foreach (var h in hl)
+            {
+                Guid newob = doc.Objects.AddHatch(h);
+                RhinoObject ro = doc.Objects.FindId(newob);
+                ro.Attributes.LayerIndex = l1index;
+                ro.CommitChanges();
+            }
         }
     }
 }
