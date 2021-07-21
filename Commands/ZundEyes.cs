@@ -18,33 +18,43 @@ namespace gjTools.Commands
         int l2index;
         int l1index;
 
-        
+
 
         double topD;
         double numEyesT;
         double spacingT;
-
+                       
         double sideD;
         double numEyesS;
         double spacingS;
 
-        LayerTools lt = new LayerTools(RhinoDoc.ActiveDoc);
+        LayerTools lt;
 
         ObjRef nestboxref;
 
-        List<Curve> cl = new List<Curve>();
+        List<Curve> cl;
         public static ZundEyes Instance { get; private set; }
 
         public override string EnglishName => "ZundEyes";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            int currentLayer = doc.Layers.CurrentLayerIndex;
-            RhinoApp.WriteLine("TEST");
+            // Reset values for multiple uses within one session
+            l2index = 0;
+            l1index = 0;
+            topD = 0;
+            numEyesT = 0;
+            spacingT = 0;
+            sideD = 0;
+            numEyesS = 0;
+            spacingS = 0;
+            cl = new List<Curve>();
+            lt = new LayerTools(RhinoDoc.ActiveDoc);
+
             const ObjectType filter = ObjectType.Curve;
-            List<RhinoObject> robj = new List<RhinoObject>();
             Result rc = Rhino.Input.RhinoGet.GetMultipleObjects("Select box(es) to add eyes to..", false, filter, out ObjRef[] objref);
             if (rc != Result.Success) { return Result.Cancel; }
+
             BoundingBox bb = objref[0].Geometry().GetBoundingBox(true);
             bool nestbox = false;
             nestboxref = objref[0];
@@ -57,8 +67,8 @@ namespace gjTools.Commands
                     nestboxref = or;
                 }
             }
-            //----Layering----//
 
+            //----Layering----//
             createLayers(doc);
 
             // Get corners
@@ -69,7 +79,6 @@ namespace gjTools.Commands
 
             //----------------Draw Eyes----------------//
             drawEyes(corners, doc);
-            doc.Layers.SetCurrentLayerIndex(currentLayer, true);
 
             doc.Views.Redraw();
             return Result.Success;
@@ -94,12 +103,10 @@ namespace gjTools.Commands
                 var player = doc.Layers.FindId(pli.ParentLayerId);
                 pli = player;
             }
-
             l1index = lt.CreateLayer("C_EYES", pli.Name, System.Drawing.Color.Red).Index;
             l2index = lt.CreateLayer("EYE_FILL", pli.Name, System.Drawing.Color.Black).Index;
-            
-
         }
+
         void calcPlacement(Point3d[] corners)
         {
             topD = Math.Abs(corners[3].X - corners[2].X);
@@ -113,6 +120,7 @@ namespace gjTools.Commands
             if (numEyesS > 2) { numEyesS = 2; }
             spacingS = (sideD - spacingFromSide) / (numEyesS);
         }
+
         void drawEyes(Point3d[] corners, RhinoDoc doc)
         {
             Point3d first = new Point3d((corners[3].X + (spacingFromSide / 2)), (corners[3].Y - (spacingFromSide / 2)), 0);
@@ -145,7 +153,7 @@ namespace gjTools.Commands
             {
                 Guid newob = doc.Objects.AddHatch(h);
                 RhinoObject ro = doc.Objects.FindId(newob);
-                ro.Attributes.LayerIndex = l1index;
+                ro.Attributes.LayerIndex = l2index;
                 ro.CommitChanges();
             }
         }
