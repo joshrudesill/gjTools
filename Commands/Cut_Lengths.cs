@@ -17,7 +17,6 @@ namespace gjTools.Commands
         public struct CutLengths
         {
             private List<ObjRef> _obj;
-            private int _CutIterator;
 
             /// <summary>
             /// This isnt available until you load objects in
@@ -32,7 +31,6 @@ namespace gjTools.Commands
                 get { return _obj; }
                 set { 
                     _obj = value; 
-                    _CutIterator = 0;
                     if (_obj.Count > 0)
                         doc = _obj[0].Object().Document;
                 }
@@ -70,11 +68,15 @@ namespace gjTools.Commands
                 get
                 {
                     var lays = new List<Layer>();
+                    var laysName = new List<string>();
                     foreach(var o in _obj)
                     {
                         var obLay = doc.Layers[o.Object().Attributes.LayerIndex];
-                        if (!lays.Contains(obLay) && obLay.Name.Substring(0, 2) == "C_")
+                        if (!laysName.Contains(obLay.Name) && obLay.Name.Substring(0, 2) == "C_")
+                        {
                             lays.Add(obLay);
+
+                        }
                     }
                     return lays;
                 }
@@ -138,11 +140,14 @@ namespace gjTools.Commands
 
             foreach (var l in obj.GetCutLayers)
             {
-                var objId = obj.doc.Objects.AddText(dt.AddText(l.Name.Substring(2) + ": " + obj.GetCutLength(l), pt, ds, 1, 0, 0, 6));
+                var objId = obj.doc.Objects.AddText(dt.AddText(l.Name.Substring(2) + ": " + obj.GetCutLength(l), pt, ds, 1, 0, 2, 6));
                 var rObj = obj.doc.Objects.FindId(objId);
+                    rObj.Attributes.PlotColorSource = ObjectPlotColorSource.PlotColorFromObject;
+                    rObj.Attributes.PlotColor = l.Color;
                     rObj.Attributes.ObjectColor = l.Color;
+                    rObj.Attributes.ColorSource = ObjectColorSource.ColorFromObject;
                     rObj.CommitChanges();
-                pt.Y += 1.5;
+                pt.Y += 1.75;
             }
         }
     }
