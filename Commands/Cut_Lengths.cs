@@ -128,9 +128,6 @@ namespace gjTools.Commands
         }
 
 
-
-
-
         /// <summary>
         /// Makes the cut length block by Color
         /// </summary>

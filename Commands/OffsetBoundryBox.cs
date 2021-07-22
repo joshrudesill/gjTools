@@ -10,6 +10,8 @@ namespace gjTools.Commands
 {
     public class OffsetBoundryBox : Command
     {
+        public double offset = 0.25;
+
         public OffsetBoundryBox()
         {
             Instance = this;
@@ -20,19 +22,36 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            double offset = 0.25;
             var lt = new LayerTools(doc);
 
+            // Make the box
+            MakeOffsetBox(doc, lt);
+
+            doc.Views.Redraw();
+            return Result.Success;
+        }
+
+
+
+        /// <summary>
+        /// Asks for objects to put a box around
+        /// <para>If kiss or thru, than the result is opposite</para>
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="lt"></param>
+        /// <returns></returns>
+        public bool MakeOffsetBox(RhinoDoc doc, LayerTools lt)
+        {
             var go = new GetObject();
-                go.SetCommandPrompt("Select Objects <Offset=" + offset + ">");
-                go.GeometryFilter = ObjectType.Curve;
-                go.AcceptNumber(true, true);
-            
+            go.SetCommandPrompt("Select Objects <Offset=" + offset + ">");
+            go.GeometryFilter = ObjectType.Curve;
+            go.AcceptNumber(true, true);
+
             while (true)
             {
                 var res = go.GetMultiple(1, 0);
                 if (res == Rhino.Input.GetResult.Cancel)
-                    return Result.Cancel;
+                    return false;
                 if (res == Rhino.Input.GetResult.Number)
                 {
                     offset = go.Number();
@@ -44,10 +63,10 @@ namespace gjTools.Commands
                     break;
                 }
                 else
-                    return Result.Cancel;
+                    return false;
             }
 
-            var obj = new List<ObjRef> (go.Objects());
+            var obj = new List<ObjRef>(go.Objects());
             BoundingBox bb = obj[0].Curve().GetBoundingBox(true);
 
             // Test one object for layer and cuttype
@@ -72,8 +91,7 @@ namespace gjTools.Commands
                 newRect.Attributes.LayerIndex = boxLayer.Index;
                 newRect.CommitChanges();
 
-            doc.Views.Redraw();
-            return Result.Success;
+            return true;
         }
     }
 }

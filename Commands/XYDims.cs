@@ -11,6 +11,8 @@ namespace gjTools.Commands
 {
     public class XYDims : Command
     {
+        public int dimlevel = 1;
+
         public XYDims()
         {
             Instance = this;
@@ -22,16 +24,9 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            var sql = new SQLTools();
-            var data = sql.queryDataStore(new List<int> { 13 })[0];
-            int dimlevel = data.intValue;
-
-            var obj = CollectObjects(ref dimlevel);
+            var obj = CollectObjects();
             if (obj.Count == 0)
                 return Result.Cancel;
-
-            // write the dimlevel to the datastore
-            sql.updateDataStore(new DataStore(data.DBindex, " ", dimlevel, 0.0, EnglishName));
 
             //  Get the needed layer
             var lay = GetObjectData(obj, out BoundingBox bb);
@@ -41,8 +36,8 @@ namespace gjTools.Commands
 
             // add the dims to the drawing and swap the layer
             var dims = new List<Guid> { 
-                doc.Objects.AddLinearDimension(MakeDim(doc.DimStyles.Current, pts[3], pts[2], dimlevel)), 
-                doc.Objects.AddLinearDimension(MakeDim(doc.DimStyles.Current, pts[0], pts[3], dimlevel, true))
+                doc.Objects.AddLinearDimension(MakeDim(doc.DimStyles.Current, pts[3], pts[2])), 
+                doc.Objects.AddLinearDimension(MakeDim(doc.DimStyles.Current, pts[0], pts[3], true))
             };
             foreach(var d in dims)
             {
@@ -68,7 +63,7 @@ namespace gjTools.Commands
         /// <param name="dimlevel"></param>
         /// <param name="dimVertical"></param>
         /// <returns></returns>
-        public LinearDimension MakeDim(DimensionStyle ds, Point3d start, Point3d end, int dimlevel = 1, bool dimVertical = false)
+        public LinearDimension MakeDim(DimensionStyle ds, Point3d start, Point3d end, bool dimVertical = false)
         {
             Plane p = Plane.WorldXY;
             Vector3d v = Vector3d.XAxis;
@@ -94,14 +89,12 @@ namespace gjTools.Commands
         /// </summary>
         /// <param name="dimLevel"></param>
         /// <returns></returns>
-        public List<ObjRef> CollectObjects(ref int dimLevel)
+        public List<ObjRef> CollectObjects()
         {
             var obj = new List<ObjRef>();
 
-            // TODO: make dimlevel part of the datastore in the database
-
             var go = new GetObject();
-                go.SetCommandPrompt($"Select Objects <Dim Level = {dimLevel}>");
+                go.SetCommandPrompt($"Select Objects <Dim Level = {dimlevel}>");
                 go.AcceptNumber(true, false);
                 go.GroupSelect = true;
 
@@ -110,8 +103,8 @@ namespace gjTools.Commands
                 var res = go.GetMultiple(1, 0);
                 if (res == GetResult.Number)
                 {
-                    dimLevel = (int)go.Number();
-                    go.SetCommandPrompt($"Select Objects <Dim Level = {dimLevel}>");
+                    dimlevel = (int)go.Number();
+                    go.SetCommandPrompt($"Select Objects <Dim Level = {dimlevel}>");
                 }
                 else if (res == GetResult.Object)
                 {

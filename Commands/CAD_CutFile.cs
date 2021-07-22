@@ -299,7 +299,7 @@ namespace gjTools.Commands
                 {
                     if (doc.Path.Contains("J0"))
                     {
-                        var regx = new System.Text.RegularExpressions.Regex(@"J\d{9}-\d");
+                        var regx = new System.Text.RegularExpressions.Regex(@"J\d{9}");
                         var job = regx.Match(doc.Path).Value;
                         route = GetStringPremade("Choose a Route Name", new List<string> { info.parentLayer.Name, job }, 0);
                     }
