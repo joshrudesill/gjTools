@@ -7,33 +7,42 @@ namespace gjTools.Helpers
 {
     class AssignCutTypeForm
     {
+        public RhinoDoc doc;
+        public List<string> LeftList;
+        public AssignCutTypeForm(RhinoDoc docum)
+        {
+            doc = docum;
+        }
         public void Makeform()
         {
-            var window = new Form()
+            var window = new Dialog()
             {
                 ClientSize = new Eto.Drawing.Size(515, 515),
                 Padding = 15
             };
 
             var layout = new DynamicLayout();
+            layout.Spacing = new Eto.Drawing.Size(5, 5);
 
             var optionList = new ListBox()
             {
                 Height = 350,
                 Width = 240
             };
-            var optionList2 = new ListBox()
+            optionList.DataStore = new LayerTools(doc).getAllParentLayersStrings();
+
+            var multiList = new GridView()
             {
                 Height = 350,
-                Width = 240
+                Width = 240,
             };
+            multiList.DataStore = new LayerTools(doc).getAllParentLayersStrings();
 
-            layout.BeginVertical();
-            layout.AddRow(optionList, optionList2);
-            layout.EndVertical();
+            layout.AddRow(optionList, multiList);
+
 
             window.Content = layout;
-            window.Show();
+            window.ShowModal();
         }
     }
 }
