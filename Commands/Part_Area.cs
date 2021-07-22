@@ -32,9 +32,9 @@ namespace gjTools.Commands
             // Make the text
             var dt = new DrawTools(doc);
             var ds = dt.StandardDimstyle();
-            var pt = bb.GetCorners()[2];
-                pt.Y += 0.75;
-            var txt = dt.AddText($"Hatch Area: {area} Sq.In", pt, ds, 0.5, 0, 2, 6);
+            var pt = bb.GetCorners()[1];
+                pt.Y -= 1;
+            var txt = dt.AddText($"Hatch Area: {area} Sq.In", pt, ds, 0.5, 0, 2, 0);
 
             // Find the layer
             var parentLayer = doc.Layers[obj[0].Object().Attributes.LayerIndex];
