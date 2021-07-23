@@ -19,7 +19,7 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            var form = new Helpers.AssignCutTypeForm(doc);
+            var form = new Helpers.DualListDialog(doc);
             form.Makeform();
 
             return Result.Success;
