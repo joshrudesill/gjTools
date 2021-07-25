@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using Rhino;
 using Rhino.Commands;
 using Rhino.UI;
@@ -19,8 +19,24 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            var form = new Helpers.DualListDialog(doc);
-            form.Makeform();
+            var outTypes = new List<string>
+            {
+                "LocalTemp",        // 0
+                "MeasuredDrawing",  // 1
+                "Mylar Color",      // 2
+                "Mylar NonColor",   // 3
+                "MultiPagePDF",     // 4
+                "EPExportLegacy",   // 5
+                "EPExport",         // 6
+                "ProtoNestings",    // 7
+                "WorkingLocation"   // 8
+            };
+            var lt = new LayerTools(doc);
+
+            var form = new Helpers.DualListDialog("PDF Example", "Out Type", outTypes, "Layer/s to output", lt.getAllParentLayersStrings());
+            RhinoApp.WriteLine($"The Result is: {form.CommandResult()}");
+            RhinoApp.WriteLine($"The left selected: {form.GetSingleValue()}");
+            RhinoApp.WriteLine($"The right selections: {string.Join(", ", form.GetMultiSelectValue())}");
 
             return Result.Success;
         }
