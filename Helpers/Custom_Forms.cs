@@ -132,6 +132,7 @@ namespace gjTools.Helpers
             return multiList;
         }
 
+
         public DialogResult CommandResult() { return window.Result; }
         public string GetSingleValue() { return optionList.SelectedKey; }
         public List<string> GetMultiSelectValue()
