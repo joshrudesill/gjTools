@@ -27,8 +27,8 @@ namespace gjTools.Commands
             var rl = new List<RhObjLayer>();
             var ro = new List<RhinoObject>();
 
-            var parent = new Layer();
 
+            Layer parent = new Layer();
             bool pnfound = false;
             for (int i = 0; i < go.Length; i++)
             {
@@ -39,7 +39,7 @@ namespace gjTools.Commands
                     {
                         pnfound = true;
                     }
-                    var tf = t.Remove(0, 4);
+                    var tf = t.Remove(0, 3);
                     parent  = lt.CreateLayer(tf);
                 }
                 else if(lt.isObjectOnCutLayer(go[i].Object()))
@@ -60,6 +60,7 @@ namespace gjTools.Commands
             foreach (var o in ro)
             {
                 lt.AddObjectsToLayer(o, parent);
+                RhinoApp.WriteLine("adding to parent layer");
             }
             return Result.Success;
         }
