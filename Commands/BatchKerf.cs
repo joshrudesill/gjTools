@@ -21,7 +21,9 @@ namespace gjTools.Commands
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             var lt = new LayerTools(doc);
+            RhinoApp.WriteLine("1");
             var ld = lt.getAllLayerData();
+            RhinoApp.WriteLine("1");
             var ldp = new List<string>();
             var ldsorted = new List<LayerData>();
             foreach (var lad in ld)
@@ -29,6 +31,7 @@ namespace gjTools.Commands
                 ldp.Add(lad.layerdata.Item1.Name);
             }
             var la = Rhino.UI.Dialogs.ShowMultiListBox("Layers", "Select a layer..", ldp);
+            RhinoApp.WriteLine("1");
             if (la == null)
             {
                 RhinoApp.WriteLine("Cancelled.");

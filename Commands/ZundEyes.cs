@@ -124,7 +124,6 @@ namespace gjTools.Commands
         void drawEyes(Point3d[] corners, RhinoDoc doc)
         {
             Point3d first = new Point3d((corners[3].X + (spacingFromSide / 2)), (corners[3].Y - (spacingFromSide / 2)), 0);
-            doc.Layers.SetCurrentLayerIndex(l1index, true);
             for (int i = 0; i < numEyesT + 1; i++)
             {
                 Circle c1 = new Circle(first, 0.125);

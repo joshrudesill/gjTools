@@ -55,32 +55,32 @@ namespace gjTools.Helpers
             lt = new LayerTools(doc);
             layerdata = Tuple.Create(new Layer(), new List<Tuple<Layer, List<ObjectData>>>());
             var sublayers = lt.getAllSubLayers(parent);
-            if (sublayers == null)
-            {
-                throw new Exception("Sublayer Exception: Parent layer contains no sublayers!");
-            }
             var tlta = new List<Tuple<Layer, List<ObjectData>>>();
-            foreach (var sl in sublayers)
+            if (sublayers != null)
             {
-                var obs = doc.Objects.FindByLayer(sl);
-                var lta = new List<ObjectData>();
-                
-                if (obs != null)
+                foreach (var sl in sublayers)
                 {
-                    foreach (var o in obs)
+                    var obs = doc.Objects.FindByLayer(sl);
+                    var lta = new List<ObjectData>();
+
+                    if (obs != null)
                     {
-                        var od = new ObjectData(new ObjRef(o), parent, sl);
-                        lta.Add(od);
+                        foreach (var o in obs)
+                        {
+                            var od = new ObjectData(new ObjRef(o), parent, sl);
+                            lta.Add(od);
+                        }
+                        var tta = Tuple.Create(sl, lta);
+                        tlta.Add(tta);
                     }
-                    var tta = Tuple.Create(sl, lta);
-                    tlta.Add(tta);
-                }
-                else
-                {
-                    var tta = Tuple.Create(sl, new List<ObjectData>());
-                    tlta.Add(tta);
+                    else
+                    {
+                        var tta = Tuple.Create(sl, new List<ObjectData>());
+                        tlta.Add(tta);
+                    }
                 }
             }
+            
             layerdata = Tuple.Create(parent, tlta);
         }
         public List<Layer> getSubLayers()

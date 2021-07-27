@@ -23,12 +23,13 @@ namespace gjTools.Commands
         {
             var lt = new LayerTools(doc);
             var parts = Dialogs.ShowMultiListBox("Layer Selector", "Add PN Tag to", lt.getAllParentLayersStrings());
+            
 
             foreach(var p in parts)
             {
                 var layers = new List<Layer> { lt.CreateLayer(p) };
                 layers.AddRange(lt.getAllSubLayers(layers[0]));
-
+                RhinoApp.WriteLine(layers.Count.ToString());
                 var obj = new List<RhinoObject>();
                 var ss = new ObjectEnumeratorSettings();
                 foreach(var l in layers)
@@ -40,6 +41,7 @@ namespace gjTools.Commands
                 if (obj.Count > 0)
                 {
                     RhinoObject.GetTightBoundingBox(obj, out BoundingBox bb);
+                    RhinoApp.WriteLine("Ob count greater than 1");
 
                     // create text object
                     var dt = new DrawTools(doc);
