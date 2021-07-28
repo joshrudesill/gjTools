@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Eto.Forms;
 using Eto.Drawing;
+using Rhino.UI;
 
 namespace gjTools.Helpers
 {
@@ -18,8 +19,9 @@ namespace gjTools.Helpers
         private GridView multiList;
         private Button okButt;
         private Button cancelButt;
+        public Point windowPosition;
 
-        public DualListDialog(string winTitle, string LabelSingle, List<string> singleSelect, string labelMulti, List<string> multiSelect, int singleDefaultIndex = -1, int multiDefaultIndex = -1)
+        public DualListDialog(string winTitle, string LabelSingle, List<string> singleSelect, string labelMulti, List<string> multiSelect, Point windowPos, int singleDefaultIndex = -1, int multiDefaultIndex = -1)
         {
             _winTitle = winTitle;
             _LabelSingle = LabelSingle;
@@ -27,14 +29,14 @@ namespace gjTools.Helpers
             _labelMulti = labelMulti;
             _multiSelect = multiSelect;
 
-
             window = new Dialog<DialogResult>
             {
                 Padding = 10,
                 Title = _winTitle,
                 Topmost = true,
                 Result = DialogResult.Cancel,
-                WindowStyle = WindowStyle.Default
+                WindowStyle = WindowStyle.Default,
+                Location = windowPos
             };
             window.KeyDown += Window_KeyDown;
 
@@ -89,8 +91,9 @@ namespace gjTools.Helpers
                     new TableRow(buttonLayout)
                 }
             };
-            
-            window.ShowModal();
+
+            window.ShowModal(RhinoEtoApp.MainWindow);
+            windowPosition = window.Location;
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)

@@ -22,24 +22,8 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            // get from the datastore
-            var sql = new SQLTools();
-            var oldPartNumber = sql.queryDataStore(new List<int> { 12 })[0];
-
-            if (Dialogs.ShowEditBox("OEM Label Maker", "Enter OEM Part Number", oldPartNumber.stringValue, false, out string partNumber) == false)
-                return Result.Cancel;
-
-            // update the 
-            sql.updateDataStore(new DataStore(oldPartNumber.DBindex, partNumber.ToUpper(), 0, 0.0, EnglishName));
-            var label = new OEM_Label(partNumber);
-            if (!label.IsValid)
-            {
-                RhinoApp.WriteLine("That Part Number was not Found...");
-                return Result.Cancel;
-            }
-
             // make label
-            CreateOEMLabel(doc, label);
+            CreateOEMLabel(doc);
 
             return Result.Success;
         }
@@ -50,30 +34,40 @@ namespace gjTools.Commands
         /// </summary>
         /// <param name="doc"></param>
         /// <param name="label"></param>
-        public void CreateOEMLabel(RhinoDoc doc, OEM_Label label)
+        public bool CreateOEMLabel(RhinoDoc doc)
         {
             var dt = new DrawTools(doc);
             var ds = dt.StandardDimstyle();
 
             if (RhinoGet.GetOneObject("Select a Nesting Box", false, ObjectType.Curve, out ObjRef nestBox) == Result.Success)
             {
-                var pt = nestBox.Geometry().GetBoundingBox(true).GetCorners()[3];
-                    pt.Y += 0.5;
-                var txt = dt.AddText($"PN: {label.drawingNumber}\n{label.partName}\n{label.year} {label.customer}\n{label.process}\nU/M: {label.partsPerUnit}\nDOC#: {label.DOC}",
-                    pt, ds, 1.0, 0, 3, 6);
-
-                // add the label
-                var txtObj = doc.Objects.FindId(doc.Objects.AddText(txt));
-
-                // detect the label
                 var play = doc.Layers[nestBox.Object().Attributes.LayerIndex];
                 if (play.ParentLayerId != Guid.Empty)
                     play = doc.Layers.FindId(play.ParentLayerId);
 
+                var label = new OEM_Label(play.Name);
+                if (!label.IsValid)
+                {
+                    RhinoApp.WriteLine("That Part Number was not Found...");
+                    return false;
+                }
+
+                var pt = nestBox.Geometry().GetBoundingBox(true).GetCorners()[3];
+                    pt.Y += 0.5;
+                var txt = dt.AddText($"PN: {label.drawingNumber}\n{label.partName}\n{label.year} {label.customer}\n{label.process}\nU/M: {label.partsPerUnit}\nDOC#: {label.DOC}",
+                    pt, ds, 1.5 + (nestBox.Geometry().GetBoundingBox(true).GetEdges()[0].Length * 0.005), 0, 3, 6);
+
+                // add the label
+                var txtObj = doc.Objects.FindId(doc.Objects.AddText(txt));
+
                 // change the label layer
                 txtObj.Attributes.LayerIndex = play.Index;
                 txtObj.CommitChanges();
+
+                return true;
             }
+
+            return false;
         }
     }
 }

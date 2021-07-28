@@ -135,7 +135,7 @@ namespace gjTools.Commands
                     loc[0].path
                 };
                 if (doc.Path != null)
-                    path.Add(doc.Path);
+                    path.Add(doc.Path.Replace(doc.Name, ""));
                 return path;
             }
         }
