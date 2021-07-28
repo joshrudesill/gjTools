@@ -45,7 +45,10 @@ namespace gjTools.Commands
             {
                 windowPosition = PDFwindowPosition,
                 singleDefaultIndex = 4,
-                multiSelectAlternate = viewStrings
+                multiSelectAlternate = viewStrings,
+                showTextBox = true,
+                txtBoxDefault = "Potato",
+                txtBoxLabel = "What's Yummy?"
             };
             form.ShowForm();
             PDFwindowPosition = form.windowPosition;

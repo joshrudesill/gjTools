@@ -6,6 +6,7 @@ using Rhino.DocObjects;
 using Rhino.Commands;
 using Rhino.Input.Custom;
 using Rhino.UI;
+using Eto;
 
 namespace gjTools.Commands
 {
@@ -156,7 +157,7 @@ namespace gjTools.Commands
 
 
 
-    [CommandStyle(Style.ScriptRunner)]
+    [CommandStyle(Rhino.Commands.Style.ScriptRunner)]
     public class CAD_CutFile : Command
     {
         public CAD_CutFile()
@@ -168,6 +169,7 @@ namespace gjTools.Commands
         public static CAD_CutFile Instance { get; private set; }
 
         public override string EnglishName => "CAD_CutFile";
+        public Eto.Drawing.Point CutWindowPosition = new Eto.Drawing.Point(300, 300);
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
@@ -179,19 +181,28 @@ namespace gjTools.Commands
             // get locations from DB
             var loc = new Paths(doc, sql);
 
-            // user chooses a cut location
-            info.cutType = Dialogs.ShowListBox("Cut Location", "Choose a Location", loc.cutTypes, loc.DefaultChoice) as string;
-            if (info.cutType == null)
+            // determine the current layer
+            var lays = lt.getAllParentLayersStrings();
+            var currentParentLayer = doc.Layers.CurrentLayer;
+            if (currentParentLayer.ParentLayerId != Guid.Empty)
+                currentParentLayer = doc.Layers.FindId(currentParentLayer.ParentLayerId);
+
+            // Present the new form
+            var CutDialog = new Helpers.DualListDialog("Cut File Export", "Location", loc.cutTypes, "Layer", lays)
+            {
+                windowPosition = CutWindowPosition,
+                singleDefaultIndex = 2,
+                multiDefaultIndex = lays.IndexOf(currentParentLayer.Name),
+                multiSelect_selectMultiple = false
+            };
+            CutDialog.ShowForm();
+            CutWindowPosition = CutDialog.windowPosition;
+            if (CutDialog.CommandResult() != Eto.Forms.DialogResult.Ok)
                 return Result.Cancel;
 
+            info.cutType = CutDialog.GetSingleValue();
             info.path = loc.PathOfType(info.cutType);
-
-            // ask for the layer to send cut file out from
-            var pLay = Dialogs.ShowListBox("Layers", "Choose a Layer", lt.getAllParentLayersStrings(), doc.Layers.CurrentLayer.Name) as string;
-            if (pLay == null)
-                return Result.Cancel;
-
-            info.parentLayer = lt.CreateLayer(pLay);
+            info.parentLayer = lt.CreateLayer(CutDialog.GetMultiSelectValue()[0]);
 
             // find intended nesting box if multiple
             var NestingBox = CheckMultipleNestBox(info);
@@ -203,12 +214,13 @@ namespace gjTools.Commands
             if (info.cutName == null)
                 return Result.Cancel;
 
+            // Make the DXF
+            doc.Objects.UnselectAll();
+            if (!MakeDXF(info, NestingBox))
+                return Result.Cancel;
+
             // make the cut display box
             MakeCutNameText(info, NestingBox);
-            doc.Objects.UnselectAll();
-
-            // Make the DXF
-            MakeDXF(info, NestingBox);
 
             doc.Views.Redraw();
             return Result.Success;
