@@ -36,7 +36,18 @@ namespace gjTools.Commands
             };
             var lt = new LayerTools(doc);
 
-            var form = new Helpers.DualListDialog("PDF Example", "Out Type", outTypes, "Layer/s to output", lt.getAllParentLayersStrings(), PDFwindowPosition);
+            var views = doc.Views.GetPageViews();
+            var viewStrings = new List<string>();
+            foreach (var v in views)
+                viewStrings.Add(v.MainViewport.Name);
+
+            var form = new Helpers.DualListDialog("PDF Example", "Out Type", outTypes, "Layer/s to output", lt.getAllParentLayersStrings())
+            {
+                windowPosition = PDFwindowPosition,
+                singleDefaultIndex = 4,
+                multiSelectAlternate = viewStrings
+            };
+            form.ShowForm();
             PDFwindowPosition = form.windowPosition;
             RhinoApp.WriteLine($"The Result is: {form.CommandResult()}");
             RhinoApp.WriteLine($"The left selected: {form.GetSingleValue()}");

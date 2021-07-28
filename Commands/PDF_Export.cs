@@ -6,7 +6,7 @@ using Rhino.UI;
 using Rhino.DocObjects;
 using Rhino.Display;
 using Rhino.Geometry;
-
+using Eto;
 
 
 /// <summary>
@@ -126,7 +126,7 @@ public struct ePDF
 
 namespace gjTools.Commands
 {
-    [CommandStyle(Style.ScriptRunner)]
+    [CommandStyle(Rhino.Commands.Style.ScriptRunner)]
     public class EPDF_Export : Command
     {
         public EPDF_Export()
@@ -138,6 +138,7 @@ namespace gjTools.Commands
         public static EPDF_Export Instance { get; private set; }
 
         public override string EnglishName => "PDFExport";
+        public Eto.Drawing.Point PDFwindowPosition = new Eto.Drawing.Point(300, 300);
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
@@ -161,35 +162,37 @@ namespace gjTools.Commands
             var noWorkingPathOptions = new List<string>(outTypes);
             if (doc.Path == null)
                 noWorkingPathOptions.RemoveRange(5, 4);
+            
+            // get page views
+            var views = doc.Views.GetPageViews();
+            var viewStrings = new List<string>();
+            foreach (var v in views)
+                viewStrings.Add(v.MainViewport.Name);
+
+            // present the dialog for input
+            var pdfDialog = new Helpers.DualListDialog("PDF Exporter", "Output Type", noWorkingPathOptions, "Layers/Layout Select", lt.getAllParentLayersStrings())
+            {
+                windowPosition = PDFwindowPosition,
+                singleDefaultIndex = 0,
+                multiSelectAlternate = viewStrings
+            };
+            pdfDialog.ShowForm();
+            PDFwindowPosition = pdfDialog.windowPosition;
+            if (pdfDialog.CommandResult() != Eto.Forms.DialogResult.Ok)
+                return Result.Cancel;
 
             // Get user data
-            var outType = (string)Dialogs.ShowListBox("PDF Output", "Choose a Type", noWorkingPathOptions);
-            if (outType == null || (outType == "ProtoNestings" && doc.Path == ""))
-                return Result.Cancel;
+            var outType = pdfDialog.GetSingleValue();
+            var PDFNames = pdfDialog.GetMultiSelectValue();
             
             // See if layers need to be chosen
             if (outType == outTypes[0] || outType == outTypes[1] || outType == outTypes[4] || outType == outTypes[7] || outType == outTypes[8])
-            {
-                var PDFLayers = Dialogs.ShowMultiListBox("PDF Export", "Choose Layers", lt.getAllParentLayersStrings(), new List<string> { doc.Layers.CurrentLayer.Name });
-                if (PDFLayers == null)
-                    return Result.Cancel;
-
-                foreach(var p in PDFLayers)
+                foreach(var p in PDFNames)
                     pdfData.Add( DeterminePath(new ePDF(doc, doc.Layers[doc.Layers.FindByFullPath(p, 0)]), outType, outTypes, sql) );
-            }
             
             // See if page layouts need to be chosen
             if (outType == outTypes[2] || outType == outTypes[3])
             {
-                var views = doc.Views.GetPageViews();
-                var viewStrings = new List<string>();
-                foreach(var v in views)
-                    viewStrings.Add(v.MainViewport.Name);
-
-                var PDFNames = Dialogs.ShowMultiListBox("PDF Export", "Choose Layouts", viewStrings);
-                if (PDFNames == null)
-                    return Result.Cancel;
-
                 foreach (var p in PDFNames)
                 {
                     var page = new ePDF(doc, doc.Layers[0]);
