@@ -1,0 +1,3 @@
+﻿
+
+# AssignCutType: Occasionally will not assign correct colors to cut layers when assigning multiple objects on different layers
