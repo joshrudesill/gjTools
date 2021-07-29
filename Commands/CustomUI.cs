@@ -57,9 +57,16 @@ namespace gjTools.Commands
             RhinoApp.WriteLine($"The right selections: {string.Join(", ", form.GetMultiSelectValue())}");
             **/
 
-            var form = new LiebingerDialog()
+            /**var form = new LiebingerDialog()
             {
                 defaultPartNumber = "DUT-21-78365A",
+                windowPosition = PDFwindowPosition
+            };
+            form.ShowForm();
+            PDFwindowPosition = form.windowPosition;**/
+
+            var form = new PrototypeDialog()
+            {
                 windowPosition = PDFwindowPosition
             };
             form.ShowForm();

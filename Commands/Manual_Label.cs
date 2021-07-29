@@ -13,7 +13,6 @@ namespace gjTools.Commands
             Instance = this;
         }
 
-        public Eto.Drawing.Point LwindowPosition = new Eto.Drawing.Point(300, 300);
         public string partNumber = "DUT-21-78365A";
 
         ///<summary>The only instance of the MyCommand command.</summary>
@@ -23,17 +22,21 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
+            var mouse = Eto.Forms.Mouse.Position;
+            mouse.X -= 150;
+            mouse.Y -= 100;
+
             var form = new LiebingerDialog()
             {
                 defaultPartNumber = partNumber,
-                windowPosition = LwindowPosition
+                windowPosition = new Eto.Drawing.Point(mouse)
             };
             form.ShowForm();
-            LwindowPosition = form.windowPosition;
+            partNumber = form.GetCurrentPartNumber();
 
             if (form.CommandResult() != Eto.Forms.DialogResult.Ok)
                 return Result.Cancel;
-            
+
             if (RhinoGet.GetPoint("Place Label", false, out Point3d pt) != Result.Success)
                 return Result.Cancel;
 

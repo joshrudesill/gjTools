@@ -381,7 +381,16 @@ namespace gjTools.Commands
         private void PartNumber_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Keys.Enter)
-                SearchButt_Click(sender, e);
+            {
+                if (searchButt.Enabled)
+                    SearchButt_Click(sender, e);
+                else
+                    window.Close(DialogResult.Ok);
+            }
+            else if (e.Key == Keys.Escape)
+            {
+                window.Close(DialogResult.Cancel);
+            }
         }
 
         private void PartNumber_TextChanged(object sender, EventArgs e)
@@ -414,8 +423,170 @@ namespace gjTools.Commands
 
         public DialogResult CommandResult() { return window.Result; }
 
-        public string GetPartLine() { return partLine.Text; }
+        public string GetCurrentPartNumber() { return partNumber.Text; }
+    }
 
-        public string GetDescLine() { return descLine.Text; }
+    public class PrototypeDialog
+    {
+        private Dialog<DialogResult> window;
+        private Button okButt = new Button { Text = "OK" };
+        private Button cancelButt = new Button { Text = "Cancel" };
+        private GridView protoLabels = new GridView
+        {
+            Height = 300,
+            Width = 55,
+            ShowHeader = false,
+            Border = BorderType.Line,
+            GridLines = GridLines.Horizontal,
+            AllowMultipleSelection = false,
+            Columns = {
+                new GridColumn { 
+                    Editable = false,
+                    DataCell = new TextBoxCell(0) { TextAlignment = TextAlignment.Right },
+                    Width = 50
+                },
+            }
+        };
+        private GridView protoUserVals = new GridView
+        {
+            Height = 300,
+            Width = 85,
+            ShowHeader = false,
+            Border = BorderType.Line,
+            GridLines = GridLines.Horizontal,
+            AllowMultipleSelection = false,
+            Columns = {
+                new GridColumn {
+                    Editable = true,
+                    DataCell = new TextBoxCell(0) { TextAlignment = TextAlignment.Center },
+                    Width = 80
+                },
+            }
+        };
+        private GridView protoResults = new GridView
+        {
+            Height = 300,
+            Width = 205,
+            ShowHeader = false,
+            Border = BorderType.Line,
+            GridLines = GridLines.Horizontal,
+            AllowMultipleSelection = false,
+            Columns = {
+                new GridColumn {
+                    Editable = false,
+                    DataCell = new TextBoxCell(0) { TextAlignment = TextAlignment.Left },
+                    Width = 200
+                },
+            }
+        };
+
+        private List<string> labels = new List<string>
+        {
+            "Job",
+            "Due Date",
+            "Description",
+            "Film",
+            "Cut Qty",
+            "Part #1",
+            "Part #2",
+            "Part #3",
+            "Part #4",
+            "Part #5",
+            "Part #6",
+            "Part #7",
+            "Part #8",
+            "Part #9",
+            "Part #10"
+        };
+        public List<string> userInfo = new List<string>();
+        public Point windowPosition;
+
+        public void ShowForm()
+        {
+            window = new Dialog<DialogResult>
+            {
+                Padding = 10,
+                Title = "Liebinger Label",
+                AutoSize = true,
+                Topmost = true,
+                Result = DialogResult.Cancel,
+                WindowStyle = WindowStyle.Default,
+                Location = windowPosition
+            };
+
+            // events here
+            protoUserVals.CellEdited += ProtoInfo_CellEdited;
+            okButt.Click += (s, e) => window.Close(DialogResult.Ok);
+            cancelButt.Click += (s, e) => window.Close(DialogResult.Cancel);
+
+            var protoLayout = new TableLayout
+            {
+                Padding = new Padding(5, 5, 5, 5),
+                Spacing = new Size(0, 5),
+                Rows = {
+                    new TableRow(protoLabels, protoUserVals, protoResults)
+                }
+            };
+
+            var buttonLayout = new TableLayout
+            {
+                Padding = new Padding(5, 5, 5, 5),
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(null, okButt, cancelButt)
+                }
+            };
+
+            GridAssembler();
+            window.Content = new TableLayout
+            {
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(protoLayout),
+                    new TableRow(buttonLayout)
+                }
+            };
+
+            window.ShowModal(RhinoEtoApp.MainWindow);
+            windowPosition = window.Location;
+        }
+
+        private void GridAssembler()
+        {
+            var lab = new List<List<string>>();
+            var usr = new List<List<string>>();
+            var res = new List<List<string>>();
+            if (userInfo.Count == 0)
+                for (var i = 0; i < labels.Count; i++)
+                {
+                    lab.Add(new List<string> { labels[i] });
+                    usr.Add(new List<string> { "" });
+                    res.Add(new List<string> { "" });
+                }
+            else
+                for (var i = 0; i < labels.Count; i++)
+                {
+                    lab.Add(new List<string> { labels[i] });
+                    usr.Add(new List<string> { userInfo[i] });
+                    res.Add(new List<string> { "" });
+                }
+
+            protoLabels.DataStore = lab;
+            protoUserVals.DataStore = usr;
+            protoResults.DataStore = res;
+        }
+
+        private void ProtoInfo_CellEdited(object sender, GridViewCellEventArgs e)
+        {
+            var user_ds = protoUserVals.DataStore as List<List<string>>;
+            var res_ds = protoResults.DataStore as List<List<string>>;
+            var partInfo = new OEM_Label(user_ds[e.Row][0]);
+            userInfo[e.Row] = user_ds[e.Row][0];
+
+            if (partInfo.IsValid)
+                res_ds[e.Row][0] = partInfo.partName;
+
+            protoResults.DataStore = res_ds;
+        }
     }
 }
