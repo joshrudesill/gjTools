@@ -170,7 +170,7 @@ namespace gjTools.Commands
                 viewStrings.Add(v.MainViewport.Name);
 
             // present the dialog for input
-            var pdfDialog = new Helpers.DualListDialog("PDF Exporter", "Output Type", noWorkingPathOptions, "Layers/Layout Select", lt.getAllParentLayersStrings())
+            var pdfDialog = new DualListDialog("PDF Exporter", "Output Type", noWorkingPathOptions, "Layers/Layout Select", lt.getAllParentLayersStrings())
             {
                 windowPosition = PDFwindowPosition,
                 singleDefaultIndex = 0,

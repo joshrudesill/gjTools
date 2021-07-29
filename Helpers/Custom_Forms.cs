@@ -4,19 +4,19 @@ using Eto.Forms;
 using Eto.Drawing;
 using Rhino.UI;
 
-namespace gjTools.Helpers
+namespace gjTools.Commands
 {
     /// <summary>
     /// Intended for the PDF command
     /// </summary>
-    class DualListDialog
+    public class DualListDialog
     {
         private string _winTitle;
         private string _LabelSingle;
         private List<string> _singleSelect;
         private string _labelMulti;
         private List<string> _multiSelect;
-        
+
         private Dialog<DialogResult> window;
         private ListBox optionList;
         private GridView multiList;
@@ -58,7 +58,7 @@ namespace gjTools.Helpers
         /// Default value for the textbox
         /// </summary>
         public string txtBoxDefault = "";
-        
+
 
         public DualListDialog(string winTitle, string LabelSingle, List<string> singleSelect, string labelMulti, List<string> multiSelect)
         {
@@ -70,7 +70,8 @@ namespace gjTools.Helpers
             multiSelectAlternate = multiSelect;
         }
 
-        public void ShowForm() {
+        public void ShowForm()
+        {
             window = new Dialog<DialogResult>
             {
                 Padding = 10,
@@ -80,7 +81,7 @@ namespace gjTools.Helpers
                 WindowStyle = WindowStyle.Default,
                 Location = windowPosition
             };
-            
+
             optionList = new ListBox
             {
                 Height = 350,
@@ -88,7 +89,7 @@ namespace gjTools.Helpers
                 DataStore = _singleSelect,
                 TabIndex = 0
             };
-            
+
             // Make the multilist
             MultiList();
             multiList.TabIndex = 1;
@@ -143,9 +144,9 @@ namespace gjTools.Helpers
                 Padding = new Padding(5, 5, 5, 5),
                 Spacing = new Size(5, 5),
                 Rows = {
-                    new TableRow(new Label { Text = _LabelSingle }, new Label { Text = _labelMulti }),
-                    new TableRow(optionList, multiList)
-                }
+                new TableRow(new Label { Text = _LabelSingle }, new Label { Text = _labelMulti }),
+                new TableRow(optionList, multiList)
+            }
             };
 
             var buttonLayout = new TableLayout
@@ -153,19 +154,19 @@ namespace gjTools.Helpers
                 Padding = new Padding(5, 5, 5, 5),
                 Spacing = new Size(5, 5),
                 Rows =
-                {
-                    new TableRow(userTextLabel, userText, null, okButt, cancelButt)
-                }
+            {
+                new TableRow(userTextLabel, userText, null, okButt, cancelButt)
+            }
             };
 
             window.Content = new TableLayout
             {
                 Spacing = new Size(5, 5),
                 Rows =
-                {
-                    new TableRow(selectLayout),
-                    new TableRow(buttonLayout)
-                }
+            {
+                new TableRow(selectLayout),
+                new TableRow(buttonLayout)
+            }
             };
 
             window.ShowModal(RhinoEtoApp.MainWindow);
@@ -263,7 +264,7 @@ namespace gjTools.Helpers
         {
             var ds = multiList.SelectedRows;
             var outlist = new List<string>();
-            
+
             foreach (var s in ds)
                 outlist.Add(_multiSelect[s]);
 
@@ -281,5 +282,140 @@ namespace gjTools.Helpers
         }
     }
 
+    public class LiebingerDialog
+    {
+        private Dialog<DialogResult> window;
+        public Point windowPosition = new Point(400, 400);
+        public string defaultPartNumber = "";
+        public OEM_Label LabelInfo;
 
+        private Button searchButt = new Button { Text = "Search", Width = 100 };
+        private Button okButt = new Button { Text = "Place", Width = 90, Enabled = false };
+        private Button cancelButt = new Button { Text = "Cancel", Width = 90 };
+
+        private TextBox partNumber;
+
+        private Label partNumLabel = new Label { Text = "PartNumber" };
+        private Label searchResult = new Label { Text = "" };
+        private Label partLine = new Label { Text = "" };
+        private Label descLine = new Label { Text = "" };
+
+        public void ShowForm()
+        {
+            window = new Dialog<DialogResult>
+            {
+                Padding = 10,
+                Title = "Liebinger Label",
+                AutoSize = true,
+                Topmost = true,
+                Result = DialogResult.Cancel,
+                WindowStyle = WindowStyle.Default,
+                Location = windowPosition
+            };
+
+            // Make the textbox
+            partNumber = new TextBox
+            {
+                Text = defaultPartNumber,
+                Width = 180
+            };
+
+            // Make events
+            okButt.Click += (s, e) => window.Close(DialogResult.Ok);
+            cancelButt.Click += (s, e) => window.Close(DialogResult.Cancel);
+            searchButt.Click += SearchButt_Click;
+            partNumber.KeyDown += PartNumber_KeyDown;
+            partNumber.TextChanged += PartNumber_TextChanged;
+
+            // Make the layouts
+            var searchLayout = new TableLayout
+            {
+                Rows = {
+                    new TableRow(partNumLabel, null, searchResult)
+                }
+            };
+
+            var userLayout = new TableLayout
+            {
+                Padding = new Padding(5, 5, 5, 5),
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(partNumber, searchButt, null)
+                }
+            };
+
+            var descriptionLayout = new TableLayout
+            {
+                Padding = new Padding(5, 5, 5, 5),
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(partLine),
+                    new TableRow(descLine)
+                }
+            };
+
+            var buttonLayout = new TableLayout
+            {
+                Padding = new Padding(5, 5, 5, 5),
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(null, okButt, cancelButt)
+                }
+            };
+
+            window.Content = new TableLayout
+            {
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(searchLayout),
+                    new TableRow(userLayout),
+                    new TableRow(descriptionLayout),
+                    new TableRow(buttonLayout)
+                }
+            };
+
+            window.ShowModal(RhinoEtoApp.MainWindow);
+            windowPosition = window.Location;
+        }
+
+        private void PartNumber_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Keys.Enter)
+                SearchButt_Click(sender, e);
+        }
+
+        private void PartNumber_TextChanged(object sender, EventArgs e)
+        {
+            searchButt.Enabled = true;
+            searchResult.Text = "";
+            partLine.Text = "";
+            descLine.Text = "";
+            okButt.Enabled = false;
+        }
+
+        private void SearchButt_Click(object sender, EventArgs e)
+        {
+            LabelInfo = new OEM_Label(partNumber.Text);
+            if (LabelInfo.IsValid)
+            {
+                searchResult.Text = "Found";
+                partLine.Text = $"{LabelInfo.drawingNumber}        <datamatrix,{LabelInfo.drawingNumber}>";
+                descLine.Text = $"{LabelInfo.customerPartNumber}   {LabelInfo.partName} CUT DATE: <date,MM/dd/yyyy> <orderid>";
+                searchButt.Enabled = false;
+                okButt.Enabled = true;
+            }
+            else
+            {
+                searchResult.Text = "Not Found";
+                partLine.Text = "";
+                descLine.Text = "";
+            }
+        }
+
+        public DialogResult CommandResult() { return window.Result; }
+
+        public string GetPartLine() { return partLine.Text; }
+
+        public string GetDescLine() { return descLine.Text; }
+    }
 }

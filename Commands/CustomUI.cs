@@ -41,7 +41,7 @@ namespace gjTools.Commands
             foreach (var v in views)
                 viewStrings.Add(v.MainViewport.Name);
 
-            var form = new Helpers.DualListDialog("PDF Example", "Out Type", outTypes, "Layer/s to output", lt.getAllParentLayersStrings())
+            /**var form = new DualListDialog("PDF Example", "Out Type", outTypes, "Layer/s to output", lt.getAllParentLayersStrings())
             {
                 windowPosition = PDFwindowPosition,
                 singleDefaultIndex = 4,
@@ -55,6 +55,15 @@ namespace gjTools.Commands
             RhinoApp.WriteLine($"The Result is: {form.CommandResult()}");
             RhinoApp.WriteLine($"The left selected: {form.GetSingleValue()}");
             RhinoApp.WriteLine($"The right selections: {string.Join(", ", form.GetMultiSelectValue())}");
+            **/
+
+            var form = new LiebingerDialog()
+            {
+                defaultPartNumber = "DUT-21-78365A",
+                windowPosition = PDFwindowPosition
+            };
+            form.ShowForm();
+            PDFwindowPosition = form.windowPosition;
 
             return Result.Success;
         }

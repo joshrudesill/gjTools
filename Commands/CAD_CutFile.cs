@@ -188,7 +188,7 @@ namespace gjTools.Commands
                 currentParentLayer = doc.Layers.FindId(currentParentLayer.ParentLayerId);
 
             // Present the new form
-            var CutDialog = new Helpers.DualListDialog("Cut File Export", "Location", loc.cutTypes, "Layer", lays)
+            var CutDialog = new DualListDialog("Cut File Export", "Location", loc.cutTypes, "Layer", lays)
             {
                 windowPosition = CutWindowPosition,
                 singleDefaultIndex = 2,
