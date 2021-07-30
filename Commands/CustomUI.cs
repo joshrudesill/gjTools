@@ -2,6 +2,8 @@
 using Rhino;
 using Rhino.Commands;
 using Rhino.UI;
+using Rhino.DocObjects;
+using Rhino.Input;
 using Eto;
 
 namespace gjTools.Commands
@@ -65,13 +67,15 @@ namespace gjTools.Commands
             form.ShowForm();
             PDFwindowPosition = form.windowPosition;**/
 
-            var form = new PrototypeDialog()
+            /**var form = new PrototypeDialog()
             {
                 windowPosition = PDFwindowPosition,
                 userInfo = new List<string> { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" }
             };
             form.ShowForm();
-            PDFwindowPosition = form.windowPosition;
+            PDFwindowPosition = form.windowPosition;**/
+
+            RhinoGet.GetMultipleObjects("farts", false, Rhino.DocObjects.ObjectType.Annotation, out ObjRef[] toot);
 
             return Result.Success;
         }
