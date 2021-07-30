@@ -429,28 +429,33 @@ namespace gjTools.Commands
     public class PrototypeDialog
     {
         private Dialog<DialogResult> window;
-        private Button okButt = new Button { Text = "OK" };
+        
+        private Button clearValuesButt = new Button { Text = "Clear Values", ToolTip = "Double-Click Me" };
+        private Button okButt = new Button { Text = "Place Block" };
         private Button cancelButt = new Button { Text = "Cancel" };
+
+        private CheckBox AddLabels = new CheckBox { Text = "Add Proto Labels too?", Checked = true };
+
         private GridView protoLabels = new GridView
         {
-            Height = 300,
-            Width = 55,
+            Width = 95,
             ShowHeader = false,
-            Border = BorderType.Line,
+            Border = BorderType.None,
             GridLines = GridLines.Horizontal,
             AllowMultipleSelection = false,
+            Enabled = false,
+            BackgroundColor = Colors.LightGrey,
             Columns = {
                 new GridColumn { 
                     Editable = false,
                     DataCell = new TextBoxCell(0) { TextAlignment = TextAlignment.Right },
-                    Width = 50
+                    Width = 90
                 },
             }
         };
         private GridView protoUserVals = new GridView
         {
-            Height = 300,
-            Width = 85,
+            Width = 115,
             ShowHeader = false,
             Border = BorderType.Line,
             GridLines = GridLines.Horizontal,
@@ -459,23 +464,24 @@ namespace gjTools.Commands
                 new GridColumn {
                     Editable = true,
                     DataCell = new TextBoxCell(0) { TextAlignment = TextAlignment.Center },
-                    Width = 80
+                    Width = 110
                 },
             }
         };
         private GridView protoResults = new GridView
         {
-            Height = 300,
-            Width = 205,
+            Width = 275,
             ShowHeader = false,
-            Border = BorderType.Line,
+            Border = BorderType.None,
             GridLines = GridLines.Horizontal,
             AllowMultipleSelection = false,
+            Enabled = false,
+            BackgroundColor = Colors.LightGrey,
             Columns = {
                 new GridColumn {
                     Editable = false,
                     DataCell = new TextBoxCell(0) { TextAlignment = TextAlignment.Left },
-                    Width = 200
+                    Width = 270
                 },
             }
         };
@@ -485,8 +491,8 @@ namespace gjTools.Commands
             "Job",
             "Due Date",
             "Description",
-            "Film",
             "Cut Qty",
+            "Film",
             "Part #1",
             "Part #2",
             "Part #3",
@@ -498,9 +504,15 @@ namespace gjTools.Commands
             "Part #9",
             "Part #10"
         };
+        /// <summary>
+        /// array length is 15
+        /// </summary>
         public List<string> userInfo = new List<string>();
         public Point windowPosition;
 
+        /// <summary>
+        /// Form gets written to screen
+        /// </summary>
         public void ShowForm()
         {
             window = new Dialog<DialogResult>
@@ -516,6 +528,7 @@ namespace gjTools.Commands
 
             // events here
             protoUserVals.CellEdited += ProtoInfo_CellEdited;
+            clearValuesButt.MouseDoubleClick += ClearValuesButt_MouseDoubleClick;
             okButt.Click += (s, e) => window.Close(DialogResult.Ok);
             cancelButt.Click += (s, e) => window.Close(DialogResult.Cancel);
 
@@ -533,7 +546,7 @@ namespace gjTools.Commands
                 Padding = new Padding(5, 5, 5, 5),
                 Spacing = new Size(5, 5),
                 Rows = {
-                    new TableRow(null, okButt, cancelButt)
+                    new TableRow(AddLabels, null, clearValuesButt, okButt, cancelButt)
                 }
             };
 
@@ -551,6 +564,51 @@ namespace gjTools.Commands
             windowPosition = window.Location;
         }
 
+        private void ClearValuesButt_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            userInfo.Clear();
+            GridAssembler();
+        }
+
+        //  external user data extractors
+        public bool PlaceLabels
+        {
+            get
+            {
+                return AddLabels.Checked ?? true;
+            }
+        }
+        public List<string> GetUserValues
+        {
+            get
+            {
+                var user_ds = protoUserVals.DataStore as List<List<string>>;
+                var user_1d = new List<string>();
+                foreach (var d in user_ds)
+                    user_1d.Add(d[0]);
+                return user_1d;
+            }
+        }
+        public List<string> GetResultValues
+        {
+            get
+            {
+                var res_ds = protoResults.DataStore as List<List<string>>;
+                var res_1d = new List<string>();
+                foreach (var d in res_ds)
+                    res_1d.Add(d[0]);
+                return res_1d;
+            }
+        }
+        public DialogResult CommandResult
+        {
+            get
+            {
+                return window.Result;
+            }
+        }
+
+        // Inner class tools
         private void GridAssembler()
         {
             var lab = new List<List<string>>();
@@ -574,19 +632,69 @@ namespace gjTools.Commands
             protoLabels.DataStore = lab;
             protoUserVals.DataStore = usr;
             protoResults.DataStore = res;
-        }
 
-        private void ProtoInfo_CellEdited(object sender, GridViewCellEventArgs e)
+            // initialize already present values
+            if (userInfo.Count != 0)
+            {
+                for(var i = 4; i < userInfo.Count; i++)
+                {
+                    if (userInfo[i].Length > 0)
+                    {
+                        if (i == 4)
+                            res[i] = new List<string> { UpdateColor()[i][0] };
+                        if (i > 4)
+                            res[i] = new List<string> { UpdatePart(i)[i][0] };
+                    }
+                }
+                protoResults.DataStore = res;
+            }
+        }
+        private List<List<string>> UpdateColor()
         {
             var user_ds = protoUserVals.DataStore as List<List<string>>;
             var res_ds = protoResults.DataStore as List<List<string>>;
-            var partInfo = new OEM_Label(user_ds[e.Row][0]);
-            userInfo[e.Row] = user_ds[e.Row][0];
+
+            var sql = new SQLTools();
+            var color = sql.queryOEMColors(user_ds[4][0]);
+
+            if (color[0].colorName.Length > 1)
+                res_ds[4][0] = $"{color[0].colorNum} - {color[0].colorName}";
+            else
+                res_ds[4][0] = "";
+            
+            return res_ds;
+        }
+        private List<List<string>> UpdatePart(int row)
+        {
+            var user_ds = protoUserVals.DataStore as List<List<string>>;
+            var res_ds = protoResults.DataStore as List<List<string>>;
+
+            var partInfo = new OEM_Label(user_ds[row][0]);
 
             if (partInfo.IsValid)
-                res_ds[e.Row][0] = partInfo.partName;
+                res_ds[row][0] = partInfo.partName;
+            else
+                res_ds[row][0] = "";
 
-            protoResults.DataStore = res_ds;
+            return res_ds;
+        }
+        private void ProtoInfo_CellEdited(object sender, GridViewCellEventArgs e)
+        {
+            if (e.Row > 3)
+            {
+                var user_ds = protoUserVals.DataStore as List<List<string>>;
+                var res_ds = protoResults.DataStore as List<List<string>>;
+
+                // for the color
+                if (e.Row == 4)
+                    res_ds = UpdateColor();
+
+                // for the parts only
+                if (e.Row > 4)
+                    res_ds = UpdatePart(e.Row);
+
+                protoResults.DataStore = res_ds;
+            }
         }
     }
 }

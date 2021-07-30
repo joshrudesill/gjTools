@@ -74,6 +74,7 @@ namespace gjTools.Commands
 
         public override string EnglishName => "ProtoUtility";
         public Layer _parentLayer;
+        public bool placeLabels = true;
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
@@ -112,19 +113,17 @@ namespace gjTools.Commands
                 colorList.Add(new OEMColor(newJobVals[4], "Not Found", 0));
 
             // Present the new data
-            var res = CheckDataMessage(newJobVals, parts, colorList[0]);
-            if (res.Count == 0)
-                return Result.Cancel;
+            var res = CreateProtoBlock(newJobVals, parts, colorList[0]);
 
             // add the title block
-            bool placed = PlaceTitleBlock(doc, res);
-            if (!placed)
+            if (!PlaceTitleBlock(doc, res))
                 return Result.Cancel;
 
             // ask if user wants to place labels
-            foreach (var p in parts)
-                if (!PlaceProtoLabels(doc, p, _parentLayer))
-                    break;
+            if (placeLabels)
+                foreach (var p in parts)
+                    if (!PlaceProtoLabels(doc, p, _parentLayer))
+                        break;
 
             return Result.Success;
         }
@@ -320,15 +319,23 @@ namespace gjTools.Commands
         public List<string> GetDataFromUser(JobSlot job, List<DataStore> parts)
         {
             // prep data for the Property Box
-            var propertyLabels = new List<string> { "Job", "Due Date", "Job Description", "Cut QTY", "Film:", "PN 1", "PN 2", "PN 3", "PN 4", "PN 5", "PN 6", "PN 7", "PN 8", "PN 9", "PN 10" };
+            var newValues = new List<string>();
             var propertyValues = new List<string> { job.job, job.due, job.description, job.quantity.ToString(), job.material };
             for (int i = 1; i < parts.Count; i++)
                 propertyValues.Add(parts[i].stringValue);
 
-            var res = Dialogs.ShowPropertyListBox("Prototype Utility", "Job Information", propertyLabels, propertyValues);
-            var newValues = new List<string>();
-            if (res != null)
-                newValues.AddRange(res);
+            var mouse = Eto.Forms.Mouse.Position;
+                mouse.X -= 250;
+                mouse.Y -= 300;
+
+            var res = new PrototypeDialog { userInfo = propertyValues, windowPosition = new Eto.Drawing.Point(mouse) };
+            res.ShowForm();
+            
+            if (res.CommandResult == Eto.Forms.DialogResult.Ok)
+            {
+                newValues.AddRange(res.GetUserValues);
+                placeLabels = res.PlaceLabels;
+            }
 
             return newValues;
         }
@@ -340,7 +347,7 @@ namespace gjTools.Commands
         /// <param name="parts"></param>
         /// <param name="color"></param>
         /// <returns>true if ok to place</returns>
-        public List<string> CheckDataMessage(List<string> job, List<OEM_Label> parts, OEMColor color)
+        public List<string> CreateProtoBlock(List<string> job, List<OEM_Label> parts, OEMColor color)
         {
             // Present the new data
             string textMatl = string.Format("{0} - {1}\nCut - {2}x", color.colorNum, color.colorName, job[3]);
@@ -348,14 +355,7 @@ namespace gjTools.Commands
             foreach (var t in parts)
                 textBlob += string.Format("\n{0} - {1}", t.drawingNumber, t.partName);
 
-            var ok = Dialogs.ShowMessage(string.Format("{0}\n\n{1}", textMatl, textBlob), "Info Preview", ShowMessageButton.OKCancel, ShowMessageIcon.Information);
-            var str = new List<string>();
-            if (ok == ShowMessageResult.OK)
-            {
-                str.Add(textBlob);
-                str.Add(textMatl);
-            }
-            return str;
+            return new List<string> { textBlob, textMatl };
         }
     }
 }

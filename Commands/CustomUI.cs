@@ -67,7 +67,8 @@ namespace gjTools.Commands
 
             var form = new PrototypeDialog()
             {
-                windowPosition = PDFwindowPosition
+                windowPosition = PDFwindowPosition,
+                userInfo = new List<string> { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" }
             };
             form.ShowForm();
             PDFwindowPosition = form.windowPosition;
