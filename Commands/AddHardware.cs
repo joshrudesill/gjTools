@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Rhino.Geometry;
 using Rhino.DocObjects;
 using Rhino.Input;
+using Rhino.Input.Custom;
 
 namespace gjTools.Commands
 {
@@ -20,7 +21,7 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            var hardwares = new List<string> { "Cleats", "American Girl Cleats" };
+            var hardwares = new List<string> { "Cleats", "American Girl Cleats", "Tape" };
             var type = Rhino.UI.Dialogs.ShowListBox("Add Hardware", "Choose a type of hardware to add..", hardwares);
 
             switch(hardwares.IndexOf((string)type))
@@ -31,9 +32,99 @@ namespace gjTools.Commands
                 case 1: 
                     addAmGirlCleats();
                     break;
+                case 2:
+                    AddTape(doc);
+                    break;
             }
             return Result.Success;
         }
+
+
+        public void AddTape(RhinoDoc doc)
+        {
+            var disp = new Rhino.Display.CustomDisplay(true);
+            var tapeW = new OptionDouble(0.5); 
+                tapeW.CurrentValue = tapeW.InitialValue;
+            var offset = new OptionDouble(0.125);
+                offset.CurrentValue = offset.InitialValue;
+            var orient = new OptionToggle(false, "Vertical", "Horizontal");
+                orient.CurrentValue = orient.InitialValue;
+            var qty = new OptionInteger(2);
+                qty.CurrentValue = qty.InitialValue;
+            Curve obj = null;
+            var res = GetResult.NoResult;
+
+            var go = new GetObject() { GeometryFilter = ObjectType.Curve };
+                go.SetCommandPrompt("Select Objects");
+                go.AcceptNothing(true);
+                go.AddOptionDouble("TapeWidth", ref tapeW, "New Tape Width");
+                go.AddOptionDouble("OffsetEdges", ref offset, "Set Offset");
+                go.AddOptionInteger("Qty", ref qty, "Qty of Tape");
+                go.AddOptionToggle("Orientation", ref orient);
+
+            res = go.Get();
+
+            while (true)
+            {
+                if (res == GetResult.Nothing || res == GetResult.Cancel)
+                {
+                    disp.Dispose();
+                    break;
+                }
+
+                // Collect object and deselect it to continue loop
+                if (res == GetResult.Object)
+                {
+                    obj = go.Object(0).Curve();
+                    doc.Objects.UnselectAll();
+                }
+
+                if (obj != null)
+                {
+                    disp.Clear();
+                    disp.AddCurve(obj, System.Drawing.Color.Red, 1);
+
+                    foreach (var r in addTape(obj))
+                    {
+                        var lines = r.GetEdges();
+                        for (var i = 0; i <= 4; i++)
+                            disp.AddLine(lines[i], System.Drawing.Color.Blue, 1);
+                    }
+                }
+
+                res = go.Get();
+            }
+
+            disp.Dispose();
+
+            List<BoundingBox> addTape(Curve crv)
+            {
+                var tapes = new List<BoundingBox>();
+                var bb = crv.GetBoundingBox(true);
+                    
+                double space = (bb.GetEdges()[0].Length - tapeW.CurrentValue) / qty.CurrentValue;
+
+                // add first tape
+                var pt1 = bb.GetCorners()[0];
+                var pt2 = bb.GetCorners()[3];
+                tapes.Add(new BoundingBox(
+                    pt1, 
+                    new Point3d(pt1.X + tapeW.CurrentValue, pt2.Y, 0)
+                ));
+
+                for (var i = 1; i <= qty.CurrentValue; i++)
+                {
+                    var pts = tapes[0].GetCorners();
+                    tapes.Add(new BoundingBox(
+                        new Point3d(pts[0].X + (space * i) - (tapeW.CurrentValue / 2), pts[0].Y, 0),
+                        new Point3d(pts[0].X + (space * i) + (tapeW.CurrentValue / 2), pts[3].Y, 0)
+                    ));
+                }
+
+                return tapes;
+            }
+        }
+
 
         private void addCleats()
         {

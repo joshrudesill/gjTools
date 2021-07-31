@@ -75,7 +75,7 @@ namespace gjTools.Commands
             form.ShowForm();
             PDFwindowPosition = form.windowPosition;**/
 
-            RhinoGet.GetMultipleObjects("farts", false, Rhino.DocObjects.ObjectType.Annotation, out ObjRef[] toot);
+            RhinoGet.GetMultipleObjects("farts", false, ObjectType.Annotation, out ObjRef[] toot);
 
             return Result.Success;
         }
