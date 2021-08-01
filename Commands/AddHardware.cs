@@ -40,59 +40,49 @@ namespace gjTools.Commands
         }
 
 
-        public void AddTape(RhinoDoc doc)
+        public bool AddTape(RhinoDoc doc)
         {
             var disp = new Rhino.Display.CustomDisplay(true);
             var tapeW = new OptionDouble(0.5); 
-                tapeW.CurrentValue = tapeW.InitialValue;
             var offset = new OptionDouble(0.125);
-                offset.CurrentValue = offset.InitialValue;
             var orient = new OptionToggle(false, "Vertical", "Horizontal");
-                orient.CurrentValue = orient.InitialValue;
             var qty = new OptionInteger(2);
-                qty.CurrentValue = qty.InitialValue;
-            Curve obj = null;
             var res = GetResult.NoResult;
 
-            var go = new GetObject() { GeometryFilter = ObjectType.Curve };
-                go.SetCommandPrompt("Select Objects");
+            if (RhinoGet.GetOneObject("Select Object", false, ObjectType.Curve, out ObjRef obj) != Result.Success)
+                return false;
+            doc.Objects.UnselectAll();
+
+            var go = new GetOption();
+                go.SetCommandPrompt("Tape Configure");
                 go.AcceptNothing(true);
                 go.AddOptionDouble("TapeWidth", ref tapeW, "New Tape Width");
                 go.AddOptionDouble("OffsetEdges", ref offset, "Set Offset");
                 go.AddOptionInteger("Qty", ref qty, "Qty of Tape");
                 go.AddOptionToggle("Orientation", ref orient);
 
-            res = go.Get();
+            // initial add tape
+            addTape(obj.Curve());
 
             while (true)
             {
+                res = go.Get();
+
                 if (res == GetResult.Nothing || res == GetResult.Cancel)
                 {
                     disp.Dispose();
                     break;
                 }
 
-                // Collect object and deselect it to continue loop
-                if (res == GetResult.Object)
+                disp.Clear();
+                    
+                foreach (var r in addTape(obj.Curve()))
                 {
-                    obj = go.Object(0).Curve();
-                    doc.Objects.UnselectAll();
+                    var lines = r.GetEdges();
+                    for (var i = 0; i <= 4; i++)
+                        disp.AddLine(lines[i], System.Drawing.Color.Aquamarine, 1);
                 }
-
-                if (obj != null)
-                {
-                    disp.Clear();
-                    disp.AddCurve(obj, System.Drawing.Color.Red, 1);
-
-                    foreach (var r in addTape(obj))
-                    {
-                        var lines = r.GetEdges();
-                        for (var i = 0; i <= 4; i++)
-                            disp.AddLine(lines[i], System.Drawing.Color.Blue, 1);
-                    }
-                }
-
-                res = go.Get();
+                doc.Views.Redraw();
             }
 
             disp.Dispose();
@@ -101,20 +91,19 @@ namespace gjTools.Commands
             {
                 var tapes = new List<BoundingBox>();
                 var bb = crv.GetBoundingBox(true);
+                var pts = bb.GetCorners();
+                
                     
-                double space = (bb.GetEdges()[0].Length - tapeW.CurrentValue) / qty.CurrentValue;
+                double space = (bb.GetEdges()[0].Length - (tapeW.CurrentValue / 2)) / (qty.CurrentValue - 1);
 
                 // add first tape
-                var pt1 = bb.GetCorners()[0];
-                var pt2 = bb.GetCorners()[3];
                 tapes.Add(new BoundingBox(
-                    pt1, 
-                    new Point3d(pt1.X + tapeW.CurrentValue, pt2.Y, 0)
+                    pts[0], 
+                    new Point3d(pts[0].X + tapeW.CurrentValue, pts[3].Y, 0)
                 ));
 
                 for (var i = 1; i <= qty.CurrentValue; i++)
                 {
-                    var pts = tapes[0].GetCorners();
                     tapes.Add(new BoundingBox(
                         new Point3d(pts[0].X + (space * i) - (tapeW.CurrentValue / 2), pts[0].Y, 0),
                         new Point3d(pts[0].X + (space * i) + (tapeW.CurrentValue / 2), pts[3].Y, 0)
@@ -123,6 +112,8 @@ namespace gjTools.Commands
 
                 return tapes;
             }
+
+            return true;
         }
 
 
