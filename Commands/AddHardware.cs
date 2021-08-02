@@ -48,6 +48,7 @@ namespace gjTools.Commands
             var orient = new OptionToggle(false, "Vertical", "Horizontal");
             var qty = new OptionInteger(2);
             var res = GetResult.NoResult;
+            var strips = new List<PolylineCurve>();
 
             if (RhinoGet.GetOneObject("Select Object", false, ObjectType.Curve, out ObjRef obj) != Result.Success)
                 return false;
@@ -70,21 +71,39 @@ namespace gjTools.Commands
                 }
 
                 disp.Clear();
-                    
-                foreach (var r in addTape(obj.Curve()))
+
+                strips = addTape(obj.Curve());
+                foreach (var r in strips)
                 {
-                    disp.AddLine(r, System.Drawing.Color.Aquamarine, 2);
+                    var segs = r.DuplicateSegments();
+                    foreach(var c in segs)
+                        disp.AddCurve(c, System.Drawing.Color.Aquamarine, 2);
                 }
 
                 doc.Views.Redraw();
                 res = go.Get();
             }
 
-            disp.Dispose();
-
-            List<Line> addTape(Curve crv)
+            RhinoApp.WriteLine($"The result: {res}");
+            if (res == GetResult.Nothing)
             {
-                var tapes = new List<Line>();
+                // make the strips real
+                foreach(var pl in strips)
+                {
+                    var pline = doc.Objects.FindId(doc.Objects.AddCurve(pl));
+                    var play = doc.Layers[obj.Object().Attributes.LayerIndex];
+                    if (play.ParentLayerId != Guid.Empty)
+                        play = doc.Layers.FindId(play.ParentLayerId);
+
+                    pline.Attributes.LayerIndex = play.Index;
+                    pline.CommitChanges();
+                }
+            }
+
+            List<PolylineCurve> addTape(Curve crv)
+            {
+                var tapes = new List<PolylineCurve>();
+                var tapeLines = new List<Line>();
                 var oCrv = crv.Offset(Plane.WorldXY, -offset.CurrentValue, doc.ModelAbsoluteTolerance, CurveOffsetCornerStyle.Sharp);
                 var bb = oCrv[0].GetBoundingBox(true);
                 foreach (var c in oCrv)
@@ -100,14 +119,14 @@ namespace gjTools.Commands
                 if (!orient.CurrentValue)
                 {   // Vertical Tape
                     // add first tape
-                    tapes.Add(new Line(
+                    tapeLines.Add(new Line(
                         pts[0], 
                         new Point3d(pts[0].X, pts[3].Y, 0)
                     ));
 
                     for (var i = 1; i < qty.CurrentValue; i++)
                     {
-                        tapes.Add(new Line(
+                        tapeLines.Add(new Line(
                             new Point3d(pts[0].X + (space * i), pts[0].Y, 0),
                             new Point3d(pts[0].X + (space * i), pts[3].Y, 0)
                         ));
@@ -117,35 +136,40 @@ namespace gjTools.Commands
                 {   //  Horizontal Tape
                     space = (bb.GetEdges()[1].Length - tapeW.CurrentValue) / (qty.CurrentValue - 1);
                     // add first tape
-                    tapes.Add(new Line(
+                    tapeLines.Add(new Line(
                         new Point3d(pts[1].X, pts[0].Y, 0),
                         pts[0]
                     ));
 
                     for (var i = 1; i < qty.CurrentValue; i++)
                     {
-                        tapes.Add(new Line(
+                        tapeLines.Add(new Line(
                             new Point3d(pts[1].X, pts[0].Y + (space * i), 0),
                             new Point3d(pts[0].X, pts[0].Y + (space * i), 0)
                         ));
                     }
                 }
 
-                // apply trims and return
-                return TrimLines(crv, tapes);
-            }
-
-            List<Line> TrimLines (Curve crv, List<Line> lines)
-            {
-                var tapes = new List<Line>();
-                
-                foreach(var l in lines)
-                {
-                    tapes.Add(l);
-                    tapes.Add(new Line(l.From, l.To));
-                }
+                foreach (var l in tapeLines)
+                    tapes.Add(LineToPoly(l));
 
                 return tapes;
+            }
+
+            PolylineCurve LineToPoly(Line l)
+            {
+                var offLine = new Line(l.From, l.To);
+                if (l.FromY == l.ToY)
+                {
+                    offLine.FromY = l.FromY + tapeW.CurrentValue;
+                    offLine.ToY = l.ToY + tapeW.CurrentValue;
+                }
+                else
+                {
+                    offLine.FromX = l.FromX + tapeW.CurrentValue;
+                    offLine.ToX = l.ToX + tapeW.CurrentValue;
+                }
+                return new PolylineCurve(new List<Point3d> { l.From, l.To, offLine.To, offLine.From, l.From });
             }
 
             return true;
