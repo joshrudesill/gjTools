@@ -1,12 +1,39 @@
 ﻿using System;
 using Rhino;
 using Rhino.Geometry;
+using Rhino.DocObjects;
+using Rhino.Input;
 using Rhino.Input.Custom;
 using Rhino.Commands;
 using System.Collections.Generic;
 
 namespace gjTools
 {
+
+    public struct MeasureDrawing
+    {
+        public TextEntity pnTxt;
+        public RhinoObject pnTxtObj;
+        public Layer pnLayer;
+
+        public List<RhinoObject> cutObjs;
+        public Point3d topLeftPt;
+
+        public string GetPN
+        {
+            get { return pnTxt.PlainText.Replace("PN:", "").Trim(); }
+        }
+        public List<Point3d> GetDiagRegion (Point3d pt)
+        {
+            return new List<Point3d> {
+                topLeftPt,
+                new Point3d(topLeftPt.X + 110, topLeftPt.Y, 0),
+                new Point3d(pt.X + 110, pt.Y, 0),
+                new Point3d(pt.X, pt.Y, 0)
+            };
+        }
+    }
+
     public class DrawingTools : Command
     {
         public DrawingTools()
@@ -26,7 +53,8 @@ namespace gjTools
                 "Part Boundries", 
                 "Check for Polylines", 
                 "Make Objects into Circles", 
-                "Destroy all Blocks" 
+                "Destroy all Blocks",
+                "Process Measure Drawing"
             };
 
             string operation = (string)Rhino.UI.Dialogs.ShowListBox("Part Operations", "Choose Operation", options);
@@ -44,6 +72,9 @@ namespace gjTools
 
             if (operation == options[3])
                 ExplodeAllBlocks(doc);
+
+            if (operation == options[4])
+                MeasureDrawingPrep(doc);
 
             return Result.Success;
         }
@@ -216,6 +247,102 @@ namespace gjTools
                 return true;
             else
                 return false;
+        }
+
+        public bool MeasureDrawingPrep(RhinoDoc doc)
+        {
+            var txt = doc.Objects.FindByLayer("C_PTNO");
+            var divPoint = new List<Point3d>();
+            var lt = new LayerTools(doc);
+            var md = new List<MeasureDrawing>
+            {
+                new MeasureDrawing { topLeftPt = new Point3d(-10, -1, 0) }
+            };  // add an empty to the list
+
+            // check the object for PN
+            foreach (var t in txt)
+            {
+                var oref = new ObjRef(t).TextEntity();
+                
+                // if casting success
+                if (oref == null)
+                    continue;
+                
+                // if a PN Tag
+                if (oref.PlainText.Substring(0, 3) != "PN:")
+                    continue;
+
+                md.Add(new MeasureDrawing
+                {
+                    pnTxt = oref,
+                    pnTxtObj = t,
+                    topLeftPt = new Point3d(-10, oref.GetBoundingBox(true).GetCorners()[2].Y + 0.25, 0)
+                });
+            }
+
+            // Sort the point by Y coord
+            md.Sort((x, y) => x.topLeftPt.Y.CompareTo(y.topLeftPt.Y));
+
+            var garbageLays = new List<Layer>();
+
+            // sort the parts
+            for(int i = 1; i < md.Count; i++)
+            {
+                var mdObj = md[i];
+                var ptObj = doc.Objects.FindByCrossingWindowRegion(
+                    doc.Views.ActiveView.MainViewport,
+                    mdObj.GetDiagRegion(md[i-1].topLeftPt),
+                    true,
+                    ObjectType.Curve
+                );
+
+                // make pn layer
+                mdObj.pnLayer = lt.CreateLayer(mdObj.GetPN);
+
+                // add to garbage
+                if (!garbageLays.Contains(doc.Layers[mdObj.pnTxtObj.Attributes.LayerIndex]))
+                    garbageLays.Add(doc.Layers[mdObj.pnTxtObj.Attributes.LayerIndex]);
+
+                // assign the text string to the pn layer
+                mdObj.pnTxtObj.Attributes.LayerIndex = mdObj.pnLayer.Index;
+                mdObj.pnTxtObj.CommitChanges();
+
+                // add the objects and remove the pn text
+                mdObj.cutObjs = new List<RhinoObject>(ptObj);
+
+                // reassign the layer
+                foreach(var o in mdObj.cutObjs)
+                {
+                    if (o == mdObj.pnTxtObj)
+                        continue;
+
+                    var curLay = doc.Layers[o.Attributes.LayerIndex];
+
+                    var newLayer = lt.CreateLayer(
+                        curLay.Name,
+                        mdObj.pnLayer.Name,
+                        curLay.Color
+                    );
+
+                    if (!garbageLays.Contains(curLay))
+                        garbageLays.Add(curLay);
+
+                    o.Attributes.LayerIndex = newLayer.Index;
+                    o.CommitChanges();
+                }
+
+                md[i] = mdObj;
+            }
+
+            // remove the element that's empty
+            md.RemoveAt(0);
+
+            // delete the old layers
+            if (garbageLays.Count > 0)
+                foreach (var l in garbageLays)
+                    doc.Layers.Delete(l.Index, true);
+
+            return true;
         }
     }
 }

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Rhino.Geometry;
 using Rhino.DocObjects;
 using Rhino.Input;
+using Rhino.Input.Custom;
 
 namespace gjTools.Commands
 {
@@ -20,7 +21,7 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            var hardwares = new List<string> { "Cleats", "American Girl Cleats" };
+            var hardwares = new List<string> { "Cleats", "American Girl Cleats", "Tape" };
             var type = Rhino.UI.Dialogs.ShowListBox("Add Hardware", "Choose a type of hardware to add..", hardwares);
 
             switch(hardwares.IndexOf((string)type))
@@ -31,9 +32,90 @@ namespace gjTools.Commands
                 case 1: 
                     addAmGirlCleats();
                     break;
+                case 2:
+                    AddTape(doc);
+                    break;
             }
             return Result.Success;
         }
+
+
+        public bool AddTape(RhinoDoc doc)
+        {
+            var disp = new Rhino.Display.CustomDisplay(true);
+            var tapeW = new OptionDouble(0.5); 
+            var offset = new OptionDouble(0.125);
+            var orient = new OptionToggle(false, "Vertical", "Horizontal");
+            var qty = new OptionInteger(2);
+            var res = GetResult.NoResult;
+
+            if (RhinoGet.GetOneObject("Select Object", false, ObjectType.Curve, out ObjRef obj) != Result.Success)
+                return false;
+            doc.Objects.UnselectAll();
+
+            var go = new GetOption();
+                go.SetCommandPrompt("Tape Configure");
+                go.AcceptNothing(true);
+                go.AddOptionDouble("TapeWidth", ref tapeW, "New Tape Width");
+                go.AddOptionDouble("OffsetEdges", ref offset, "Set Offset");
+                go.AddOptionInteger("Qty", ref qty, "Qty of Tape");
+                go.AddOptionToggle("Orientation", ref orient);
+
+            // initial add tape
+            addTape(obj.Curve());
+
+            while (true)
+            {
+                res = go.Get();
+
+                if (res == GetResult.Nothing || res == GetResult.Cancel)
+                {
+                    disp.Dispose();
+                    break;
+                }
+
+                disp.Clear();
+                    
+                foreach (var r in addTape(obj.Curve()))
+                {
+                    var lines = r.GetEdges();
+                    for (var i = 0; i <= 4; i++)
+                        disp.AddLine(lines[i], System.Drawing.Color.Aquamarine, 1);
+                }
+                doc.Views.Redraw();
+            }
+
+            disp.Dispose();
+
+            List<BoundingBox> addTape(Curve crv)
+            {
+                var tapes = new List<BoundingBox>();
+                var bb = crv.GetBoundingBox(true);
+                var pts = bb.GetCorners();
+                
+                    
+                double space = (bb.GetEdges()[0].Length - (tapeW.CurrentValue / 2)) / (qty.CurrentValue - 1);
+
+                // add first tape
+                tapes.Add(new BoundingBox(
+                    pts[0], 
+                    new Point3d(pts[0].X + tapeW.CurrentValue, pts[3].Y, 0)
+                ));
+
+                for (var i = 1; i <= qty.CurrentValue; i++)
+                {
+                    tapes.Add(new BoundingBox(
+                        new Point3d(pts[0].X + (space * i) - (tapeW.CurrentValue / 2), pts[0].Y, 0),
+                        new Point3d(pts[0].X + (space * i) + (tapeW.CurrentValue / 2), pts[3].Y, 0)
+                    ));
+                }
+
+                return tapes;
+            }
+
+            return true;
+        }
+
 
         private void addCleats()
         {

@@ -170,7 +170,7 @@ namespace gjTools.Commands
                 viewStrings.Add(v.MainViewport.Name);
 
             // present the dialog for input
-            var pdfDialog = new Helpers.DualListDialog("PDF Exporter", "Output Type", noWorkingPathOptions, "Layers/Layout Select", lt.getAllParentLayersStrings())
+            var pdfDialog = new DualListDialog("PDF Exporter", "Output Type", noWorkingPathOptions, "Layers/Layout Select", lt.getAllParentLayersStrings())
             {
                 windowPosition = PDFwindowPosition,
                 singleDefaultIndex = 0,
@@ -193,7 +193,7 @@ namespace gjTools.Commands
             // See if page layouts need to be chosen
             if (outType == outTypes[2] || outType == outTypes[3])
             {
-                foreach (var p in PDFNames)
+                foreach (var p in pdfDialog.GetMultiSelectAlternateValue())
                 {
                     var page = new ePDF(doc, doc.Layers[0]);
                         page.IsLayout = true;

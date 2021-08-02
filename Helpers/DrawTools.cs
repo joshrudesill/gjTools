@@ -193,8 +193,8 @@ public class DrawTools : IDrawTools
               plane.Origin = point;
         var dimstyle = doc.DimStyles.FindIndex(dimsyleIndex);
 
-        bool bold = true ? (fontStyle == 1 || fontStyle == 3) : false;
-        bool italic = true ? (fontStyle == 2) : false;
+        bool bold = (fontStyle == 1 || fontStyle == 3) ? true : false;
+        bool italic = (fontStyle == 2) ? true : false;
 
         var H = Rhino.DocObjects.TextHorizontalAlignment.Auto;
         switch (justHoriz)
