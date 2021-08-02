@@ -61,13 +61,8 @@ namespace gjTools.Commands
                 go.AddOptionInteger("Qty", ref qty, "Qty of Tape");
                 go.AddOptionToggle("Orientation", ref orient);
 
-            // initial add tape
-            addTape(obj.Curve());
-
             while (true)
             {
-                res = go.Get();
-
                 if (res == GetResult.Nothing || res == GetResult.Cancel)
                 {
                     disp.Dispose();
@@ -78,36 +73,76 @@ namespace gjTools.Commands
                     
                 foreach (var r in addTape(obj.Curve()))
                 {
-                    var lines = r.GetEdges();
-                    for (var i = 0; i <= 4; i++)
-                        disp.AddLine(lines[i], System.Drawing.Color.Aquamarine, 1);
+                    disp.AddLine(r, System.Drawing.Color.Aquamarine, 2);
                 }
+
                 doc.Views.Redraw();
+                res = go.Get();
             }
 
             disp.Dispose();
 
-            List<BoundingBox> addTape(Curve crv)
+            List<Line> addTape(Curve crv)
             {
-                var tapes = new List<BoundingBox>();
-                var bb = crv.GetBoundingBox(true);
-                var pts = bb.GetCorners();
-                
-                    
-                double space = (bb.GetEdges()[0].Length - (tapeW.CurrentValue / 2)) / (qty.CurrentValue - 1);
-
-                // add first tape
-                tapes.Add(new BoundingBox(
-                    pts[0], 
-                    new Point3d(pts[0].X + tapeW.CurrentValue, pts[3].Y, 0)
-                ));
-
-                for (var i = 1; i <= qty.CurrentValue; i++)
+                var tapes = new List<Line>();
+                var oCrv = crv.Offset(Plane.WorldXY, -offset.CurrentValue, doc.ModelAbsoluteTolerance, CurveOffsetCornerStyle.Sharp);
+                var bb = oCrv[0].GetBoundingBox(true);
+                foreach (var c in oCrv)
                 {
-                    tapes.Add(new BoundingBox(
-                        new Point3d(pts[0].X + (space * i) - (tapeW.CurrentValue / 2), pts[0].Y, 0),
-                        new Point3d(pts[0].X + (space * i) + (tapeW.CurrentValue / 2), pts[3].Y, 0)
+                    bb.Union(c.GetBoundingBox(true));
+                    disp.AddCurve(c, System.Drawing.Color.LightGray, 1);
+                }
+
+                var pts = bb.GetCorners();
+                double space = (bb.GetEdges()[0].Length - tapeW.CurrentValue) / (qty.CurrentValue - 1);
+
+                // Check Orientation
+                if (!orient.CurrentValue)
+                {   // Vertical Tape
+                    // add first tape
+                    tapes.Add(new Line(
+                        pts[0], 
+                        new Point3d(pts[0].X, pts[3].Y, 0)
                     ));
+
+                    for (var i = 1; i < qty.CurrentValue; i++)
+                    {
+                        tapes.Add(new Line(
+                            new Point3d(pts[0].X + (space * i), pts[0].Y, 0),
+                            new Point3d(pts[0].X + (space * i), pts[3].Y, 0)
+                        ));
+                    }
+                }
+                else
+                {   //  Horizontal Tape
+                    space = (bb.GetEdges()[1].Length - tapeW.CurrentValue) / (qty.CurrentValue - 1);
+                    // add first tape
+                    tapes.Add(new Line(
+                        new Point3d(pts[1].X, pts[0].Y, 0),
+                        pts[0]
+                    ));
+
+                    for (var i = 1; i < qty.CurrentValue; i++)
+                    {
+                        tapes.Add(new Line(
+                            new Point3d(pts[1].X, pts[0].Y + (space * i), 0),
+                            new Point3d(pts[0].X, pts[0].Y + (space * i), 0)
+                        ));
+                    }
+                }
+
+                // apply trims and return
+                return TrimLines(crv, tapes);
+            }
+
+            List<Line> TrimLines (Curve crv, List<Line> lines)
+            {
+                var tapes = new List<Line>();
+                
+                foreach(var l in lines)
+                {
+                    tapes.Add(l);
+                    tapes.Add(new Line(l.From, l.To));
                 }
 
                 return tapes;

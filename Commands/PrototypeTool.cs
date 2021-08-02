@@ -26,7 +26,7 @@ namespace gjTools.Commands
         private bool GetData()
         {
             string folderPath = "\\\\spi\\art\\PROTOTYPE\\AutoCAD_XML\\";
-            if (System.IO.File.Exists(folderPath + drawingNumber + ".xml"))
+            if (System.IO.File.Exists(folderPath + drawingNumber + ".xml") && drawingNumber.Length > 4)
             {
                 var XMLfile = System.IO.File.OpenText(folderPath + drawingNumber + ".xml");
                 while (true)
