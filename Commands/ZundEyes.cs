@@ -104,7 +104,7 @@ namespace gjTools.Commands
                 pli = player;
             }
             l1index = lt.CreateLayer("C_EYES", pli.Name, System.Drawing.Color.Red).Index;
-            l2index = lt.CreateLayer("EYE_FILL", pli.Name, System.Drawing.Color.Black).Index;
+            l2index = lt.CreateLayer("PRINT_REG", pli.Name, System.Drawing.Color.Black).Index;
         }
 
         void calcPlacement(Point3d[] corners)

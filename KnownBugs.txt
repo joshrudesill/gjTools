@@ -1,3 +1,5 @@
 ﻿
 
 # AssignCutType: Occasionally will not assign correct colors to cut layers when assigning multiple objects on different layers
+
+# Layer boundries: boxes dont move once layers have been reassigned correctly/ background exception
