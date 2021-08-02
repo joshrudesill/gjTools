@@ -37,10 +37,7 @@ namespace gjTools.Commands
                     break;
                 }
             }
-            if(!pnfound)
-            {
-                return Result.Nothing;
-            }
+            if(!pnfound) { return Result.Nothing; }
             foreach (var g in go)
             {
                 if (g.Object().ObjectType == ObjectType.Annotation) { continue; }
