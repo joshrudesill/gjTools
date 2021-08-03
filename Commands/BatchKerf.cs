@@ -46,7 +46,7 @@ namespace gjTools.Commands
                 string sta = "";
                 foreach (var sl in lds.layerdata.Item2)
                 {
-                    sta += sl.Item1.Name + ": ";
+                    sta += sl.Item1.Name.Replace("C_", "KERF-") + ": ";
                     double kerf = 0;
                     foreach (var ob in sl.Item2)
                     {
