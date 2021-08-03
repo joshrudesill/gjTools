@@ -21,9 +21,7 @@ namespace gjTools.Commands
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             var lt = new LayerTools(doc);
-            RhinoApp.WriteLine("1");
             var ld = lt.getAllLayerData();
-            RhinoApp.WriteLine("1");
             var ldp = new List<string>();
             var ldsorted = new List<LayerData>();
             foreach (var lad in ld)
@@ -31,7 +29,6 @@ namespace gjTools.Commands
                 ldp.Add(lad.layerdata.Item1.Name);
             }
             var la = Rhino.UI.Dialogs.ShowMultiListBox("Layers", "Select a layer..", ldp);
-            RhinoApp.WriteLine("1");
             if (la == null)
             {
                 RhinoApp.WriteLine("Cancelled.");
@@ -50,15 +47,15 @@ namespace gjTools.Commands
                 foreach (var sl in lds.layerdata.Item2)
                 {
                     sta += sl.Item1.Name.Replace("C_", "KERF-") + ": ";
-                    int kerf = 0;
+                    double kerf = 0;
                     foreach (var ob in sl.Item2)
                     {
                         if (ob.obRef.Curve() != null)
                         {
-                            kerf += (int)ob.obRef.Curve().GetLength();
+                            kerf += ob.obRef.Curve().GetLength();
                         }
                     }
-                    sta += kerf.ToString() + "\n";
+                    sta += Math.Floor(kerf).ToString() + "\n";
                 }
                 var bb = lds.getBoundingBoxofParent();
                 var crns = bb.GetCorners();
