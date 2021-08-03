@@ -45,7 +45,7 @@ namespace gjTools.Commands
 
             RhinoObject.GetTightBoundingBox(rObj, out BoundingBox bb);
 
-
+            
         }
     }
 }
