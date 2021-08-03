@@ -169,10 +169,13 @@ namespace gjTools.Commands
         public static CAD_CutFile Instance { get; private set; }
 
         public override string EnglishName => "CAD_CutFile";
-        public Eto.Drawing.Point CutWindowPosition = new Eto.Drawing.Point(300, 300);
+        public Eto.Drawing.Point CutWindowPosition = Eto.Drawing.Point.Empty;
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
+            if (CutWindowPosition == Eto.Drawing.Point.Empty)
+                CutWindowPosition = new Eto.Drawing.Point((int)MouseCursor.Location.X - 250, 200);
+
             var sql = new SQLTools();
             var lt = new LayerTools(doc);
             var info = new CutData { doc = doc };
@@ -197,6 +200,7 @@ namespace gjTools.Commands
             };
             CutDialog.ShowForm();
             CutWindowPosition = CutDialog.windowPosition;
+
             if (CutDialog.CommandResult() != Eto.Forms.DialogResult.Ok)
                 return Result.Cancel;
 

@@ -138,10 +138,13 @@ namespace gjTools.Commands
         public static EPDF_Export Instance { get; private set; }
 
         public override string EnglishName => "PDFExport";
-        public Eto.Drawing.Point PDFwindowPosition = new Eto.Drawing.Point(300, 300);
+        public Eto.Drawing.Point PDFwindowPosition = Eto.Drawing.Point.Empty;
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
+            if (PDFwindowPosition == Eto.Drawing.Point.Empty)
+                PDFwindowPosition = new Eto.Drawing.Point((int)MouseCursor.Location.X - 250, 200);
+
             var sql = new SQLTools();
             var lt = new LayerTools(doc);
             var pdfData = new List<ePDF>();
@@ -178,6 +181,7 @@ namespace gjTools.Commands
             };
             pdfDialog.ShowForm();
             PDFwindowPosition = pdfDialog.windowPosition;
+
             if (pdfDialog.CommandResult() != Eto.Forms.DialogResult.Ok)
                 return Result.Cancel;
 
