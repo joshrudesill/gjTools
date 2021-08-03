@@ -251,6 +251,8 @@ namespace gjTools
 
         public bool MeasureDrawingPrep(RhinoDoc doc)
         {
+            doc.Objects.UnselectAll();
+
             var txt = doc.Objects.FindByLayer("C_PTNO");
             var divPoint = new List<Point3d>();
             var lt = new LayerTools(doc);
