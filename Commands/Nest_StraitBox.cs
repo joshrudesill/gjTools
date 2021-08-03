@@ -77,14 +77,14 @@ namespace gjTools.Commands
             }
 
             // time to write the Data
-            if (res == GetResult.Point)
+            if (res == GetResult.Point && gp.data[0] > 1)
             {
                 selectedBB = gp.ObjectBB;
                 data = gp.data;
                 return true;
             }
-            else
-                return false;
+            
+            return false;
         }
 
         public void GridObjCopy(ObjRef[] obj)
