@@ -21,9 +21,7 @@ namespace gjTools.Commands
 
         public override string EnglishName => "Nest_StraitBox";
         public double space = 0.25;
-        /// <summary>
-        /// Qty, rows, columns
-        /// </summary>
+        /// <summary> Qty, rows, columns </summary>
         public List<int> data = new List<int> { 1, 1, 1 };
         public Box selectedBB = Box.Empty;
 

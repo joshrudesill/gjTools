@@ -36,8 +36,8 @@ namespace gjTools.Commands
 
             // add the dims to the drawing and swap the layer
             var dims = new List<Guid> { 
-                doc.Objects.AddLinearDimension(MakeDim(doc.DimStyles.Current, pts[3], pts[2])), 
-                doc.Objects.AddLinearDimension(MakeDim(doc.DimStyles.Current, pts[0], pts[3], true))
+                doc.Objects.AddLinearDimension(MakeDim(doc.DimStyles.Current, pts[3], pts[2], false, dimlevel)), 
+                doc.Objects.AddLinearDimension(MakeDim(doc.DimStyles.Current, pts[0], pts[3], true, dimlevel))
             };
             foreach(var d in dims)
             {
@@ -63,7 +63,7 @@ namespace gjTools.Commands
         /// <param name="dimlevel"></param>
         /// <param name="dimVertical"></param>
         /// <returns></returns>
-        public LinearDimension MakeDim(DimensionStyle ds, Point3d start, Point3d end, bool dimVertical = false)
+        public static LinearDimension MakeDim(DimensionStyle ds, Point3d start, Point3d end, bool dimVertical = false, int dimlevel = 1)
         {
             Plane p = Plane.WorldXY;
             Vector3d v = Vector3d.XAxis;
