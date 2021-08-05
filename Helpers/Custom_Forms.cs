@@ -697,4 +697,183 @@ namespace gjTools.Commands
             }
         }
     }
+
+    public class OEMColorManager
+    {
+        private Dialog<DialogResult> window;
+        public Point windowPosition = new Point(400, 400);
+
+        private Button placeButt = new Button { Text = "Place Label" };
+        private Button addButt = new Button { Text = "ADD", ToolTip = "Double-Click", Enabled = false };
+        private Button okButt = new Button { Text = "Done" };
+
+        private TextBox newNumber = new TextBox { Width = 100 };
+        private TextBox newName = new TextBox { Width = 180 };
+
+        private SQLTools sql = new SQLTools();
+
+        private GridView colors = new GridView
+        {
+            Height = 350,
+            ShowHeader = true,
+            Border = BorderType.Line,
+            GridLines = GridLines.Both,
+            AllowMultipleSelection = false,
+            Enabled = true,
+            Columns = {
+                new GridColumn {
+                    Editable = true,
+                    HeaderText = "Color Number",
+                    DataCell = new TextBoxCell(0) { TextAlignment = TextAlignment.Center },
+                    Width = 100
+                },
+                new GridColumn {
+                    Editable = true,
+                    HeaderText = "Description",
+                    DataCell = new TextBoxCell(1) { TextAlignment = TextAlignment.Center },
+                    Width = 260
+                }
+            }
+        };
+
+        public void ShowForm()
+        {
+            window = new Dialog<DialogResult>
+            {
+                Padding = 10,
+                Title = "Liebinger Label",
+                AutoSize = true,
+                Topmost = true,
+                Result = DialogResult.Cancel,
+                WindowStyle = WindowStyle.Default,
+                Location = windowPosition
+            };
+
+            var gridLabel = new Label { Text = "Current Color List" };
+            var removeRowLayout = new TableLayout
+            {
+                Padding = new Padding(5, 5, 5, 5),
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(gridLabel, null)
+                }
+            };
+
+            var colorGridLayout = new TableLayout
+            {
+                Padding = new Padding(5, 0, 5, 15),
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(colors)
+                }
+            };
+
+            var newNumberLabel = new Label { Text = "New Color Number" };
+            var newNameLabel = new Label { Text = "Description" };
+            var newValsLayout = new TableLayout
+            {
+                Padding = new Padding(5, 5, 5, 5),
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(newNumberLabel, newNameLabel, null),
+                    new TableRow(newNumber, newName, addButt)
+                }
+            };
+
+            var buttonLayout = new TableLayout
+            {
+                Padding = new Padding(5, 5, 5, 5),
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(null, placeButt, okButt)
+                }
+            };
+
+            window.Content = new TableLayout
+            {
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(removeRowLayout),
+                    new TableRow(colorGridLayout),
+                    new TableRow(newValsLayout),
+                    new TableRow(buttonLayout)
+                }
+            };
+
+            // make the events
+            colors.SelectedItemsChanged += Colors_SelectionChanged;
+            colors.CellEdited += Colors_CellEdited;
+            okButt.Click += (s, e) => window.Close(DialogResult.Ok);
+            placeButt.Click += (s, e) => window.Close(DialogResult.Yes);
+            addButt.MouseDoubleClick += AddButt_MouseDoubleClick;
+            newName.TextChanged += NewName_TextChanged;
+            newNumber.TextChanged += NewName_TextChanged;
+
+            gridAssembler();
+            window.ShowModal(RhinoEtoApp.MainWindow);
+            windowPosition = window.Location;
+        }
+
+        public DialogResult CommandResult
+        {
+            get
+            {
+                return window.Result;
+            }
+        }
+
+        public OEMColor SelectedColor
+        {
+            get
+            {
+                return sql.queryOEMColors()[colors.SelectedRow];
+            }
+        }
+
+        private void NewName_TextChanged(object sender, EventArgs e)
+        {
+            if (newNumber.Text != string.Empty && newName.Text != string.Empty)
+                addButt.Enabled = true;
+        }
+
+        private void Colors_CellEdited(object sender, GridViewCellEventArgs e)
+        {
+            if (e.Row != -1)
+            {
+                var c = sql.queryOEMColors()[e.Row];
+                var ds = colors.DataStore as List<List<string>>;
+                var newC = new OEMColor(ds[e.Row][0], ds[e.Row][1], c.id);
+                sql.updateOemColor(newC);
+            }
+        }
+
+        private void AddButt_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            
+            if (newNumber.Text != string.Empty && newName.Text != string.Empty)
+            {
+                var c = sql.queryOEMColors();
+                sql.insertOemColor(new OEMColor(newNumber.Text, newName.Text, c[c.Count - 1].id + 1));
+                gridAssembler();
+            }
+        }
+
+        private void Colors_SelectionChanged(object sender, EventArgs e)
+        {
+            if (colors.SelectedItem != null)
+                placeButt.Enabled = true;
+            else
+                placeButt.Enabled = false;
+        }
+
+        private void gridAssembler()
+        {
+            var colorDB = sql.queryOEMColors();
+            var ds = new List<List<string>>(colorDB.Count);
+            foreach(var c in colorDB)
+                ds.Add(new List<string> { c.colorNum, c.colorName });
+
+            colors.DataStore = ds;
+        }
+    }
 }

@@ -491,7 +491,7 @@ namespace gjTools
         /// <returns></returns>
         public bool updateOemColor(OEMColor c)
         {
-            string s = string.Format("UPDATE oemColors SET colorNum = '{0}', colorName = '{1}, id = '{2}' WHERE id = '{3}';", c.colorNum, c.colorName, c.id, c.id);
+            string s = string.Format("UPDATE oemColors SET colorNum = '{0}', colorName = '{1}', id = '{2}' WHERE id = '{3}'", c.colorNum, c.colorName, c.id, c.id);
             int r = executeCommand(s);
             if (r == 0)
             {
@@ -508,7 +508,7 @@ namespace gjTools
         /// <returns></returns>
         public bool insertOemColor(OEMColor c)
         {
-            string s = string.Format("INSERT INTO oemColors (colorNum, colorName, id) VALUES ('{0}', '{1}', '{2}');", c.colorNum, c.colorName, c.id);
+            string s = string.Format("INSERT INTO oemColors (colorNum, colorName, id) VALUES ('{0}', '{1}', '{2}')", c.colorNum, c.colorName, c.id);
             int r = executeCommand(s);
             if (r == 0)
             {

@@ -9,48 +9,55 @@ using Rhino.UI;
 
 namespace gjTools.Commands
 {
-    public class Fill_NumberSeries : Command
+    public class Unit_Number_List : Command
     {
-        public Fill_NumberSeries()
+        public Unit_Number_List()
         {
             Instance = this;
         }
 
         ///<summary>The only instance of the MyCommand command.</summary>
-        public static Fill_NumberSeries Instance { get; private set; }
+        public static Unit_Number_List Instance { get; private set; }
 
-        public override string EnglishName => "FillNumberSeries";
+        public override string EnglishName => "UnitNumberList";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            // Text Heigh
-            double unitHeight = 1.25;
-            if (RhinoGet.GetNumber("Text Height", false, ref unitHeight) != Result.Success)
+            // Get the sized unit number
+            if (RhinoGet.GetOneObject("Select the Desired Text", false, ObjectType.Annotation, out ObjRef example) != Result.Success)
                 return Result.Cancel;
-            
-            // ffffind the fffffont
-            var unitFont = Dialogs.ShowListBox("Fonts", "Select a Font", Font.AvailableFontFaceNames());
-            if (unitFont == null)
+
+            var txt = example.TextEntity();
+            if (txt == null)
+            {
+                RhinoApp.WriteLine("That wasnt a text entity, Try again");
                 return Result.Cancel;
+            }
 
             // get the list of parts
             if (!Dialogs.ShowEditBox("List Import", "Paste Here", "Each Line will be a new part...", true, out string rawInput))
                 return Result.Cancel;
 
             var unitNumbers = new List<string> (rawInput.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries));
-            var dt = new DrawTools(doc);
-            var txt = dt.AddText("396NONE", Point3d.Origin, dt.StandardDimstyle(), unitHeight);
-                txt.Font = Font.FromQuartetProperties((string)unitFont, false, false);
 
             double height = 0.0;
             double width = 0.0;
             foreach (var u in unitNumbers)
             {
                 txt.PlainText = u;
-                if (txt.GetBoundingBox(true).GetEdges()[0].Length > width)
-                    width = txt.GetBoundingBox(true).GetEdges()[0].Length;
-                if (txt.GetBoundingBox(true).GetEdges()[1].Length > height)
-                    height = txt.GetBoundingBox(true).GetEdges()[1].Length;
+
+                // explode for better size results
+                var explTxt = txt.Explode();
+                var crvBB = BoundingBox.Empty;
+                foreach(var c in explTxt)
+                    crvBB.Union(c.GetBoundingBox(true));
+
+                // Test Dims
+                var edges = crvBB.GetEdges();
+                if (edges[0].Length > width)
+                    width = edges[0].Length;
+                if (edges[1].Length > height)
+                    height = edges[1].Length;
             }
 
             var box = new Rectangle3d(Plane.WorldXY, width + 0.5, height + 0.5);
@@ -69,7 +76,6 @@ namespace gjTools.Commands
             }
 
             doc.Views.Redraw();
-
             return Result.Success;
         }
     }
