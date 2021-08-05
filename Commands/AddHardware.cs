@@ -27,7 +27,7 @@ namespace gjTools.Commands
             switch(hardwares.IndexOf((string)type))
             {
                 case 0: 
-                    addCleats();
+                    addCleats(doc);
                     break;
                 case 1: 
                     addAmGirlCleats();
@@ -176,11 +176,25 @@ namespace gjTools.Commands
         }
 
 
-        private void addCleats()
+        private void addCleats(RhinoDoc doc)
         {
             if (RhinoGet.GetOneObject("Select an Object to add Cleats to", false, ObjectType.Curve, out ObjRef crv) == Result.Success)
             {
                 var rect = crv.Curve();
+                int pli = 0;
+                Guid gi = crv.ObjectId;
+
+                var lay = doc.Layers[crv.Object().Attributes.LayerIndex];
+                var player = lay.ParentLayerId;
+                if (player != Guid.Empty)
+                {
+                    var lt = doc.Layers.FindId(player);
+                    pli = lt.Index;
+                }
+                else
+                {
+                    pli = crv.Object().Attributes.LayerIndex;
+                }
                 var bb = rect.GetBoundingBox(true);
                 var corners = bb.GetCorners();
                 var edges = bb.GetEdges();
@@ -200,8 +214,10 @@ namespace gjTools.Commands
                     var diff = (rectta2.Width - 96) / 2;
                     rectta2 = new Rectangle3d(Plane.WorldXY, new Point3d(x1 + diff, y1 - (edges[1].Length / 3), 0), new Point3d(x2 - diff, y2 - (edges[1].Length / 3), 0));
                 }
-                RhinoDoc.ActiveDoc.Objects.AddRectangle(rectta);
-                RhinoDoc.ActiveDoc.Objects.AddRectangle(rectta2);
+                var oa = new ObjectAttributes();
+                oa.LayerIndex = pli;
+                RhinoDoc.ActiveDoc.Objects.AddRectangle(rectta, oa);
+                RhinoDoc.ActiveDoc.Objects.AddRectangle(rectta2, oa);
                 Plane p = RhinoDoc.ActiveDoc.Views.ActiveView.ActiveViewport.ConstructionPlane();
                 p.Origin = rectta.Center;
                 Plane p2 = RhinoDoc.ActiveDoc.Views.ActiveView.ActiveViewport.ConstructionPlane();
@@ -209,8 +225,8 @@ namespace gjTools.Commands
                 DrawTools dt = new DrawTools(RhinoDoc.ActiveDoc);
                 var t1 = dt.AddText("CLEAT", rectta.Center, dt.StandardDimstyle(), 0.1, 0, 1, 3);
                 dt.AddText("CLEAT", rectta2.Center, dt.StandardDimstyle(), 0.1, 0, 1, 3);
-                RhinoDoc.ActiveDoc.Objects.AddText("CLEAT", p, 0.1, "Arial", false, false, TextJustification.MiddleCenter);
-                RhinoDoc.ActiveDoc.Objects.AddText("SPACER", p2, 0.1, "Arial", false, false, TextJustification.MiddleCenter);
+                RhinoDoc.ActiveDoc.Objects.AddText("CLEAT", p, 0.1, "Arial", false, false, TextJustification.MiddleCenter, oa);
+                RhinoDoc.ActiveDoc.Objects.AddText("SPACER", p2, 0.1, "Arial", false, false, TextJustification.MiddleCenter, oa);
             }
         }
         private void addAmGirlCleats()
