@@ -27,7 +27,7 @@ namespace gjTools.Commands
             switch(hardwares.IndexOf((string)type))
             {
                 case 0: 
-                    addCleats(doc);
+                    addCleats2(doc);
                     break;
                 case 1: 
                     addAmGirlCleats();
@@ -175,6 +175,55 @@ namespace gjTools.Commands
             return true;
         }
 
+        public bool addCleats2(RhinoDoc doc)
+        {
+            double roundQuarter(double len) { return (int)(len * 4) / 4; }
+
+            if (RhinoGet.GetOneObject("Select Object", false, ObjectType.Curve, out ObjRef obj) != Result.Success)
+                return false;
+
+            int heightThreshold = 26;
+            int maxCleatLength = 96;
+            var dt = new DrawTools(doc);
+
+            var bb = new Box(obj.Geometry().GetBoundingBox(true));
+            var cleats = new List<Rectangle3d>();
+            var labels = new List<string> { "CLEAT", "SPACER" };
+            var consPlane = new Plane(new Point3d(bb.Center.X, bb.GetCorners()[3].Y - roundQuarter(bb.Y.Length / 2), 0), Vector3d.ZAxis);
+
+            double width = (bb.X.Length + 4 > maxCleatLength) ? maxCleatLength : roundQuarter(bb.X.Length - 4);
+            double height = 2;
+
+            consPlane.OriginX -= width / 2;
+
+            if (bb.Y.Length > heightThreshold)  // Needs cleats and spacers
+            {
+                // Move Plane
+                consPlane.OriginY += roundQuarter(bb.Y.Length / 6 + height);
+                cleats.Add(new Rectangle3d(consPlane, width, height));
+
+                // Move Plane
+                consPlane.OriginY -= roundQuarter(bb.Y.Length / 2 - height * 2);
+                cleats.Add(new Rectangle3d(consPlane, width, height));
+            }
+            else    // Only one Cleat
+                cleats.Add(new Rectangle3d(consPlane, width, height));
+
+            // Get the layer
+            var lay = doc.Layers[obj.Object().Attributes.LayerIndex];
+            if (lay.ParentLayerId != Guid.Empty)
+                lay = doc.Layers.FindId(lay.ParentLayerId);
+            var attr = new ObjectAttributes { LayerIndex = lay.Index };
+
+            // add the cleats
+            foreach (var r in cleats)
+            {
+                doc.Objects.AddRectangle(r, attr);
+                doc.Objects.AddText(dt.AddText(labels[cleats.IndexOf(r)], r.Center, dt.StandardDimstyle(), 1.5, 0, 1, 3), attr);
+            }
+            return true;
+        }
+
 
         private void addCleats(RhinoDoc doc)
         {
@@ -229,6 +278,7 @@ namespace gjTools.Commands
                 RhinoDoc.ActiveDoc.Objects.AddText("SPACER", p2, 0.1, "Arial", false, false, TextJustification.MiddleCenter, oa);
             }
         }
+
         private void addAmGirlCleats()
         {
 
