@@ -30,7 +30,7 @@ namespace gjTools.Commands
                     addCleats2(doc);
                     break;
                 case 1: 
-                    addAmGirlCleats();
+                    addAmGirlCleats(doc);
                     break;
                 case 2:
                     AddTape(doc);
@@ -189,7 +189,7 @@ namespace gjTools.Commands
             var bb = new Box(obj.Geometry().GetBoundingBox(true));
             var cleats = new List<Rectangle3d>();
             var labels = new List<string> { "CLEAT", "SPACER" };
-            var consPlane = new Plane(new Point3d(bb.Center.X, bb.GetCorners()[3].Y - roundQuarter(bb.Y.Length / 2), 0), Vector3d.ZAxis);
+            var consPlane = new Plane(new Point3d(bb.Center.X, bb.GetCorners()[3].Y, 0), Vector3d.ZAxis);
 
             double width = (bb.X.Length + 4 > maxCleatLength) ? maxCleatLength : roundQuarter(bb.X.Length - 4);
             double height = 2;
@@ -199,7 +199,7 @@ namespace gjTools.Commands
             if (bb.Y.Length > heightThreshold)  // Needs cleats and spacers
             {
                 // Move Plane
-                consPlane.OriginY += roundQuarter(bb.Y.Length / 6 + height);
+                consPlane.OriginY -= roundQuarter(bb.Y.Length / 3 - height);
                 cleats.Add(new Rectangle3d(consPlane, width, height));
 
                 // Move Plane
@@ -207,7 +207,10 @@ namespace gjTools.Commands
                 cleats.Add(new Rectangle3d(consPlane, width, height));
             }
             else    // Only one Cleat
+            {
+                consPlane.OriginY -= roundQuarter(bb.Y.Length / 2);
                 cleats.Add(new Rectangle3d(consPlane, width, height));
+            }
 
             // Get the layer
             var lay = doc.Layers[obj.Object().Attributes.LayerIndex];
@@ -279,9 +282,34 @@ namespace gjTools.Commands
             }
         }
 
-        private void addAmGirlCleats()
+        private bool addAmGirlCleats(RhinoDoc doc)
         {
+            if (RhinoGet.GetOneObject("Select Object", false, ObjectType.Curve, out ObjRef obj) != Result.Success)
+                return false;
 
+            var bb = new Box(obj.Object().Geometry.GetBoundingBox(true));
+            var pt = bb.GetCorners();
+            var plne = new Plane(pt[3], Vector3d.ZAxis);
+            var cleats = new List<Rectangle3d>();
+
+            plne.OriginX += 1;
+            plne.OriginY -= 3;
+            cleats.Add(new Rectangle3d(plne, 2, 2));
+
+            plne.OriginY -= bb.Y.Length - 5;
+            cleats.Add(new Rectangle3d(plne, 2, 2));
+
+            var lay = doc.Layers[obj.Object().Attributes.LayerIndex];
+            if (lay.ParentLayerId != Guid.Empty)
+                lay = doc.Layers.FindId(lay.ParentLayerId);
+
+            var attr = new ObjectAttributes { LayerIndex = lay.Index };
+            var mirror = Transform.Mirror(new Plane(bb.Center, Vector3d.XAxis));
+
+            foreach(var c in cleats)
+                doc.Objects.Transform(doc.Objects.AddRectangle(c, attr), mirror, false);
+
+            return true;
         }
     }
 }
