@@ -38,7 +38,7 @@ namespace gjTools.Commands
             }
             return Result.Success;
         }
-
+        
 
         public bool AddTape(RhinoDoc doc)
         {
@@ -226,7 +226,6 @@ namespace gjTools.Commands
             }
             return true;
         }
-
 
         private void addCleats(RhinoDoc doc)
         {

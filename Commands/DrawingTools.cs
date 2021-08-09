@@ -54,33 +54,75 @@ namespace gjTools
                 "Check for Polylines", 
                 "Make Objects into Circles", 
                 "Destroy all Blocks",
-                "Process Measure Drawing"
+                "Process Measure Drawing",
+                "Make Selection to Height",
+                "Make Selection to Width"
             };
 
-            string operation = (string)Rhino.UI.Dialogs.ShowListBox("Part Operations", "Choose Operation", options);
-            if (operation == null)
-                return Result.Cancel;
+            string operation = "";
+
+            if (mode == RunMode.Interactive)
+            {
+                operation = (string)Rhino.UI.Dialogs.ShowListBox("Part Operations", "Choose Operation", options);
+                if (operation == null)
+                    return Result.Cancel;
+            }
+            else
+            {
+                int opt = 0;
+                if (RhinoGet.GetInteger($"Part Operations 0-{options.Count - 1}", false, ref opt) != Result.Success)
+                    return Result.Cancel;
+                operation = options[opt];
+            }
 
             if (operation == options[0])
                 PartBoundries(doc);
-
             if (operation == options[1])
                 CheckPolylines(doc);
-
             if (operation == options[2])
                 ForceCircleOnObject(doc);
-
             if (operation == options[3])
                 ExplodeAllBlocks(doc);
-
             if (operation == options[4])
                 MeasureDrawingPrep(doc);
+            if (operation == options[5])
+                MakeObjectToSize(doc, true);
+            if (operation == options[6])
+                MakeObjectToSize(doc, false);
+
 
             return Result.Success;
         }
 
 
+        public bool MakeObjectToSize(RhinoDoc doc, bool height = true)
+        {
+            if (RhinoGet.GetMultipleObjects("Select Objects", false, ObjectType.Curve, out ObjRef[] obj) != Result.Success)
+                return false;
 
+            var bb = obj[0].Geometry().GetBoundingBox(true);
+            foreach (var o in obj)
+                bb.Union(o.Geometry().GetBoundingBox(true));
+            double currentSize = (height) ? bb.GetEdges()[3].Length : bb.GetEdges()[0].Length;
+            double origSize = currentSize;
+            string Label = (height) ? "Height" : "Width";
+
+            if (RhinoGet.GetNumber($"Size Requirement for {Label}", false, ref currentSize) != Result.Success)
+                return false;
+
+            // scale the objects
+            var scaleTransform = Transform.Scale(bb.GetCorners()[0], currentSize / origSize);
+            RhinoApp.WriteLine($"Scaled {Math.Round(currentSize / origSize, 2)} from Original");
+            foreach (var o in obj)
+                doc.Objects.Transform(o, scaleTransform, true);
+            
+            return true;
+        }
+
+        /// <summary>
+        /// Untested fully, but should work fine
+        /// </summary>
+        /// <param name="doc"></param>
         public void ExplodeAllBlocks(RhinoDoc doc)
         {
             var blocks =new List<Rhino.DocObjects.InstanceDefinition>(doc.InstanceDefinitions.GetList(true));
@@ -213,7 +255,6 @@ namespace gjTools
             return true;
         }
 
-
         /// <summary>
         /// Checks that the selected are polylines and shows a nifty X-Mas like display
         /// </summary>
@@ -249,6 +290,11 @@ namespace gjTools
                 return false;
         }
 
+        /// <summary>
+        /// Layer out the Measured drawings
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <returns></returns>
         public bool MeasureDrawingPrep(RhinoDoc doc)
         {
             doc.Objects.UnselectAll();
