@@ -27,7 +27,7 @@ namespace gjTools.Commands
             switch(hardwares.IndexOf((string)type))
             {
                 case 0: 
-                    addCleats2(doc);
+                    addCleats(doc);
                     break;
                 case 1: 
                     addAmGirlCleats(doc);
@@ -175,7 +175,7 @@ namespace gjTools.Commands
             return true;
         }
 
-        public bool addCleats2(RhinoDoc doc)
+        public bool addCleats(RhinoDoc doc)
         {
             double roundQuarter(double len) { return (int)(len * 4) / 4; }
 
@@ -227,58 +227,47 @@ namespace gjTools.Commands
             return true;
         }
 
-        private void addCleats(RhinoDoc doc)
+        public bool addCleats2(RhinoDoc doc)
         {
-            if (RhinoGet.GetOneObject("Select an Object to add Cleats to", false, ObjectType.Curve, out ObjRef crv) == Result.Success)
-            {
-                var rect = crv.Curve();
-                int pli = 0;
-                Guid gi = crv.ObjectId;
+            double roundQuarter(double len) { return (int)(len * 4) / 4; }
 
-                var lay = doc.Layers[crv.Object().Attributes.LayerIndex];
-                var player = lay.ParentLayerId;
-                if (player != Guid.Empty)
-                {
-                    var lt = doc.Layers.FindId(player);
-                    pli = lt.Index;
-                }
-                else
-                {
-                    pli = crv.Object().Attributes.LayerIndex;
-                }
-                var bb = rect.GetBoundingBox(true);
-                var corners = bb.GetCorners();
-                var edges = bb.GetEdges();
-                var x1 = corners[3].X + 2;
-                var x2 = corners[2].X - 2;
-                var y1 = corners[3].Y - (edges[1].Length / 3) - 1;
-                var y2 = corners[2].Y - (edges[1].Length / 3) + 1;
-                Rectangle3d rectta = new Rectangle3d(Plane.WorldXY, new Point3d(x1, y1, 0), new Point3d(x2, y2, 0));
-                if (rectta.Width > 96)
-                {
-                    var diff = (rectta.Width - 96) / 2;
-                    rectta = new Rectangle3d(Plane.WorldXY, new Point3d(x1 + diff, y1, 0), new Point3d(x2 - diff, y2, 0));
-                }
-                Rectangle3d rectta2 = new Rectangle3d(Plane.WorldXY, new Point3d(x1, y1 - (edges[1].Length / 3), 0), new Point3d(x2, y2 - (edges[1].Length / 3), 0));
-                if (rectta2.Width > 96)
-                {
-                    var diff = (rectta2.Width - 96) / 2;
-                    rectta2 = new Rectangle3d(Plane.WorldXY, new Point3d(x1 + diff, y1 - (edges[1].Length / 3), 0), new Point3d(x2 - diff, y2 - (edges[1].Length / 3), 0));
-                }
-                var oa = new ObjectAttributes();
-                oa.LayerIndex = pli;
-                RhinoDoc.ActiveDoc.Objects.AddRectangle(rectta, oa);
-                RhinoDoc.ActiveDoc.Objects.AddRectangle(rectta2, oa);
-                Plane p = RhinoDoc.ActiveDoc.Views.ActiveView.ActiveViewport.ConstructionPlane();
-                p.Origin = rectta.Center;
-                Plane p2 = RhinoDoc.ActiveDoc.Views.ActiveView.ActiveViewport.ConstructionPlane();
-                p2.Origin = rectta2.Center;
-                DrawTools dt = new DrawTools(RhinoDoc.ActiveDoc);
-                var t1 = dt.AddText("CLEAT", rectta.Center, dt.StandardDimstyle(), 0.1, 0, 1, 3);
-                dt.AddText("CLEAT", rectta2.Center, dt.StandardDimstyle(), 0.1, 0, 1, 3);
-                RhinoDoc.ActiveDoc.Objects.AddText("CLEAT", p, 0.1, "Arial", false, false, TextJustification.MiddleCenter, oa);
-                RhinoDoc.ActiveDoc.Objects.AddText("SPACER", p2, 0.1, "Arial", false, false, TextJustification.MiddleCenter, oa);
+            if (RhinoGet.GetOneObject("Select Object", false, ObjectType.Curve, out ObjRef obj) != Result.Success)
+                return false;
+
+            int heightThreshold = 26;
+            int maxCleatLength = 96;
+            var dt = new DrawTools(doc);
+
+            var bb = new SimpleBox(obj.Geometry().GetBoundingBox(true));
+            var cleats = new List<SimpleBox>();
+            var labels = new List<string> { "CLEAT", "SPACER" };
+
+            double width = (bb.Width + 4 > maxCleatLength) ? maxCleatLength : roundQuarter(bb.Width - 4);
+            double height = 2;
+
+            if (bb.Height > heightThreshold)  // Needs cleats and spacers
+            {
+                cleats.Add(new SimpleBox(bb.GetModPt(3, bb.Width - (width / 2), -(bb.Height / 3 - height)), width, height));
+                cleats.Add(new SimpleBox(bb.GetModPt(0, bb.Width - (width / 2), bb.Height / 3 - height), width, height));
             }
+            else    // Only one Cleat
+            {
+                cleats.Add(new SimpleBox(bb.GetModPt(3, bb.Width - (width / 2), -(bb.Height / 2 - height)), width, height));
+            }
+
+            // Get the layer
+            var lay = doc.Layers[obj.Object().Attributes.LayerIndex];
+            if (lay.ParentLayerId != Guid.Empty)
+                lay = doc.Layers.FindId(lay.ParentLayerId);
+            var attr = new ObjectAttributes { LayerIndex = lay.Index };
+
+            // add the cleats
+            foreach (var r in cleats)
+            {
+                doc.Objects.AddRectangle(r.GetRect, attr);
+                doc.Objects.AddText(dt.AddText(labels[cleats.IndexOf(r)], r.Center, dt.StandardDimstyle(), 1.5, 0, 1, 3), attr);
+            }
+            return true;
         }
 
         private bool addAmGirlCleats(RhinoDoc doc)

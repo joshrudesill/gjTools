@@ -145,6 +145,7 @@ namespace gjTools.Commands
             if (PDFwindowPosition == Eto.Drawing.Point.Empty)
                 PDFwindowPosition = new Eto.Drawing.Point((int)MouseCursor.Location.X - 250, 200);
 
+            int currentLayer = doc.Layers.CurrentLayerIndex;
             var sql = new SQLTools();
             var lt = new LayerTools(doc);
             var pdfData = new List<ePDF>();
@@ -272,6 +273,7 @@ namespace gjTools.Commands
                 }
             }
 
+            doc.Layers.SetCurrentLayerIndex(currentLayer, true);
             doc.Views.ActiveView.MainViewport.ZoomExtents();
             return Result.Success;
         }
