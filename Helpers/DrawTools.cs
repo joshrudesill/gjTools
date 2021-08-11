@@ -21,6 +21,130 @@ interface ICutOperations
     double CutLengthByLayer(string layerName);
 }
 
+
+/// <summary>
+/// Used as a handy version of the boxes out there
+/// <para>More Directed for the tools we need</para>
+/// </summary>
+public struct SimpleBox
+{
+    private List<Point3d> _pt;
+
+    public SimpleBox(BoundingBox BBox)
+    {
+        var pts = BBox.GetCorners();
+        _pt = new List<Point3d> { pts[0], pts[1], pts[2], pts[3] };
+    }
+    public SimpleBox(Point3d Min, Point3d Max)
+    {
+        _pt = new List<Point3d> { Min, new Point3d(Max.X, Min.Y, 0), Max, new Point3d(Min.X, Max.Y, 0) };
+    }
+    public SimpleBox(Point3d BottomLeftPoint, double width, double height)
+    {
+        var pt = BottomLeftPoint;
+        _pt = new List<Point3d> { 
+            BottomLeftPoint, 
+            new Point3d(pt.X + width, pt.Y, 0),
+            new Point3d(pt.X + width, pt.Y + height, 0),
+            new Point3d(pt.X, pt.Y + height, 0)
+        };
+    }
+    public SimpleBox(SimpleBox oldBox)
+    {
+        _pt = new List<Point3d> { oldBox.pt(0), oldBox.pt(1), oldBox.pt(2), oldBox.pt(3) };
+    }
+
+    public double Width { get { return _pt[0].DistanceTo(_pt[1]); } }
+    public double Height { get { return _pt[0].DistanceTo(_pt[3]); } }
+    public Point3d Center
+    {
+        get
+        {
+            return new Point3d(_pt[0].X + (_pt[0].DistanceTo(_pt[1]) / 2), _pt[1].Y + (_pt[1].DistanceTo(_pt[2]) / 2), 0);
+        }
+        set
+        {
+            var center = new Point3d(_pt[0].X + (_pt[0].DistanceTo(_pt[1]) / 2), _pt[1].Y + (_pt[1].DistanceTo(_pt[2]) / 2), 0);
+            double xDist = center.X - value.X;
+            double yDist = center.Y - value.Y;
+            for (var i = 0; i < _pt.Count; i++)
+            {
+                var pt = _pt[i];
+                pt.X += xDist;
+                pt.Y += yDist;
+                _pt[i] = pt;
+            }
+        }
+    }
+    public Point3d pt(int index) 
+    {
+        return _pt[index];
+    }
+
+    /// <summary>
+    /// Get the Bounding box equivilent of this
+    /// </summary>
+    public BoundingBox GetBB { get { return new BoundingBox(_pt); } }
+    /// <summary>
+    /// Get the rectangle equivilent of this
+    /// </summary>
+    public Rectangle3d GetRect {
+        get { return new Rectangle3d(new Plane (_pt[0], Vector3d.ZAxis), Width, Height); }
+    }
+    /// <summary>
+    /// Same as the Rhino Box methods
+    /// </summary>
+    /// <param name="BBox"></param>
+    public void Union(BoundingBox BBox)
+    {
+        var myBB = GetBB;
+        myBB.Union(BBox);
+        var edge = BBox.GetEdges();
+        var pts = BBox.GetCorners();
+
+        _pt = new List<Point3d> { pts[0], pts[1], pts[2], pts[3] };
+    }
+    /// <summary>
+    /// Inflates or deflates based on +- value
+    /// <para>does the uniform first, then the side adjustments</para>
+    /// </summary>
+    /// <param name="uniform"></param>
+    /// <param name="lh"></param>
+    /// <param name="rh"></param>
+    /// <param name="top"></param>
+    /// <param name="bott"></param>
+    public void Inflate(double uniform = 0, double lh = 0, double rh = 0, double top = 0, double bott = 0)
+    {
+        var ptMin = _pt[0];
+        var ptMax = _pt[2];
+
+        ptMin.X -= uniform + lh;
+        ptMin.Y -= uniform + bott;
+        ptMax.X += uniform + top;
+        ptMax.Y += uniform + rh;
+
+        var pt = new BoundingBox(new List<Point3d> { ptMin, ptMax }).GetCorners();
+        _pt = new List<Point3d> { pt[0], pt[1], pt[2], pt[3] };
+
+    }
+
+    /// <summary>
+    /// returns a modified copy of one of the 4 bounding corners
+    /// <para>Does NOT modify this object</para>
+    /// </summary>
+    /// <param name="index"></param>
+    /// <param name="xTransform"></param>
+    /// <param name="yTransform"></param>
+    /// <returns></returns>
+    public Point3d GetModPt(int index = 0, double xTransform = 0, double yTransform = 0)
+    {
+        var pt = _pt[index];
+        pt.X += xTransform;
+        pt.Y += yTransform;
+        return pt;
+    }
+}
+
 public class DrawTools : IDrawTools 
 {
 

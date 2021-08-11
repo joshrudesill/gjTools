@@ -30,7 +30,7 @@ namespace gjTools.Commands
 
             foreach (var b in blurbs)
                 blurbString.Add(b.blurb);
-            blurbString.AddRange(new List<string> { "RH", "LH", "Manage Blurbs" });
+            blurbString.AddRange(new List<string> { "RH", "LH", "E&P Composite Mylar", "E&P Cut Name", "Manage Blurbs" });
 
             var res = new List<string>( Dialogs.ShowMultiListBox("Text Blurbs", "Select Blurbs", blurbString) );
             if (res == null)
@@ -41,6 +41,10 @@ namespace gjTools.Commands
                 RHLHSwap(doc, res);
             else if (res.Contains("Manage Blurbs"))
                 ManageBlurbs(doc, sql);
+            else if (res.Contains("E&P Composite Mylar") && doc.Name != null)
+                EPDecoration(doc, "Composite Mylar", doc.Name.Substring(0, doc.Name.Length - 5) + "_MYLAR");
+            else if (res.Contains("E&P Cut Name") && doc.Name != null)
+                EPDecoration(doc, "Cut Name", doc.Name.Substring(0, doc.Name.Length - 5) + "_CUT");
             else
                 AddBlurb(doc, string.Join(", ", res));
 
@@ -48,6 +52,36 @@ namespace gjTools.Commands
             return Result.Success;
         }
 
+
+        /// <summary>
+        /// Make a cut-style box for EP
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="RegularTxt"></param>
+        /// <param name="BoldTxt"></param>
+        /// <returns></returns>
+        public bool EPDecoration(RhinoDoc doc, string RegularTxt, string BoldTxt)
+        {
+            var dt = new DrawTools(doc);
+            if (RhinoGet.GetPoint("Place the Block", false, out Point3d pt) != Result.Success)
+                return false;
+            
+            var txt = dt.AddText($"{RegularTxt}\n{BoldTxt}", pt, dt.StandardDimstyle(), 1, 1, 3, 6);
+            txt.RichText = "{\\rtf1\\deff0{\\fonttbl{\\f0 Consolas;}}\\f0{\\f0\\fs20\\b0 " +
+                $"{RegularTxt}" +
+                "\\par}{\\f0\\fs30\\b " +
+                $"{BoldTxt}" +
+                "\\b0\\par}}";
+            txt.MaskEnabled = false;
+            txt.MaskFrame = DimensionStyle.MaskFrame.RectFrame;
+            txt.MaskOffset = 0.5;
+            txt.DrawTextFrame = true;
+            var attr = new ObjectAttributes { LayerIndex = doc.Layers.CurrentLayer.Index };
+
+            doc.Objects.AddText(txt, attr);
+
+            return true;
+        }
 
         /// <summary>
         /// Used to present the blurbs to be modified
