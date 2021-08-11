@@ -360,7 +360,7 @@ namespace gjTools.Commands
         /// <param name="nestBox"></param>
         /// <param name="path"></param>
         /// <param name="fileName"></param>
-        public bool MakeEpXML(RhinoDoc doc, string path, string fileName)
+        public bool MakeEpXML2(RhinoDoc doc, string path, string fileName)
         {
             var lt = new LayerTools(doc);
             var cutLayers = lt.getAllCutLayers(lt.CreateLayer("CUT"), true);
@@ -389,7 +389,52 @@ namespace gjTools.Commands
                 "<CADNumberUp>{1}</CADNumberUp>\n" +
                 "</JDF>", fileName, count, Math.Round(bb.GetEdges()[0].Length, 2), Math.Round(bb.GetEdges()[1].Length), 2);
 
+            if (!System.IO.Directory.Exists(path))
+                System.IO.Directory.CreateDirectory(path);
+
             System.IO.File.WriteAllText(path + fileName + ".xml", xml);
+            return true;
+        }
+
+        /// <summary>
+        /// create the XML for E&P output
+        /// </summary>
+        /// <param name="cuts"></param>
+        /// <param name="nestBox"></param>
+        /// <param name="path"></param>
+        /// <param name="fileName"></param>
+        public bool MakeEpXML(RhinoDoc doc, string path, string fileName)
+        {
+            var CutLay = doc.Layers.FindByFullPath("CUT", -1);
+            var allLays = doc.Layers[CutLay].GetChildren();
+            var nestLay = doc.Layers.FindByFullPath("CUT::NestBox", -1);
+
+            if (CutLay == -1 || nestLay == -1 || allLays == null)
+                return false;
+
+            var nestBox = doc.Objects.FindByLayer(doc.Layers[nestLay])[0];
+            var bb = nestBox.Geometry.GetBoundingBox(true).GetEdges();
+            var obj = new List<RhinoObject>();
+            foreach(var l in allLays)
+            {
+                var o = doc.Objects.FindByLayer(l);
+                if (o.Length > 0 && l.Name.Substring(0,2) == "C_")
+                    obj.AddRange(o);
+            }
+            var cuts = new CutSort(obj);
+            var qty = (cuts.groupCount > 0) ? cuts.groupCount : cuts.obj.Count;
+
+            string xml = "<JDF>\n" +
+                $"<DrawingNumber>{fileName}</DrawingNumber>\n" +
+                $"<CADSheetWidth>{bb[0].Length}</CADSheetWidth>\n" +
+                $"<CADSheetHeight>{bb[1].Length}</CADSheetHeight>\n" +
+                $"<CADNumberUp>{qty}</CADNumberUp>\n" +
+                "</JDF>";
+
+            if (!System.IO.Directory.Exists(path))
+                System.IO.Directory.CreateDirectory(path);
+            System.IO.File.WriteAllText(path + fileName + ".xml", xml);
+
             return true;
         }
 

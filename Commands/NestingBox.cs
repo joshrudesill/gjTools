@@ -45,14 +45,17 @@ namespace gjTools
 
                     // add object to lists
                     var objR = new ObjRef(o);
-                    obj.Add(objR);
-                    objLayerIndex.Add(objLayer.Index);
-                    objCutLength.Add(Math.Round(objR.Curve().GetLength(), 1));
+                    if (objR.Curve() != null)
+                    {
+                        obj.Add(objR);
+                        objLayerIndex.Add(objLayer.Index);
+                        objCutLength.Add(Math.Round(objR.Curve().GetLength(), 1));
 
-                    // check groups
-                    var group = o.Attributes.GetGroupList();
-                    if (group != null && !uniqueGroup.Contains(group[0]))
-                        uniqueGroup.Add(group[0]);
+                        // check groups
+                        var group = o.Attributes.GetGroupList();
+                        if (group != null && !uniqueGroup.Contains(group[0]))
+                            uniqueGroup.Add(group[0]);
+                    }
                 }
             }
             groupCount = uniqueGroup.Count;
@@ -83,14 +86,17 @@ namespace gjTools
                     }
 
                     // add object to lists
-                    obj.Add(o);
-                    objLayerIndex.Add(objLayer.Index);
-                    objCutLength.Add(Math.Round(o.Curve().GetLength(), 1));
+                    if (o.Curve() != null)
+                    {
+                        obj.Add(o);
+                        objLayerIndex.Add(objLayer.Index);
+                        objCutLength.Add(Math.Round(o.Curve().GetLength(), 1));
 
-                    // check groups
-                    var group = o.Object().Attributes.GetGroupList();
-                    if (group != null && !uniqueGroup.Contains(group[0]))
-                        uniqueGroup.Add(group[0]);
+                        // check groups
+                        var group = o.Object().Attributes.GetGroupList();
+                        if (group != null && !uniqueGroup.Contains(group[0]))
+                            uniqueGroup.Add(group[0]);
+                    }
                 }
             }
             groupCount = uniqueGroup.Count;
