@@ -66,6 +66,10 @@ namespace gjTools.Commands
                 var xf = Transform.Rotation(rotation * j, bb.Center);
                 foreach (var ob in ids)
                 {
+                    if (ob.Object().ObjectType == ObjectType.Annotation)
+                    {
+                        continue;
+                    }
                     var o1 = ob.Curve();
                     o1.Transform(xf);
                     idsol.Add(doc.Objects.FindId(doc.Objects.AddCurve(o1)));
