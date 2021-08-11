@@ -360,49 +360,6 @@ namespace gjTools.Commands
         /// <param name="nestBox"></param>
         /// <param name="path"></param>
         /// <param name="fileName"></param>
-        public bool MakeEpXML2(RhinoDoc doc, string path, string fileName)
-        {
-            var lt = new LayerTools(doc);
-            var cutLayers = lt.getAllCutLayers(lt.CreateLayer("CUT"), true);
-            var obj = new List<RhinoObject>();
-            RhinoObject nestBox;
-            var ss = new ObjectEnumeratorSettings { ObjectTypeFilter = ObjectType.Curve };
-            foreach(var l in cutLayers)
-            {
-                ss.LayerIndexFilter = l.Index;
-                if (l.Name == "NestBox")
-                    nestBox = doc.Objects.FindByLayer(l)[0];
-                else
-                    obj.AddRange(doc.Objects.GetObjectList(ss));
-            }
-            var objrefs = new List<ObjRef>();
-            foreach(var oref in obj){ objrefs.Add(new ObjRef(oref)); }
-            var cuts = new CutSort(objrefs);
-            int count = (cuts.groupCount > 0) ? cuts.groupCount : cuts.obj.Count;
-
-            RhinoObject.GetTightBoundingBox(cuts.GetRhinoObjects, out BoundingBox bb);
-
-            string xml = string.Format("<JDF>\n" +
-                "<DrawingNumber>{0}</DrawingNumber>\n" +
-                "<CADSheetWidth>{2}</CADSheetWidth>\n" +
-                "<CADSheetHeight>{3}</CADSheetHeight>\n" +
-                "<CADNumberUp>{1}</CADNumberUp>\n" +
-                "</JDF>", fileName, count, Math.Round(bb.GetEdges()[0].Length, 2), Math.Round(bb.GetEdges()[1].Length), 2);
-
-            if (!System.IO.Directory.Exists(path))
-                System.IO.Directory.CreateDirectory(path);
-
-            System.IO.File.WriteAllText(path + fileName + ".xml", xml);
-            return true;
-        }
-
-        /// <summary>
-        /// create the XML for E&P output
-        /// </summary>
-        /// <param name="cuts"></param>
-        /// <param name="nestBox"></param>
-        /// <param name="path"></param>
-        /// <param name="fileName"></param>
         public bool MakeEpXML(RhinoDoc doc, string path, string fileName)
         {
             var CutLay = doc.Layers.FindByFullPath("CUT", -1);
