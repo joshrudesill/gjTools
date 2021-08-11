@@ -143,7 +143,9 @@ namespace gjTools.Commands
             
             foreach (var c in cl)
             {
-                Guid newob = doc.Objects.Add(c);
+                Circle tc;
+                c.TryGetCircle(out tc);
+                Guid newob = doc.Objects.AddCircle(tc);
                 RhinoObject ro = doc.Objects.FindId(newob);
                 ro.Attributes.LayerIndex = l1index;
                 ro.CommitChanges();
