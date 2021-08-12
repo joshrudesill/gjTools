@@ -311,14 +311,11 @@ namespace gjTools.Commands
             else if (info.cutType == loc.cutTypes[1])
             {
                 var route = "";
-                if (doc.Path != null)
+                if (doc.Path != null && doc.Path.Contains("J0"))
                 {
-                    if (doc.Path.Contains("J0"))
-                    {
-                        var regx = new System.Text.RegularExpressions.Regex(@"J\d{9}");
-                        var job = regx.Match(doc.Path).Value;
-                        route = GetStringPremade("Choose a Route Name", new List<string> { info.parentLayer.Name, job }, 0);
-                    }
+                    var regx = new System.Text.RegularExpressions.Regex(@"J\d{9}");
+                    var job = regx.Match(doc.Path).Value;
+                    route = GetStringPremade("Choose a Route Name", new List<string> { info.parentLayer.Name, job }, 0);
                 }
                 else
                 {
