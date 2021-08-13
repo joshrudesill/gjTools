@@ -20,9 +20,9 @@ namespace gjTools.Commands
         public static Nest_StraitBox Instance { get; private set; }
 
         public override string EnglishName => "Nest_StraitBox";
-        public double space = 0.25;
         /// <summary> Qty, rows, columns </summary>
         public List<int> data = new List<int> { 1, 1, 1 };
+        public double space = 0.25;
         public Box selectedBB = Box.Empty;
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
