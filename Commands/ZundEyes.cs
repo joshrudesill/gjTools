@@ -30,6 +30,8 @@ namespace gjTools.Commands
 
         LayerTools lt;
 
+        DrawTools dt;
+
         ObjRef nestboxref;
 
         List<Curve> cl;
@@ -49,7 +51,8 @@ namespace gjTools.Commands
             numEyesS = 0;
             spacingS = 0;
             cl = new List<Curve>();
-            lt = new LayerTools(RhinoDoc.ActiveDoc);
+            dt = new DrawTools(doc);
+            lt = new LayerTools(doc);
 
             const ObjectType filter = ObjectType.Curve;
             Result rc = Rhino.Input.RhinoGet.GetMultipleObjects("Select box(es) to add eyes to..", false, filter, out ObjRef[] objref);
@@ -139,7 +142,7 @@ namespace gjTools.Commands
             }
             Circle fc = new Circle(new Point3d(corners[1].X - 1 - (spacingFromSide / 2), corners[1].Y + (spacingFromSide / 2), 0), 0.125);
             cl.Add(fc.ToNurbsCurve());
-            Hatch[] hl = Hatch.Create(cl, doc.HatchPatterns.CurrentHatchPatternIndex, 0, 1.0, 1.0);
+            Hatch[] hl = Hatch.Create(cl, dt.CreateSolidHatchDef(), 0, 1.0, doc.ModelAbsoluteTolerance);
             
             foreach (var c in cl)
             {
