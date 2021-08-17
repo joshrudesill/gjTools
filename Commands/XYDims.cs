@@ -83,6 +83,22 @@ namespace gjTools.Commands
             return LinearDimension.Create( AnnotationType.Aligned, ds, p, v, start, end, offset, 0 );
         }
 
+        public static LinearDimension MakeDim2(DimensionStyle ds, Point3d start, Point3d end, double dimOffset = 1, bool verticalDim = false)
+        {
+            var dm_Center = new Line(start, end).PointAtLength(start.DistanceTo(end) / 2);
+            
+            if (verticalDim)
+                dm_Center.Y += dimOffset;
+            else
+                dm_Center.X += dimOffset;
+
+            Plane p = new Plane(start, end, dm_Center);
+            Point2d startPt, endPt, MidPt = new Point2d();
+            //p.ClosestParameter(start, out startPt.X, out startPt.Y);
+
+            return new LinearDimension();
+        }
+
         /// <summary>
         /// Ask for user input either a number and/or the objects
         /// <para>TODO: make dimlevel part of the datastore in the database</para>
