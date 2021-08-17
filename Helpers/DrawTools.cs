@@ -1,5 +1,6 @@
 ﻿using Rhino;
 using Rhino.Geometry;
+using Rhino.DocObjects;
 using Rhino.Input.Custom;
 using System;
 using System.Collections.Generic;
@@ -294,6 +295,31 @@ public class DrawTools : IDrawTools
         {
             return doc.DimStyles.FindName("LabelMaker").Index;
         }
+    }
+
+
+    /// <summary>
+    /// Creates a solid hatch defenition to the table if not already present
+    /// </summary>
+    /// <returns>the hatch index</returns>
+    public int CreateSolidHatchDef()
+    {
+        string hatchName = "GJSTDSolid";
+        var stdHatch = doc.HatchPatterns.FindName(hatchName);
+
+        if (stdHatch == null)
+        {
+            var hatchPattern = new HatchPattern()
+            {
+                FillType = HatchPatternFillType.Solid,
+                Name = hatchName,
+                Description = "GJStandard"
+            };
+
+            return doc.HatchPatterns.Add(hatchPattern);
+        }
+
+        return stdHatch.Index;
     }
 
 
