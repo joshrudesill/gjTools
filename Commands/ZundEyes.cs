@@ -81,7 +81,12 @@ namespace gjTools.Commands
             calcPlacement(corners);
 
             //----------------Draw Eyes----------------//
-            drawEyes(corners, doc);
+            if (drawEyes(corners, doc) == false)
+            {
+                RhinoApp.WriteLine("Failed: Hatch pattern missing! Be careful before purging next time..");
+                return Result.Failure;
+            }
+            
 
             doc.Views.Redraw();
             return Result.Success;
@@ -124,7 +129,7 @@ namespace gjTools.Commands
             spacingS = (sideD - spacingFromSide) / (numEyesS);
         }
 
-        void drawEyes(Point3d[] corners, RhinoDoc doc)
+        bool drawEyes(Point3d[] corners, RhinoDoc doc)
         {
             Point3d first = new Point3d((corners[3].X + (spacingFromSide / 2)), (corners[3].Y - (spacingFromSide / 2)), 0);
             for (int i = 0; i < numEyesT + 1; i++)
@@ -142,7 +147,11 @@ namespace gjTools.Commands
             }
             Circle fc = new Circle(new Point3d(corners[1].X - 1 - (spacingFromSide / 2), corners[1].Y + (spacingFromSide / 2), 0), 0.125);
             cl.Add(fc.ToNurbsCurve());
-            Hatch[] hl = Hatch.Create(cl, dt.CreateSolidHatchDef(), 0, 1.0, doc.ModelAbsoluteTolerance);
+            if (doc.HatchPatterns.FindName("Solid").Index == null)
+            {
+                return false;
+            }
+            Hatch[] hl = Hatch.Create(cl, doc.HatchPatterns.FindName("Solid").Index, 0, 1.0, doc.ModelAbsoluteTolerance);
             
             foreach (var c in cl)
             {
@@ -160,6 +169,7 @@ namespace gjTools.Commands
                 ro.Attributes.LayerIndex = l2index;
                 ro.CommitChanges();
             }
+            return true;
         }
     }
 }
