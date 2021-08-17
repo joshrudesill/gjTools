@@ -28,6 +28,8 @@ namespace gjTools.Commands
 
             // Make some Hatches
             var hatch = MakeHatch(new List<ObjRef>(obj), out double area, out BoundingBox bb);
+            if (hatch.Length == 0)
+                return Result.Failure;
 
             // Make the text
             var dt = new DrawTools(doc);
@@ -74,7 +76,15 @@ namespace gjTools.Commands
                 crvs.Add(o.Curve());
                 bb.Union(o.Geometry().GetBoundingBox(true));
             }
-            
+
+            if (doc.HatchPatterns.FindName("Grid60") == null)
+            {
+                RhinoApp.WriteLine("The Required \"Grid60\" Hatch Pattern has been Deleted, Aborting...");
+                area = 0;
+                bb = BoundingBox.Empty;
+                return Array.Empty<Hatch>();
+            }
+                
             // Make me some hatch
             var hatch = Hatch.Create(crvs, doc.HatchPatterns.FindName("Grid60").Index, 0, 1.5, doc.ModelAbsoluteTolerance);
             

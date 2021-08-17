@@ -275,55 +275,6 @@ public class DrawTools : IDrawTools
 
 
     /// <summary>
-    /// creates the default label dimstyle used all over
-    /// </summary>
-    /// <returns></returns>
-    public int StandardDimstyle()
-    {
-        if (doc.DimStyles.FindName("LabelMaker") == null)
-        {
-            // craete the dimstyle
-            int dimStyleIntex = doc.DimStyles.Add("LabelMaker");
-            var dimstyle = doc.DimStyles.FindIndex(dimStyleIntex);
-
-            dimstyle.DimensionScale = 1;
-            dimstyle.TextHeight = 0.14;
-            dimstyle.Font = Rhino.DocObjects.Font.FromQuartetProperties("Consolas", false, false);
-
-            return dimstyle.Index;
-        } else
-        {
-            return doc.DimStyles.FindName("LabelMaker").Index;
-        }
-    }
-
-
-    /// <summary>
-    /// Creates a solid hatch defenition to the table if not already present
-    /// </summary>
-    /// <returns>the hatch index</returns>
-    public int CreateSolidHatchDef()
-    {
-        string hatchName = "GJSTDSolid";
-        var stdHatch = doc.HatchPatterns.FindName(hatchName);
-
-        if (stdHatch == null)
-        {
-            var hatchPattern = new HatchPattern()
-            {
-                FillType = HatchPatternFillType.Solid,
-                Name = hatchName,
-                Description = "GJStandard"
-            };
-
-            return doc.HatchPatterns.Add(hatchPattern);
-        }
-
-        return stdHatch.Index;
-    }
-
-
-    /// <summary>
     /// Create a Text entity and return for addition to document later
     /// <para> fontStyle: 0=normal, 1=bold, 2=italic, 3=bold and italic </para>
     /// <para> justHoriz: 0=left, 1=center, 2=right, 3=auto </para>
