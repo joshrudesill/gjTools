@@ -67,6 +67,7 @@ namespace gjTools.Commands
         public Hatch[] MakeHatch(List<ObjRef> obj, out double area, out BoundingBox bb)
         {
             var doc = obj[0].Object().Document;
+            area = 0;
             var crvs = new List<Curve>();
             bb = obj[0].Geometry().GetBoundingBox(true);
 
@@ -80,8 +81,6 @@ namespace gjTools.Commands
             if (doc.HatchPatterns.FindName("Grid60") == null)
             {
                 RhinoApp.WriteLine("The Required \"Grid60\" Hatch Pattern has been Deleted, Aborting...");
-                area = 0;
-                bb = BoundingBox.Empty;
                 return Array.Empty<Hatch>();
             }
                 
@@ -89,7 +88,6 @@ namespace gjTools.Commands
             var hatch = Hatch.Create(crvs, doc.HatchPatterns.FindName("Grid60").Index, 0, 1.5, doc.ModelAbsoluteTolerance);
             
             // calc the area
-            area = 0;
             foreach(var h in hatch)
                 area += AreaMassProperties.Compute(h).Area;
 

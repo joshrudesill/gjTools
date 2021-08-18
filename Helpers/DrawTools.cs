@@ -247,7 +247,29 @@ public class DrawTools : IDrawTools
         return isPoly;
     }
 
+    /// <summary>
+    /// creates the default label dimstyle used all over
+    /// </summary>
+    /// <returns>The STD Dimstyle index</returns>
+    public int StandardDimstyle()
+    {
+        if (doc.DimStyles.FindName("LabelMaker") == null)
+        {
+            // craete the dimstyle
+            int dimStyleIntex = doc.DimStyles.Add("LabelMaker");
+            var dimstyle = doc.DimStyles.FindIndex(dimStyleIntex);
 
+            dimstyle.DimensionScale = 1;
+            dimstyle.TextHeight = 0.14;
+            dimstyle.Font = Font.FromQuartetProperties("Consolas", false, false);
+
+            return dimstyle.Index;
+        }
+        else
+        {
+            return doc.DimStyles.FindName("LabelMaker").Index;
+        }
+    }
 
     /// <summary>
     /// asks user to select layer or layers depending on multiSel val
@@ -297,21 +319,21 @@ public class DrawTools : IDrawTools
         bool bold = (fontStyle == 1 || fontStyle == 3) ? true : false;
         bool italic = (fontStyle == 2) ? true : false;
 
-        var H = Rhino.DocObjects.TextHorizontalAlignment.Auto;
+        var H = TextHorizontalAlignment.Auto;
         switch (justHoriz)
         {
-            case 0: H = Rhino.DocObjects.TextHorizontalAlignment.Left; break;
-            case 1: H = Rhino.DocObjects.TextHorizontalAlignment.Center; break;
-            case 2: H = Rhino.DocObjects.TextHorizontalAlignment.Right; break;
+            case 0: H = TextHorizontalAlignment.Left; break;
+            case 1: H = TextHorizontalAlignment.Center; break;
+            case 2: H = TextHorizontalAlignment.Right; break;
             default: break;
         }
 
-        var V = Rhino.DocObjects.TextVerticalAlignment.Top;
+        var V = TextVerticalAlignment.Top;
         switch (justVert)
         {
-            case 0: V = Rhino.DocObjects.TextVerticalAlignment.Top; break;
-            case 3: V = Rhino.DocObjects.TextVerticalAlignment.Middle; break;
-            case 6: V = Rhino.DocObjects.TextVerticalAlignment.Bottom; break;
+            case 0: V = TextVerticalAlignment.Top; break;
+            case 3: V = TextVerticalAlignment.Middle; break;
+            case 6: V = TextVerticalAlignment.Bottom; break;
             default: break;
         }
 
@@ -319,7 +341,7 @@ public class DrawTools : IDrawTools
             txtEntity.TextHorizontalAlignment = H;
             txtEntity.TextVerticalAlignment = V;
             txtEntity.TextHeight = height;
-            txtEntity.Font = Rhino.DocObjects.Font.FromQuartetProperties("Consolas", bold, italic);
+            txtEntity.Font = Font.FromQuartetProperties("Consolas", bold, italic);
 
         return txtEntity;
     }

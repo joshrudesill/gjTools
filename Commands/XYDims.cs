@@ -52,6 +52,8 @@ namespace gjTools.Commands
 
 
 
+
+
         /// <summary>
         /// Makes a linear dimension 
         /// <para>Vertical Dim extends to the left</para>
@@ -60,43 +62,27 @@ namespace gjTools.Commands
         /// <param name="ds"></param>
         /// <param name="start"></param>
         /// <param name="end"></param>
-        /// <param name="dimlevel"></param>
-        /// <param name="dimVertical"></param>
+        /// <param name="verticalDim"></param>
+        /// <param name="dimOffset"></param>
         /// <returns></returns>
-        public static LinearDimension MakeDim(DimensionStyle ds, Point3d start, Point3d end, bool dimVertical = false, int dimlevel = 1)
-        {
-            Plane p = Plane.WorldXY;
-            Vector3d v = Vector3d.XAxis;
-            Point3d offset = start;
-                    offset.X += start.DistanceTo(end) / 2;
-                    offset.Y += (ds.TextHeight * ds.DimensionScale * 2.25) * dimlevel;
-
-            if (dimVertical)
-            {
-                p = new Plane(start, Vector3d.YAxis, Vector3d.XAxis);
-                v = Vector3d.YAxis;
-                offset = start;
-                offset.Y += start.DistanceTo(end) / 2;
-                offset.X -= (ds.TextHeight * ds.DimensionScale * 2) * dimlevel;
-            }
-
-            return LinearDimension.Create( AnnotationType.Aligned, ds, p, v, start, end, offset, 0 );
-        }
-
-        public static LinearDimension MakeDim2(DimensionStyle ds, Point3d start, Point3d end, double dimOffset = 1, bool verticalDim = false)
+        public static LinearDimension MakeDim(DimensionStyle ds, Point3d start, Point3d end, bool verticalDim = false, int dimlevel = 1, double dimOffset = 0)
         {
             var dm_Center = new Line(start, end).PointAtLength(start.DistanceTo(end) / 2);
             
+            // Set the correct offset
+            dimOffset = (dimOffset > 0) ? dimOffset : ds.TextHeight * ds.DimensionScale * dimlevel * 2.25;
+
             if (verticalDim)
-                dm_Center.Y += dimOffset;
+                dm_Center.X -= dimOffset;
             else
-                dm_Center.X += dimOffset;
+                dm_Center.Y += dimOffset;
 
             Plane p = new Plane(start, end, dm_Center);
-            Point2d startPt, endPt, MidPt = new Point2d();
-            //p.ClosestParameter(start, out startPt.X, out startPt.Y);
-
-            return new LinearDimension();
+                  p.ClosestParameter(start, out double sX, out double sY);
+                  p.ClosestParameter(dm_Center, out double mX, out double mY);
+                  p.ClosestParameter(end, out double eX, out double eY);
+            
+            return new LinearDimension(p, new Point2d(sX, sY), new Point2d(eX, eY), new Point2d(mX, mY)) { Aligned = true, DimensionStyleId = ds.Id };
         }
 
         /// <summary>
