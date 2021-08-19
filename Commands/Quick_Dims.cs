@@ -108,10 +108,39 @@ namespace gjTools.Commands
             }
 
             //  for center mode
-            var totalLengthbb = projectedLines[0].BoundingBox;
-            foreach (var l in projectedLines)
-                totalLengthbb.Union(l.BoundingBox);
-            double totalLength = (rotated) ? totalLengthbb.GetEdges()[1].Length : totalLengthbb.GetEdges()[0].Length;
+            if (gp.onlyCenters)
+            {
+                var centerPoint = new List<Point3d>();
+                foreach(var l in projectedLines)
+                {
+                    bool duplicatef = false;
+                    bool duplicatet = false;
+                    foreach(var p in centerPoint)
+                    {
+                        if (p.Equals(l.From))
+                            duplicatef = true;
+                        if (p.Equals(l.To))
+                            duplicatet = true;
+                    }
+                    if (!duplicatef)
+                        centerPoint.Add(l.From);
+                    if (!duplicatet)
+                        centerPoint.Add(l.To);
+                }
+
+                projectedLines.Clear();
+                if (rotated)
+                    centerPoint.Sort((x, y) => x.Y.CompareTo(y.Y));
+                else
+                    centerPoint.Sort((x, y) => x.X.CompareTo(y.X));
+
+                // Make fresh lines
+                for(var i = 0; i < centerPoint.Count; i++)
+                {
+                    if ((i + 1) < centerPoint.Count)
+                        projectedLines.Add(new Line(centerPoint[i], centerPoint[i+1]));
+                }
+            }
 
 
             // compare them
@@ -130,8 +159,7 @@ namespace gjTools.Commands
                 }
 
                 if (!match || (match && !uniqueLines.Contains(projectedLines[i])))
-                    if (!(gp.onlyCenters && projectedLines[i].Length == totalLength && projectedLines.Count > 2))
-                        uniqueLines.Add(projectedLines[i]);
+                    uniqueLines.Add(projectedLines[i]);
                 match = false;
             }
 
@@ -143,6 +171,7 @@ namespace gjTools.Commands
             return true;
         }
 
+        
         /// <summary>
         /// Tailored make dim for this command
         /// </summary>
