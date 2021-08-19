@@ -21,6 +21,9 @@ namespace gjTools.Commands
 
         public override string EnglishName => "QuickDimension";
 
+        public bool overallDimOption = false;
+        public bool centerOnlyOption = false;
+
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             if (RhinoGet.GetMultipleObjects("Objects", false, ObjectType.Curve, out ObjRef[] obj) != Result.Success)
@@ -31,10 +34,14 @@ namespace gjTools.Commands
             foreach(var o in obj)
                 bb.Add(o.Curve().GetBoundingBox(true));
 
-            var overallDim = new OptionToggle(false, "Individual", "Overall");
+            var overallDim = new OptionToggle(overallDimOption, "Individual", "Overall");
+            var centerOnly = new OptionToggle(centerOnlyOption, "Bounds", "Centers");
             var gp = new CustomDynamicDims();
                 gp.ProcessBounds(bb);
+                gp.onlyCenters = centerOnly.CurrentValue;
+                gp.overallDim = overallDim.CurrentValue;
                 gp.AddOptionToggle("DimOutput", ref overallDim);
+                gp.AddOptionToggle("DimType", ref centerOnly);
                 gp.SetCommandPrompt("Place Dims");
                 gp.ds = doc.DimStyles.Current;
             var res = gp.Get();
@@ -45,6 +52,18 @@ namespace gjTools.Commands
                     break;
                 if (res == GetResult.Cancel)
                     return Result.Cancel;
+                if (res == GetResult.Option)
+                {
+                    gp.onlyCenters = centerOnlyOption = centerOnly.CurrentValue;
+                    gp.overallDim = overallDimOption = overallDim.CurrentValue;
+                    res = gp.Get();
+                }
+            }
+
+            if (centerOnlyOption && bb.Count < 2)
+            {
+                RhinoApp.WriteLine("Must have more than one Object for Center to Center Option");
+                return Result.Cancel;
             }
 
             var lay = doc.Layers[obj[0].Object().Attributes.LayerIndex];
@@ -56,8 +75,6 @@ namespace gjTools.Commands
             doc.Views.Redraw();
             return Result.Success;
         }
-
-
 
 
 
@@ -76,15 +93,26 @@ namespace gjTools.Commands
             var uniqueLines = new List<Line>();
             var pt = gp.Point();
             var baseLine = gp.M_Edge[(int)gp.Dir];
+            bool rotated = false;
 
             // project the lines flat for comparison
-            foreach(var l in gp.CurrentDimPoints)
+            foreach(var l in gp._CurrentDimPoints())
             {
                 if (gp.Dir == CustomDynamicDims.Side.right || gp.Dir == CustomDynamicDims.Side.left)
+                {
+                    rotated = true;
                     projectedLines.Add(new Line(new Point3d(baseLine.FromX, l.FromY, 0), new Point3d(baseLine.ToX, l.ToY, 0)));
+                }
                 else
                     projectedLines.Add(new Line(new Point3d(l.FromX, baseLine.FromY, 0), new Point3d(l.ToX, baseLine.ToY, 0)));
             }
+
+            //  for center mode
+            var totalLengthbb = projectedLines[0].BoundingBox;
+            foreach (var l in projectedLines)
+                totalLengthbb.Union(l.BoundingBox);
+            double totalLength = (rotated) ? totalLengthbb.GetEdges()[1].Length : totalLengthbb.GetEdges()[0].Length;
+
 
             // compare them
             bool match = false;
@@ -102,19 +130,15 @@ namespace gjTools.Commands
                 }
 
                 if (!match || (match && !uniqueLines.Contains(projectedLines[i])))
-                    uniqueLines.Add(projectedLines[i]);
+                    if (!(gp.onlyCenters && projectedLines[i].Length == totalLength && projectedLines.Count > 2))
+                        uniqueLines.Add(projectedLines[i]);
                 match = false;
             }
 
             // Make the dims
             var attr = new ObjectAttributes { LayerIndex = parentLayer.Index };
             foreach (var l in uniqueLines)
-            {
-                if (gp.Dir == CustomDynamicDims.Side.right || gp.Dir == CustomDynamicDims.Side.left)
-                    doc.Objects.AddLinearDimension(MakeDim(gp.ds, l, pt, true), attr);
-                else
-                    doc.Objects.AddLinearDimension(MakeDim(gp.ds, l, pt, false), attr);
-            }
+                doc.Objects.AddLinearDimension(MakeDim(gp.ds, l, pt, rotated), attr);
 
             return true;
         }
@@ -160,9 +184,34 @@ namespace gjTools.Commands
         private List<Line> DimPointsBott = new List<Line>();
 
         // Complete List for Dimensions
-        public List<Line> CurrentDimPoints { get; private set; }
+        private List<Line> CurrentDimPoints;
+        public bool overallDim { get; set; }
+        public bool onlyCenters { get; set; }
         public enum Side { bottom, right, top, left }
         public Side Dir { get; private set; }
+
+        public List<Line> _CurrentDimPoints()
+        {
+            // overrides all other outputs
+            if (onlyCenters)
+            {
+                var centerLines = new List<Line>();
+                for(var i = 0; i< CurrentDimPoints.Count; i++)
+                {
+                    if ( i + 1 < CurrentDimPoints.Count)
+                    {
+                        centerLines.Add(new Line(
+                            CurrentDimPoints[i].PointAtLength(CurrentDimPoints[i].Length / 2),
+                            CurrentDimPoints[i+1].PointAtLength(CurrentDimPoints[i+1].Length / 2)
+                        ));
+                    }
+                }
+                return centerLines;
+            }
+            if (overallDim)
+                return new List<Line> { M_Edge[(int)Dir] };
+            return CurrentDimPoints;
+        }
 
         public void ProcessBounds(List<BoundingBox> bboxes)
         {
