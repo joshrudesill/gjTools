@@ -59,7 +59,7 @@ namespace gjTools.Commands
             var rObj = new List<RhinoObject>();
 
             // Command options
-            var opt_Gutter = new OptionDouble(Data.Spacing, 0, 10);
+            var opt_Gutter = new OptionDouble(Data.Spacing, 0, 100);
             var opt_Group = new OptionToggle(Data.grouped, "UnGrouped", "Grouped");
 
             // get rhinoObject list
