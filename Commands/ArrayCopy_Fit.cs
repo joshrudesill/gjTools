@@ -20,7 +20,7 @@ namespace gjTools.Commands
         public static ArrayCopy_Fit Instance { get; private set; }
 
         public override string EnglishName => "CopyFit";
-        private int CF_qty = 2;
+        private int CF_qty = 3;
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
