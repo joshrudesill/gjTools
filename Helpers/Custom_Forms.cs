@@ -876,4 +876,433 @@ namespace gjTools.Commands
             colors.DataStore = ds;
         }
     }
+
+    public class BannerDialog
+    {
+        // storage struct
+        public struct BannerInfo
+        {
+            public enum Stitch { Single, Double, Raw, Weld }
+            public enum Finish { None, Hem, Pocket }
+            public double gromEdgeOffset;
+            public double gromDiameter;
+
+            public double Width;
+            public double Height;
+            public bool Folded;
+
+            public Stitch st_Top;
+            public Stitch st_Bott;
+            public Stitch st_Side;
+
+            public Finish fn_Top;
+            public Finish fn_Bott;
+            public Finish fn_Side;
+
+            public double Size_Top;
+            public double Size_Bott;
+            public double Size_Side;
+
+            public int gromQty_Top;
+            public int gromQty_Bott;
+            public int gromQty_Side;
+
+            public string PartNumber;
+        }
+
+        // Make structure
+        public BannerInfo BData = new BannerInfo();
+
+        // Text Lists
+        private List<string> STRType = new List<string> { "Single Sided", "Double Sided", "Single Side Folded" };
+        private List<string> STRStitch = new List<string> { "Single", "Double", "Raw Edge", "Weld" };
+        private List<string> STRFinishing = new List<string> { "None", "Hem", "Pocket" };
+
+        // ListBoxes
+        public DropDown FoldedBanner = new DropDown { SelectedIndex = 0, Width = 180 };
+        public ListBox StitchTypeTop = new ListBox { SelectedIndex = 2, Height = 85 };
+        public ListBox StitchTypeBott = new ListBox { SelectedIndex = 2, Height = 85 };
+        public ListBox StitchTypeSide = new ListBox { SelectedIndex = 2, Height = 85 };
+        public ListBox FinishingTop = new ListBox { SelectedIndex = 0, Height = 65 };
+        public ListBox FinishingBott = new ListBox { SelectedIndex = 0, Height = 65 };
+        public ListBox FinishingSide = new ListBox { SelectedIndex = 0, Height = 65 };
+
+        // Values
+        public TextBox GromDiameter = new TextBox { Text = "0.75", Width = 45, ToolTip = "Diameter" };
+        public TextBox GromEdgeOffset = new TextBox { Text = "0.563", Width = 45, ToolTip = "Offset" };
+
+        // Text Fields
+        public TextBox Width = new TextBox();
+        public TextBox Height = new TextBox();
+
+        public TextBox TopSize = new TextBox();
+        public TextBox BottSize = new TextBox();
+        public TextBox SideSize = new TextBox();
+
+        private TextBox TopPoleSize = new TextBox { ToolTip = "Top" };
+        private TextBox BottPoleSize = new TextBox { ToolTip = "Bottom" };
+
+        public TextBox TopGromQty = new TextBox { ToolTip = "Top" };
+        public TextBox BottGromQty = new TextBox { ToolTip = "Bottom" };
+        public TextBox SideGromQty = new TextBox { ToolTip = "Side" };
+
+        private TextBox TopGromSpace = new TextBox { Enabled = false };
+        private TextBox BottGromSpace = new TextBox { Enabled = false };
+        private TextBox SideGromSpace = new TextBox { Enabled = false };
+
+        public TextBox PartNumber = new TextBox();
+        public TextBox Code = new TextBox();
+
+        // buttons
+        private Button OkButt = new Button { Text = "Ok", Enabled = false };
+        private Button CancelButt = new Button { Text = "Cancel" };
+
+
+        // Window stuff
+        private Dialog<DialogResult> window;
+        public Point windowPosition = new Point(400, 400);
+
+        /// <summary>
+        /// Create and Show the form
+        /// </summary>
+        public void ShowForm()
+        {
+            window = new Dialog<DialogResult>
+            {
+                Padding = 10,
+                Title = "Banner Maker",
+                Topmost = true,
+                Result = DialogResult.Cancel,
+                WindowStyle = WindowStyle.Default,
+                Location = windowPosition
+            };
+
+            var ChangeVariables = new TableLayout
+            {
+                Padding = new Padding(5, 5, 5, 20),
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(new Label { Text = "Grommet Diameter" }, GromDiameter, new Label { Text = "Gromet Offset" }, GromEdgeOffset)
+                }
+            };
+
+            FoldedBanner.DataStore = STRType;
+            var WidthAndHeight = new TableLayout
+            {
+                Padding = new Padding(5, 5, 5, 5),
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(new Label { Text = "Paste Code" }, Code),
+                    new TableRow(new Label { Text = "Width" }, Width),
+                    new TableRow(new Label { Text = "Height" }, Height),
+                    new TableRow(new Label { Text = "Printed Sides" }, FoldedBanner)
+                }
+            };
+
+            StitchTypeTop.DataStore = STRStitch;
+            StitchTypeBott.DataStore = STRStitch;
+            StitchTypeSide.DataStore = STRStitch;
+            FinishingTop.DataStore = STRFinishing;
+            FinishingBott.DataStore = STRFinishing;
+            FinishingSide.DataStore = STRFinishing;
+            var multiTable = new TableLayout
+            {
+                Padding = new Padding(5, 15, 5, 15),
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(null, new Label { Text = "Top", TextAlignment = TextAlignment.Center }, 
+                        new Label { Text = "Bottom", TextAlignment = TextAlignment.Center }, 
+                        new Label { Text = "Sides", TextAlignment = TextAlignment.Center }),
+                    new TableRow(new Label { Text = "Stitch\nType", TextAlignment = TextAlignment.Right }, 
+                        StitchTypeTop, StitchTypeBott, StitchTypeSide),
+                    new TableRow(new Label { Text = "Edge\nFinishing", TextAlignment = TextAlignment.Right }, 
+                        FinishingTop, FinishingBott, FinishingSide),
+                    new TableRow(new Label { Text = "Size", TextAlignment = TextAlignment.Right }, 
+                        TopSize, BottSize, SideSize),
+                    new TableRow(new Label { Text = "Pole Dia.", TextAlignment = TextAlignment.Right }, 
+                        TopPoleSize, BottPoleSize, null),
+                    new TableRow(new Label { Text = "Grommets", TextAlignment = TextAlignment.Right }, 
+                        new Label { Text = "Top", TextAlignment = TextAlignment.Center },
+                        new Label { Text = "Bottom", TextAlignment = TextAlignment.Center },
+                        new Label { Text = "Sides", TextAlignment = TextAlignment.Center }),
+                    new TableRow(new Label { Text = "Qty", TextAlignment = TextAlignment.Right },
+                        TopGromQty, BottGromQty, SideGromQty),
+                    new TableRow(new Label { Text = "Spacing", TextAlignment = TextAlignment.Right }, 
+                        TopGromSpace, BottGromSpace, SideGromSpace)
+                }
+            };
+
+            var PartNum = new TableLayout
+            {
+                Padding = new Padding(5, 5, 5, 5),
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(new Label { Text = "Part Number" }, PartNumber)
+                }
+            };
+
+            var ButtonRow = new TableLayout
+            {
+                Padding = new Padding(5, 5, 5, 5),
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(null, OkButt, CancelButt)
+                }
+            };
+
+            // Fill the window
+            window.Content = new TableLayout
+            {
+                Spacing = new Size(5, 5),
+                Rows = {
+                    new TableRow(ChangeVariables),
+                    new TableRow(WidthAndHeight),
+                    new TableRow(multiTable),
+                    new TableRow(PartNum),
+                    new TableRow(ButtonRow)
+                }
+            };
+
+            // Events
+            OkButt.Click += (s, e) => window.Close(DialogResult.Ok);
+            CancelButt.Click += (s, e) => window.Close(DialogResult.Cancel);
+            Code.KeyUp += Code_KeyUp;
+            PartNumber.KeyUp += PartNumber_KeyUp;
+            TopGromQty.KeyUp += GromQty_KeyUp;
+            BottGromQty.KeyUp += GromQty_KeyUp;
+            SideGromQty.KeyUp += GromQty_KeyUp;
+            TopPoleSize.KeyUp += PoleSize_KeyUp;
+            BottPoleSize.KeyUp += PoleSize_KeyUp;
+            GromEdgeOffset.LostFocus += GromValue_LostFocus;
+            GromDiameter.LostFocus += GromValue_LostFocus;
+
+            // Display the window
+            window.ShowModal(RhinoEtoApp.MainWindow);
+            windowPosition = window.Location;
+        }
+
+        private void GromValue_LostFocus(object sender, EventArgs e)
+        {
+            var box = sender as TextBox;
+            if (!double.TryParse(box.Text, out double value))
+            {
+                if (box.ToolTip == "Diameter")
+                    box.Text = "0.75";
+                if (box.ToolTip == "Offset")
+                    box.Text = "0.563";
+            }
+        }
+
+        private void PoleSize_KeyUp(object sender, KeyEventArgs e)
+        {
+            var box = sender as TextBox;
+            var tryV = double.TryParse(box.Text, out double dia);
+            
+            if (e.Key == Keys.Enter && tryV)
+            {
+                double circum = (Math.Floor(dia * Math.PI * 4) / 4) / 2 + 0.25;
+
+                if (box.ToolTip == "Top")
+                {
+                    TopSize.Text = circum.ToString();
+                    BData.Size_Top = circum;
+                }
+                if (box.ToolTip == "Bottom")
+                {
+                    BottSize.Text = circum.ToString();
+                    BData.Size_Bott = circum;
+                }
+
+                box.Text = "";
+            }
+        }
+
+        private void Code_KeyUp(object sender, KeyEventArgs e)
+        {
+            if (Code.Text.Length == 105)
+                CalcCode_Click(sender, e);
+        }
+
+        private void GromQty_KeyUp(object sender, KeyEventArgs e)
+        {
+            var box = sender as TextBox;
+            var tryW = double.TryParse(Width.Text, out BData.Width);
+            var tryH = double.TryParse(Width.Text, out BData.Height);
+            var tryV = int.TryParse(box.Text, out int num);
+            var g_offset = double.Parse(GromEdgeOffset.Text);
+
+            double dist;
+            if (num <= 1)
+                tryV = false;
+
+            if (box.ToolTip == "Top" && tryW && tryV)
+            {
+                dist = (BData.Width - (g_offset * 2)) / (num - 1);
+                BData.gromQty_Top = num;
+                TopGromSpace.Text = Math.Round(dist, 4).ToString();
+            }
+
+            if (box.ToolTip == "Bottom" && tryW && tryV)
+            {
+                dist = (BData.Width - (g_offset * 2)) / (num - 1);
+                BData.gromQty_Bott = num;
+                BottGromSpace.Text = Math.Round(dist, 4).ToString();
+            }
+
+            if (box.ToolTip == "Side" && tryH && tryV)
+            {
+                var trySizeT = double.TryParse(TopSize.Text, out double st);
+                var trySizeB = double.TryParse(BottSize.Text, out double sb);
+                var h = BData.Height;
+
+                if (FinishingTop.SelectedIndex == 2 && trySizeT)
+                    h -= st;
+                if (FinishingBott.SelectedIndex == 2 && trySizeB)
+                    h -= sb;
+
+                dist = (h - (g_offset * 2)) / (num - 1);
+                BData.gromQty_Side = num;
+                SideGromSpace.Text = Math.Round(dist, 4).ToString();
+            }
+        }
+
+        private void PartNumber_KeyUp(object sender, KeyEventArgs e)
+        {
+            if (PartNumber.Text.Length > 0)
+            {
+                BData.PartNumber = PartNumber.Text;
+                OkButt.Enabled = true;
+            }
+            else
+                OkButt.Enabled = false;
+        }
+
+        private void CalcCode_Click(object sender, EventArgs e)
+        {
+            int byt = 7;
+            var snip = new List<double>();
+            var dat = Code.Text;
+
+            for (int i = 1; i < dat.Length / byt; i++)
+                snip.Add(double.Parse(dat.Substring(byt * i, byt)));
+
+            Width.Text = snip[0].ToString();
+            Height.Text = snip[1].ToString();
+
+            FoldedBanner.SelectedIndex = (snip[13] == 1) ? 2 : 0;
+
+            StitchTypeTop.SelectedIndex = StitchIndex(snip[4]);
+            StitchTypeBott.SelectedIndex = StitchIndex(snip[5]);
+            StitchTypeSide.SelectedIndex = StitchIndex(snip[6]);
+
+            FinishingTop.SelectedIndex = FinishIndex(snip[2], snip[7]);
+            FinishingBott.SelectedIndex = FinishIndex(snip[3], snip[8]);
+            FinishingSide.SelectedIndex = FinishIndex(0, snip[9]);
+
+            TopSize.Text = (snip[2] + snip[7]).ToString();
+            BottSize.Text = (snip[3] + snip[8]).ToString();
+            SideSize.Text = snip[9].ToString();
+
+            TopGromSpace.Text = snip[10].ToString();
+            BottGromSpace.Text = snip[11].ToString();
+            SideGromSpace.Text = snip[12].ToString();
+
+            // populate the qtys
+            CalcCode_QTYS();
+
+            // Blank out the Code
+            Code.Text = "";
+
+            int FinishIndex(double pocket, double hem)
+            {
+                if (pocket > 0)
+                    return 2;
+                if (hem > 0)
+                    return 1;
+                return 0;
+            }
+
+            int StitchIndex(double val)
+            {
+                switch (val)
+                {
+                    case 0: // Single
+                        val = 0; break;
+                    case 1: // Double
+                        val = 1; break;
+                    case 2: // Weld
+                        val = 3; break;
+                    case 3: // Raw
+                        val = 2; break;
+                    default:
+                        break;
+                }
+                return (int)val;
+            }
+        }
+
+        /// <summary>
+        /// Sync the spacing with the QTYs
+        /// </summary>
+        private void CalcCode_QTYS()
+        {
+            var w = double.Parse(Width.Text);
+            var h = double.Parse(Height.Text);
+            var t_space = double.Parse(TopGromSpace.Text);
+            var b_space = double.Parse(BottGromSpace.Text);
+            var s_space = double.Parse(SideGromSpace.Text);
+            var g_offset = double.Parse(GromEdgeOffset.Text);
+
+            // Initialize
+            TopGromQty.Text = "0";
+            BottGromQty.Text = "0";
+            SideGromQty.Text = "0";
+
+            if (t_space > 0)
+                TopGromQty.Text = ((int)((w - (g_offset * 2)) / t_space + 1)).ToString();
+            if (b_space > 0)
+                BottGromQty.Text = ((int)((w - (g_offset * 2)) / b_space + 1)).ToString();
+            if (t_space > 0)
+                SideGromQty.Text = ((int)((h - (g_offset * 2)) / s_space + 1)).ToString();
+        }
+
+        public BannerInfo GetAllValues()
+        {
+            double.TryParse(Width.Text, out BData.Width);
+            double.TryParse(Height.Text, out BData.Height);
+            BData.Folded = (FoldedBanner.SelectedIndex == 2) ? true : false;
+
+            BData.st_Top = (BannerInfo.Stitch)StitchTypeTop.SelectedIndex;
+            BData.st_Bott = (BannerInfo.Stitch)StitchTypeBott.SelectedIndex;
+            BData.st_Side = (BannerInfo.Stitch)StitchTypeSide.SelectedIndex;
+
+            BData.fn_Top = (BannerInfo.Finish)FinishingTop.SelectedIndex;
+            BData.fn_Bott = (BannerInfo.Finish)FinishingBott.SelectedIndex;
+            BData.fn_Side = (BannerInfo.Finish)FinishingSide.SelectedIndex;
+
+            double.TryParse(TopSize.Text, out BData.Size_Top);
+            double.TryParse(BottSize.Text, out BData.Size_Bott);
+            double.TryParse(SideSize.Text, out BData.Size_Side);
+
+            int.TryParse(TopGromQty.Text, out BData.gromQty_Top);
+            int.TryParse(BottGromQty.Text, out BData.gromQty_Bott);
+            int.TryParse(SideGromQty.Text, out BData.gromQty_Side);
+
+            double.TryParse(GromDiameter.Text, out BData.gromDiameter);
+            double.TryParse(GromEdgeOffset.Text, out BData.gromEdgeOffset);
+
+            BData.PartNumber = PartNumber.Text;
+
+            return BData;
+        }
+
+        public DialogResult CommandResult
+        {
+            get
+            {
+                return window.Result;
+            }
+        }
+    }
+    
 }

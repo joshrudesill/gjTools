@@ -5,6 +5,7 @@ using Rhino.Commands;
 using Rhino.DocObjects;
 using Rhino.UI;
 using Rhino.Geometry;
+using Eto;
 
 namespace gjTools.Commands
 {
@@ -19,320 +20,243 @@ namespace gjTools.Commands
         public static BannerMaker Instance { get; private set; }
 
         public override string EnglishName => "BannerMaker";
+        private Eto.Drawing.Point FormWindowPosition = Eto.Drawing.Point.Empty;
+        private BannerDialog BannerData;
 
+        /// <summary>
+        /// Stores the Geometry to have created
+        /// </summary>
+        public struct BannerGeom
+        {
+            public BoundingBox CutsBox;
+            public List<BoundingBox> LiveBox;
+            public List<BoundingBox> StitBox;
+            public List<BoundingBox> GromBox;
+            public List<Point3d> GromPts;
+            public List<TextEntity> Verbage;
+            public List<Circle> GromCir;
+        }
+        
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            var BData = new Banner();
+            if (FormWindowPosition == Eto.Drawing.Point.Empty)
+                FormWindowPosition = new Eto.Drawing.Point((int)MouseCursor.Location.X - 250, 200);
 
-            if (!Dialogs.ShowEditBox("Banner Maker", "Enter Banner Code", "", false, out string code))
+            // Keep the entire form in memory and re-use
+            if (BannerData == null)
+                BannerData = new BannerDialog { windowPosition = FormWindowPosition };
+
+            BannerData.ShowForm();
+            FormWindowPosition = BannerData.windowPosition;
+
+            if (BannerData.CommandResult != Eto.Forms.DialogResult.Ok)
                 return Result.Cancel;
 
-            if (code.Length != 15 * 7)
-            {
-                RhinoApp.WriteLine("That Code Doesnt Look Correct");
-                return Result.Cancel;
-            }
+            var BData = BannerData.GetAllValues();
 
-            var res = Rhino.Input.RhinoGet.GetString("Part Number", false, ref BData.partNum);
-            if (res != Result.Success)
-                return Result.Cancel;
+            var BGeom = CreateBoxes(BData);
 
-            ParseCode(code, ref BData);
+            BGeom = GrommetPoints(BGeom, BData);
 
-            // Make the Banner
-            MakeBanner(doc, BData);
+            BGeom = CreateGromCircles(BGeom, BData);
 
+            if (BData.Folded)
+                BGeom = MakeFolded(BGeom);
+
+            //var dt = new DrawTools(doc);
+            //BGeom = CreateTextLabels(dt, BGeom, BData);
+
+            AddAllObjects(doc, BGeom, BData);
+
+            doc.Views.Redraw();
             return Result.Success;
         }
 
-
-
-        public bool MakeBanner(RhinoDoc doc, Banner BData)
+        public void AddAllObjects(RhinoDoc doc, BannerGeom BGeom, BannerDialog.BannerInfo BData)
         {
+            var attr = new ObjectAttributes { LayerIndex = doc.Layers.CurrentLayer.Index };
             var lt = new LayerTools(doc);
 
-            // Make Live area Box
-            var liveArea = AddRectangleLayer(doc, lt, BData._LiveArea, "LiveArea", BData.partNum);
+            attr.LayerIndex = lt.CreateLayer("LiveArea", BData.PartNumber, System.Drawing.Color.DarkOliveGreen).Index;
+            foreach (var b in BGeom.LiveBox)
+                doc.Objects.AddRectangle(new Rectangle3d(Plane.WorldXY, b.Min, b.Max), attr);
 
-            // make the stitch box
-            var stitchBox = AddRectangleLayer(doc, lt, BData.StitchBox(), "StitchBox", BData.partNum);
+            attr.LayerIndex = lt.CreateLayer("Stitch", BData.PartNumber, System.Drawing.Color.DarkBlue).Index;
+            foreach (var b in BGeom.StitBox)
+                doc.Objects.AddRectangle(new Rectangle3d(Plane.WorldXY, b.Min, b.Max), attr);
 
-            // make the stitch box
-            var cutSize = AddRectangleLayer(doc, lt, BData.CutSize(), "CutSize", BData.partNum);
+            attr.LayerIndex = lt.CreateLayer("Cut", BData.PartNumber, System.Drawing.Color.Red).Index;
+            doc.Objects.AddRectangle(new Rectangle3d(Plane.WorldXY, BGeom.CutsBox.Min, BGeom.CutsBox.Max), attr);
 
-            // add grommets
-            MakeGrommets(doc, BData, lt);
-
-            doc.Views.Redraw();
-            return true;
-        }
-
-
-        /// <summary>
-        /// Adds the grommets to the drawing
-        /// </summary>
-        /// <param name="doc"></param>
-        /// <param name="BData"></param>
-        /// <param name="lt"></param>
-        /// <returns></returns>
-        public List<RhinoObject> MakeGrommets(RhinoDoc doc, Banner BData, LayerTools lt)
-        {
-            var pts = GrommetPoints(BData);
-            var gromLay = lt.CreateLayer("Grommets", BData.partNum, System.Drawing.Color.Brown);
-            var obj = new List<RhinoObject>();
-
-            foreach (var p in pts)
+            if (BGeom.GromCir.Count > 0)
             {
-                var id = doc.Objects.AddCircle(new Circle(p, BData.GromDiameter / 2));
-                var cir = doc.Objects.FindId(id);
-                cir.Attributes.LayerIndex = gromLay.Index;
-                cir.CommitChanges();
-
-                obj.Add(cir);
+                attr.LayerIndex = lt.CreateLayer("Grommet", BData.PartNumber, System.Drawing.Color.SaddleBrown).Index;
+                foreach (var c in BGeom.GromCir)
+                    doc.Objects.AddCircle(c, attr);
             }
-
-            return obj;
         }
 
-        /// <summary>
-        /// Calcs all the points for the grommets
-        /// </summary>
-        /// <param name="BData"></param>
-        /// <returns></returns>
-        public List<Point3d> GrommetPoints(Banner BData)
+        public BannerGeom CreateTextLabels(DrawTools dt, BannerGeom BGeom, BannerDialog.BannerInfo BData)
         {
-            var sides = new List<Point3d>();
-            var top = new List<Point3d>();
-            var bott = new List<Point3d>();
-            var all = new List<Point3d>();
-            double adjust = 0;
-            int gromQty;
+            var ds = dt.StandardDimstyle();
 
-            // Check the Top
-            if (BData.gromTopSpace > 0)
+            if (BData.fn_Top != BannerDialog.BannerInfo.Finish.None)
             {
-                if (BData.topFinish == edgeType.pocket)
-                    adjust = BData.TopSize;
-
-                gromQty = (int)Math.Round((BData._LiveArea.Width - (BData.gromFromEdge * 2)) / BData.gromTopSpace);
-                var pt = new Point3d(BData.gromFromEdge, BData._LiveArea.Corner(3).Y - adjust - BData.gromFromEdge, 0);
-                top.Add(pt);
-
-                for (var i = 0; i < gromQty; i++)
+                if (BData.fn_Top == BannerDialog.BannerInfo.Finish.Hem)
                 {
-                    pt.X += (BData._LiveArea.Width - (BData.gromFromEdge * 2)) / gromQty;
-                    top.Add(pt);
+
+                    BGeom.Verbage.Add(dt.AddText("HEM", Point3d.Origin, ds, 1, 3, 1, 0));
                 }
-                all.AddRange(top);
             }
 
-            // Check the bottom
-            if (BData.gromBottSpace > 0)
+            return BGeom;
+        }
+
+        public BannerGeom MakeFolded(BannerGeom BGeom)
+        {
+            var mirror = Transform.Mirror(new Plane(BGeom.LiveBox[0].Max, Vector3d.YAxis));
+            
+            BGeom.LiveBox.Add(new BoundingBox(BGeom.LiveBox[0].GetCorners(), mirror));
+            BGeom.StitBox.Add(new BoundingBox(BGeom.StitBox[0].GetCorners(), mirror));
+            BGeom.GromBox.Add(new BoundingBox(BGeom.GromBox[0].GetCorners(), mirror));
+
+
+            return BGeom;
+        }
+
+        public BannerGeom CreateGromCircles(BannerGeom BGeom, BannerDialog.BannerInfo BData)
+        {
+            BGeom.GromCir = new List<Circle>();
+
+            foreach (var p in BGeom.GromPts)
+                BGeom.GromCir.Add(new Circle(p, BData.gromDiameter / 2));
+
+            return BGeom;
+        }
+
+        public BannerGeom GrommetPoints(BannerGeom BGeom, BannerDialog.BannerInfo BData)
+        {
+            BGeom.GromPts = new List<Point3d>();
+
+            // Generate the points
+            if (BData.gromQty_Top > 1)
+                BGeom.GromPts.AddRange(DivLine(BData.gromQty_Top, BGeom.GromBox[0].GetEdges()[2]));
+            if (BData.gromQty_Bott > 1)
+                BGeom.GromPts.AddRange(DivLine(BData.gromQty_Bott, BGeom.GromBox[0].GetEdges()[0]));
+            if (BData.gromQty_Side > 1)
             {
-                if (BData.bottFinish == edgeType.pocket)
-                    adjust = BData.BottSize;
+                BGeom.GromPts.AddRange(DivLine(BData.gromQty_Side, BGeom.GromBox[0].GetEdges()[1]));
+                BGeom.GromPts.AddRange(DivLine(BData.gromQty_Side, BGeom.GromBox[0].GetEdges()[3]));
+            }
+
+            // Remove Duplicates
+            if (BGeom.GromPts.Count > 0)
+            {
+                var CleanPts = new List<Point3d>();
+
+                foreach(var p in BGeom.GromPts)
+                {
+                    bool uniq = true;
+                    foreach (var pp in CleanPts)
+                        if (p.Equals(pp))
+                            uniq = false;
+                    if (uniq)
+                        CleanPts.Add(p);
+                }
+
+                BGeom.GromPts = CleanPts;
+            }
+
+            List<Point3d> DivLine(int qty, Line l)
+            {
+                var pts = new List<Point3d>();
+
+                for(var i = 0; i < qty; i++)
+                    pts.Add(l.PointAtLength((l.Length / (qty - 1)) * i));
+
+                return pts;
+            };
+
+            return BGeom;
+        }
+
+        public BannerGeom CreateBoxes(BannerDialog.BannerInfo BData)
+        {
+            // Starting Point (Basically the live area)
+            var BaseBox = new BoundingBox(Point3d.Origin, new Point3d(BData.Width, BData.Height, 0));
+
+            // Setup the vectors
+            var st_MaxVect = new Vector3d(0, 0, 0);
+            var st_MinVect = new Vector3d(0, 0, 0);
+            var ct_MaxVect = new Vector3d(0, 0, 0);
+            var ct_MinVect = new Vector3d(0, 0, 0);
+            var gr_MaxVect = new Vector3d(0, 0, 0);
+            var gr_MinVect = new Vector3d(0, 0, 0);
+
+            // Populate Vectors
+            if (BData.fn_Top != BannerDialog.BannerInfo.Finish.None)
+            {
+                if (BData.fn_Top == BannerDialog.BannerInfo.Finish.Hem)
+                {
+                    st_MaxVect.Y -= 0.25;
+                    ct_MaxVect.Y += BData.Size_Top;
+                    gr_MaxVect.Y -= BData.gromEdgeOffset;
+                }
                 else
-                    adjust = 0;
-
-                gromQty = (int)Math.Round((BData._LiveArea.Width - (BData.gromFromEdge * 2)) / BData.gromBottSpace);
-                var pt = new Point3d(BData.gromFromEdge, BData._LiveArea.Corner(0).Y + adjust + BData.gromFromEdge, 0);
-                bott.Add(pt);
-
-                for (var i = 0; i < gromQty; i++)
                 {
-                    pt.X += (BData._LiveArea.Width - (BData.gromFromEdge * 2)) / gromQty;
-                    bott.Add(pt);
+                    st_MaxVect.Y -= BData.Size_Top;
+                    gr_MaxVect.Y -= BData.Size_Top + BData.gromEdgeOffset;
+                    ct_MaxVect.Y += BData.Size_Top + StitchExtra(BData.st_Top);
                 }
-                all.AddRange(bott);
             }
-
-            // Sides
-            if (BData.gromSideSpace > 0)
+            if (BData.fn_Bott != BannerDialog.BannerInfo.Finish.None)
             {
-                gromQty = (int)Math.Round((BData._LiveArea.Height - (BData.gromFromEdge * 2)) / BData.gromSideSpace);
-                var pt = new Point3d(BData.gromFromEdge, BData._LiveArea.Corner(0).Y + BData.gromFromEdge, 0);
-
-                if (bott.Count == 0)
-                    sides.Add(pt);
-
-                for (var i = 0; i < gromQty; i++)
+                if (BData.fn_Bott == BannerDialog.BannerInfo.Finish.Hem)
                 {
-                    pt.Y += (BData._LiveArea.Height - (BData.gromFromEdge * 2)) / gromQty;
-
-                    if (i != gromQty - 1)
-                        sides.Add(pt);
-                    if (top.Count == 0)
-                        sides.Add(pt);
+                    st_MinVect.Y += 0.25;
+                    ct_MinVect.Y -= BData.Size_Bott;
+                    gr_MinVect.Y += BData.gromEdgeOffset;
                 }
-
-                var qty = sides.Count;
-                // Dupe them to the other side
-                for (var i = 0; i < qty; i++)
+                else
                 {
-                    pt = new Point3d(sides[i]);
-                    pt.X += BData._LiveArea.Width - (BData.gromFromEdge * 2);
-                    sides.Add(pt);
+                    st_MinVect.Y += BData.Size_Bott;
+                    gr_MinVect.Y += BData.Size_Bott + BData.gromEdgeOffset;
+                    if (BData.Folded)
+                        ct_MinVect.Y -= StitchExtra(BData.st_Bott);
+                    else
+                        ct_MinVect.Y -= BData.Size_Bott + StitchExtra(BData.st_Bott);
                 }
-                all.AddRange(sides);
             }
-
-            return all;
-        }
-
-        /// <summary>
-        /// create and add the boxes
-        /// </summary>
-        /// <param name="doc"></param>
-        /// <param name="lt"></param>
-        /// <param name="rec"></param>
-        /// <param name="layer"></param>
-        /// <param name="parentLay"></param>
-        /// <returns></returns>
-        public RhinoObject AddRectangleLayer(RhinoDoc doc, LayerTools lt, Rectangle3d rec, string layer, string parentLay)
-        {
-            var color = System.Drawing.Color.DarkGreen;
-            if (layer == "StitchBox")
-                color = System.Drawing.Color.DarkBlue;
-            if (layer == "CutSize")
-                color = System.Drawing.Color.DarkRed;
-
-            var box = doc.Objects.FindId(
-                doc.Objects.AddRectangle(rec)
-            );
-            box.Attributes.LayerIndex = lt.CreateLayer(layer, parentLay, color).Index;
-            box.CommitChanges();
-
-            return box;
-        }
-
-        /// <summary>
-        /// Makes sense of the banner code from the banner Form
-        /// </summary>
-        /// <param name="Code"></param>
-        /// <param name="BData"></param>
-        public void ParseCode(string Code, ref Banner BData)
-        {
-            int byt = 7;
-            var snip = new List<double>();
-            
-            for (int i = 1; i < Code.Length / byt; i++)
-                snip.Add(double.Parse(Code.Substring(byt * i, byt)));
-
-            BData.LiveArea(snip[0], snip[1]);
-
-            // top finishing
-            if (snip[2] > 0 || snip[7] > 0)
+            if (BData.fn_Side == BannerDialog.BannerInfo.Finish.Hem)
             {
-                BData.TopSize = (snip[2] > 0) ? snip[2] : snip[7];
-                BData.topFinish = (snip[2] > 0) ? edgeType.pocket : edgeType.hem;
+                st_MaxVect.X -= 0.25;
+                st_MinVect.X += 0.25;
+                ct_MaxVect.X += BData.Size_Side;
+                ct_MinVect.X -= BData.Size_Side;
+                gr_MaxVect.X -= BData.gromEdgeOffset;
+                gr_MinVect.X += BData.gromEdgeOffset;
             }
-            // bottom finishing
-            if (snip[3] > 0 || snip[8] > 0)
+
+            // Create the boxes
+            var BGeom = new BannerGeom
             {
-                BData.BottSize = (snip[3] > 0) ? snip[3] : snip[8];
-                BData.bottFinish = (snip[3] > 0) ? edgeType.pocket : edgeType.hem;
-            }
-            // Side Finishing
-            if (snip[9] > 0)
+                CutsBox = new BoundingBox(BaseBox.Min + ct_MinVect, BaseBox.Max + ct_MaxVect),
+                LiveBox = new List<BoundingBox> { BaseBox },
+                StitBox = new List<BoundingBox> { new BoundingBox(BaseBox.Min + st_MinVect, BaseBox.Max + st_MaxVect) },
+                GromBox = new List<BoundingBox> { new BoundingBox(BaseBox.Min + gr_MinVect, BaseBox.Max + gr_MaxVect) }
+            };
+
+            double StitchExtra(BannerDialog.BannerInfo.Stitch stitch)
             {
-                BData.sideFinish = edgeType.hem;
-                BData.SideSize = snip[9];
+                if (stitch == BannerDialog.BannerInfo.Stitch.Single)
+                    return 0.25;
+                if (stitch == BannerDialog.BannerInfo.Stitch.Double)
+                    return 0.5;
+                
+                return 0;
             }
 
-            // Grommet Data
-            BData.gromTopSpace = snip[10];
-            BData.gromBottSpace = snip[11];
-            BData.gromSideSpace = snip[12];
-
-            // Folded Banner?
-            if (snip[13] > 0)
-                BData.DoubleSided = true;
-        }
-
-
-
-        public enum edgeType { raw, hem, pocket }
-        public struct Banner
-        {
-            public string partNum;
-
-            public bool DoubleSided;
-
-            public Rectangle3d _LiveArea;
-
-            public edgeType sideFinish;
-            public edgeType topFinish;
-            public edgeType bottFinish;
-            public double SideSize;
-            public double TopSize;
-            public double BottSize;
-
-            public double GromDiameter { get { return 0.75; } }
-            public double gromFromEdge { get { return 0.563; } }
-            public double gromTopSpace;
-            public double gromSideSpace;
-            public double gromBottSpace;
-
-            public double stitchExtra;
-            
-            public Rectangle3d LiveArea(double width, double height)
-            {
-                _LiveArea = new Rectangle3d(Plane.WorldXY, width, height);
-                topFinish = edgeType.raw;
-                bottFinish = edgeType.raw;
-                sideFinish = edgeType.raw;
-                stitchExtra = 0.25;
-                DoubleSided = false;
-                return _LiveArea;
-            }
-
-            public Rectangle3d StitchBox()
-            {
-                var pt0 = _LiveArea.Corner(0);
-                var pt2 = _LiveArea.Corner(2);
-
-                if (sideFinish == edgeType.hem)
-                {
-                    pt0.X += stitchExtra;
-                    pt2.X -= stitchExtra;
-                }
-
-                if (topFinish == edgeType.hem)
-                    pt2.Y -= stitchExtra;
-                if (topFinish == edgeType.pocket)
-                    pt2.Y -= TopSize;
-
-                if (bottFinish == edgeType.hem)
-                    pt0.Y += stitchExtra;
-                if (bottFinish == edgeType.pocket)
-                    pt0.Y += BottSize;
-
-                return new Rectangle3d(Plane.WorldXY, pt0, pt2);
-            }
-
-            public Rectangle3d CutSize()
-            {
-                var pt0 = _LiveArea.Corner(0);
-                var pt2 = _LiveArea.Corner(2);
-
-                if (sideFinish == edgeType.hem)
-                {
-                    pt0.X -= SideSize / 2;
-                    pt2.X += SideSize / 2;
-                }
-
-                if (topFinish == edgeType.hem)
-                    pt2.Y += TopSize;
-                if (topFinish == edgeType.pocket)
-                    pt2.Y += TopSize + stitchExtra;
-
-                if (bottFinish == edgeType.hem)
-                    pt0.Y -= BottSize;
-                if (bottFinish == edgeType.pocket)
-                    pt0.Y -= BottSize + stitchExtra;
-
-                return new Rectangle3d(Plane.WorldXY, pt0, pt2);
-            }
+            return BGeom;
         }
     }
 }
