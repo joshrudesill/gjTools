@@ -927,11 +927,10 @@ namespace gjTools.Commands
         public ListBox FinishingBott = new ListBox { SelectedIndex = 0, Height = 65 };
         public ListBox FinishingSide = new ListBox { SelectedIndex = 0, Height = 65 };
 
-        // Values
+        // Text Fields
         public TextBox GromDiameter = new TextBox { Text = "0.75", Width = 45, ToolTip = "Diameter" };
         public TextBox GromEdgeOffset = new TextBox { Text = "0.563", Width = 45, ToolTip = "Offset" };
 
-        // Text Fields
         public TextBox Width = new TextBox();
         public TextBox Height = new TextBox();
 
@@ -946,14 +945,15 @@ namespace gjTools.Commands
         public TextBox BottGromQty = new TextBox { ToolTip = "Bottom" };
         public TextBox SideGromQty = new TextBox { ToolTip = "Side" };
 
-        private TextBox TopGromSpace = new TextBox { Enabled = false };
-        private TextBox BottGromSpace = new TextBox { Enabled = false };
-        private TextBox SideGromSpace = new TextBox { Enabled = false };
+        private Label TopGromSpace = new Label { TextAlignment = TextAlignment.Center };
+        private Label BottGromSpace = new Label { TextAlignment = TextAlignment.Center };
+        private Label SideGromSpace = new Label { TextAlignment = TextAlignment.Center };
 
         public TextBox PartNumber = new TextBox();
         public TextBox Code = new TextBox();
 
         // buttons
+        private Button UnlockButt = new Button { Text = "Change Defualts" };
         private Button OkButt = new Button { Text = "Ok", Enabled = false };
         private Button CancelButt = new Button { Text = "Cancel" };
 
@@ -972,17 +972,20 @@ namespace gjTools.Commands
                 Padding = 10,
                 Title = "Banner Maker",
                 Topmost = true,
+                AutoSize = true,
                 Result = DialogResult.Cancel,
                 WindowStyle = WindowStyle.Default,
                 Location = windowPosition
             };
 
+            // reset to hide
+            GromDiameter.Enabled = GromEdgeOffset.Enabled = false;
             var ChangeVariables = new TableLayout
             {
                 Padding = new Padding(5, 5, 5, 20),
                 Spacing = new Size(5, 5),
                 Rows = {
-                    new TableRow(new Label { Text = "Grommet Diameter" }, GromDiameter, new Label { Text = "Gromet Offset" }, GromEdgeOffset)
+                    new TableRow(new Label { Text = "Grommet Diameter" }, GromDiameter, new Label { Text = "Edge Offset" }, GromEdgeOffset, null, UnlockButt)
                 }
             };
 
@@ -1010,7 +1013,7 @@ namespace gjTools.Commands
                 Padding = new Padding(5, 15, 5, 15),
                 Spacing = new Size(5, 5),
                 Rows = {
-                    new TableRow(null, new Label { Text = "Top", TextAlignment = TextAlignment.Center }, 
+                    new TableRow(new Label{ Text = "" }, new Label { Text = "Top", TextAlignment = TextAlignment.Center }, 
                         new Label { Text = "Bottom", TextAlignment = TextAlignment.Center }, 
                         new Label { Text = "Sides", TextAlignment = TextAlignment.Center }),
                     new TableRow(new Label { Text = "Stitch\nType", TextAlignment = TextAlignment.Right }, 
@@ -1020,7 +1023,7 @@ namespace gjTools.Commands
                     new TableRow(new Label { Text = "Size", TextAlignment = TextAlignment.Right }, 
                         TopSize, BottSize, SideSize),
                     new TableRow(new Label { Text = "Pole Dia.", TextAlignment = TextAlignment.Right }, 
-                        TopPoleSize, BottPoleSize, null),
+                        TopPoleSize, BottPoleSize, new Label{ Text = "<-<Enter>" }),
                     new TableRow(new Label { Text = "Grommets", TextAlignment = TextAlignment.Right }, 
                         new Label { Text = "Top", TextAlignment = TextAlignment.Center },
                         new Label { Text = "Bottom", TextAlignment = TextAlignment.Center },
@@ -1075,10 +1078,25 @@ namespace gjTools.Commands
             BottPoleSize.KeyUp += PoleSize_KeyUp;
             GromEdgeOffset.LostFocus += GromValue_LostFocus;
             GromDiameter.LostFocus += GromValue_LostFocus;
+            UnlockButt.Click += Unlock_Click;
+            window.LoadComplete += (s, e) => Code.Focus();
 
             // Display the window
             window.ShowModal(RhinoEtoApp.MainWindow);
             windowPosition = window.Location;
+        }
+
+        private void Unlock_Click(object sender, EventArgs e)
+        {
+            if (!GromDiameter.Enabled)
+            {
+                GromDiameter.Enabled = true;
+                GromEdgeOffset.Enabled = true;
+            } else
+            {
+                GromDiameter.Enabled = false;
+                GromEdgeOffset.Enabled = false;
+            }
         }
 
         private void GromValue_LostFocus(object sender, EventArgs e)
@@ -1120,7 +1138,10 @@ namespace gjTools.Commands
         private void Code_KeyUp(object sender, KeyEventArgs e)
         {
             if (Code.Text.Length == 105)
+            {
                 CalcCode_Click(sender, e);
+                PartNumber.Focus();
+            }
         }
 
         private void GromQty_KeyUp(object sender, KeyEventArgs e)
@@ -1172,6 +1193,9 @@ namespace gjTools.Commands
             {
                 BData.PartNumber = PartNumber.Text;
                 OkButt.Enabled = true;
+
+                if (e.Key == Keys.Enter)
+                    window.Close(DialogResult.Ok);
             }
             else
                 OkButt.Enabled = false;
@@ -1201,7 +1225,7 @@ namespace gjTools.Commands
 
             TopSize.Text = (snip[2] + snip[7]).ToString();
             BottSize.Text = (snip[3] + snip[8]).ToString();
-            SideSize.Text = snip[9].ToString();
+            SideSize.Text = (snip[9] / 2).ToString();
 
             TopGromSpace.Text = snip[10].ToString();
             BottGromSpace.Text = snip[11].ToString();

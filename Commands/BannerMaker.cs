@@ -52,21 +52,22 @@ namespace gjTools.Commands
             if (BannerData.CommandResult != Eto.Forms.DialogResult.Ok)
                 return Result.Cancel;
 
-            var BData = BannerData.GetAllValues();
+            var BData = BannerData.GetAllValues();      // get the info from the form
 
-            var BGeom = CreateBoxes(BData);
+            var BGeom = CreateBoxes(BData);             // make the inital box
 
-            BGeom = GrommetPoints(BGeom, BData);
+            BGeom = GrommetPoints(BGeom, BData);        // get all the points for the groms
 
-            BGeom = CreateGromCircles(BGeom, BData);
+            BGeom = CreateGromCircles(BGeom, BData);    // use the points and make the circles
 
             if (BData.Folded)
-                BGeom = MakeFolded(BGeom);
+                BGeom = MakeFolded(BGeom, BData);       // Folded banner gets extra boxes
 
-            //var dt = new DrawTools(doc);
-            //BGeom = CreateTextLabels(dt, BGeom, BData);
 
-            AddAllObjects(doc, BGeom, BData);
+            var dt = new DrawTools(doc);
+            BGeom = CreateTextLabels(dt, BGeom, BData); // Only adds the part number at this point
+
+            AddAllObjects(doc, BGeom, BData);           // add the shit to the document
 
             doc.Views.Redraw();
             return Result.Success;
@@ -74,8 +75,12 @@ namespace gjTools.Commands
 
         public void AddAllObjects(RhinoDoc doc, BannerGeom BGeom, BannerDialog.BannerInfo BData)
         {
-            var attr = new ObjectAttributes { LayerIndex = doc.Layers.CurrentLayer.Index };
             var lt = new LayerTools(doc);
+            var parentLayer = lt.CreateLayer(BData.PartNumber);
+            var attr = new ObjectAttributes { LayerIndex = parentLayer.Index };
+
+            foreach (var t in BGeom.Verbage)
+                doc.Objects.AddText(t, attr);
 
             attr.LayerIndex = lt.CreateLayer("LiveArea", BData.PartNumber, System.Drawing.Color.DarkOliveGreen).Index;
             foreach (var b in BGeom.LiveBox)
@@ -94,25 +99,21 @@ namespace gjTools.Commands
                 foreach (var c in BGeom.GromCir)
                     doc.Objects.AddCircle(c, attr);
             }
+
+
         }
 
         public BannerGeom CreateTextLabels(DrawTools dt, BannerGeom BGeom, BannerDialog.BannerInfo BData)
         {
             var ds = dt.StandardDimstyle();
 
-            if (BData.fn_Top != BannerDialog.BannerInfo.Finish.None)
-            {
-                if (BData.fn_Top == BannerDialog.BannerInfo.Finish.Hem)
-                {
-
-                    BGeom.Verbage.Add(dt.AddText("HEM", Point3d.Origin, ds, 1, 3, 1, 0));
-                }
-            }
+            // More to come when i get to it
+            BGeom.Verbage = new List<TextEntity> { dt.AddText(BData.PartNumber, BGeom.LiveBox[0].Center, ds, 2, 1, 1, 3) };
 
             return BGeom;
         }
 
-        public BannerGeom MakeFolded(BannerGeom BGeom)
+        public BannerGeom MakeFolded(BannerGeom BGeom, BannerDialog.BannerInfo BData)
         {
             var mirror = Transform.Mirror(new Plane(BGeom.LiveBox[0].Max, Vector3d.YAxis));
             
@@ -120,6 +121,17 @@ namespace gjTools.Commands
             BGeom.StitBox.Add(new BoundingBox(BGeom.StitBox[0].GetCorners(), mirror));
             BGeom.GromBox.Add(new BoundingBox(BGeom.GromBox[0].GetCorners(), mirror));
 
+            var GromCircles = new List<Circle>(BGeom.GromCir);
+            foreach (var c in GromCircles)
+            {
+                var mir_Cir = new Circle(c.Center, c.Radius);
+                mir_Cir.Transform(mirror);
+                BGeom.GromCir.Add(mir_Cir);
+            }
+
+            // change the Cut Size
+            double extra = (BData.fn_Bott == BannerDialog.BannerInfo.Finish.Hem) ? BData.Size_Bott : StitchExtra(BData.st_Bott);
+            BGeom.CutsBox.Max = new Point3d(BGeom.CutsBox.Max.X, BGeom.LiveBox[1].Max.Y + extra, 0);
 
             return BGeom;
         }
@@ -246,17 +258,22 @@ namespace gjTools.Commands
                 GromBox = new List<BoundingBox> { new BoundingBox(BaseBox.Min + gr_MinVect, BaseBox.Max + gr_MaxVect) }
             };
 
-            double StitchExtra(BannerDialog.BannerInfo.Stitch stitch)
-            {
-                if (stitch == BannerDialog.BannerInfo.Stitch.Single)
-                    return 0.25;
-                if (stitch == BannerDialog.BannerInfo.Stitch.Double)
-                    return 0.5;
-                
-                return 0;
-            }
-
             return BGeom;
+        }
+
+        /// <summary>
+        /// returns the proper extra material per the stitch
+        /// </summary>
+        /// <param name="stitch"></param>
+        /// <returns></returns>
+        public double StitchExtra(BannerDialog.BannerInfo.Stitch stitch)
+        {
+            if (stitch == BannerDialog.BannerInfo.Stitch.Single)
+                return 0.25;
+            if (stitch == BannerDialog.BannerInfo.Stitch.Double)
+                return 0.5;
+
+            return 0;
         }
     }
 }
