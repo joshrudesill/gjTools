@@ -1153,8 +1153,17 @@ namespace gjTools.Commands
             var g_offset = double.Parse(GromEdgeOffset.Text);
 
             double dist;
-            if (num <= 1)
+            if (num <= 1 || !tryV)
+            {
                 tryV = false;
+                box.Text = "0";
+                if (box.ToolTip == "Top")
+                    TopGromSpace.Text = "0";
+                else if (box.ToolTip == "Bottom")
+                    BottGromSpace.Text = "0";
+                else
+                    SideGromSpace.Text = "0";
+            }
 
             if (box.ToolTip == "Top" && tryW && tryV)
             {

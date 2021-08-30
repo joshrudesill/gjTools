@@ -99,16 +99,44 @@ namespace gjTools.Commands
                 foreach (var c in BGeom.GromCir)
                     doc.Objects.AddCircle(c, attr);
             }
-
-
         }
 
         public BannerGeom CreateTextLabels(DrawTools dt, BannerGeom BGeom, BannerDialog.BannerInfo BData)
         {
             var ds = dt.StandardDimstyle();
 
-            // More to come when i get to it
-            BGeom.Verbage = new List<TextEntity> { dt.AddText(BData.PartNumber, BGeom.LiveBox[0].Center, ds, 2, 1, 1, 3) };
+            // Part Number
+            BGeom.Verbage = new List<TextEntity> { dt.AddText($"PN: {BData.PartNumber}", BGeom.LiveBox[0].Center, ds, 2, 1, 1, 3) };
+
+            // Get the insertion point
+            Point3d pt = BGeom.LiveBox[BGeom.LiveBox.Count - 1].Center;
+                    pt.X += BData.Width * 0.65;
+
+            // Helper Function
+            string FinishBlurb(BannerDialog.BannerInfo.Stitch stitch, BannerDialog.BannerInfo.Finish finish, double size)
+            {
+                var str = "";
+                if (stitch == BannerDialog.BannerInfo.Stitch.Single || stitch == BannerDialog.BannerInfo.Stitch.Double)
+                    str += $"{stitch}-Stitched ";
+                else if (stitch == BannerDialog.BannerInfo.Stitch.Weld)
+                    str += $"{stitch}ed ";
+
+                if (finish == BannerDialog.BannerInfo.Finish.None)
+                    str += "Raw Edge";
+                else
+                    str += $"{size}\" {finish}";
+
+                return str;
+            }
+
+            // Add the Banner information in text form
+            string txtBlob = $"Top: {FinishBlurb(BData.st_Top, BData.fn_Top, BData.Size_Top)}\n" +
+                $"Sides: {FinishBlurb(BData.st_Side, BData.fn_Side, BData.Size_Side)}\n" +
+                $"Bottom: {FinishBlurb(BData.st_Bott, BData.fn_Bott, BData.Size_Bott)}\n\n" +
+                $"Grommets:\nTop: {BData.gromQty_Top}x\nSide: {BData.gromQty_Side}x/Side\nBottom: {BData.gromQty_Bott}x" +
+                $"\nTotal: {BGeom.GromCir.Count}x";
+
+            BGeom.Verbage.Add(dt.AddText(txtBlob, pt, ds, 1));
 
             return BGeom;
         }
@@ -163,21 +191,7 @@ namespace gjTools.Commands
 
             // Remove Duplicates
             if (BGeom.GromPts.Count > 0)
-            {
-                var CleanPts = new List<Point3d>();
-
-                foreach(var p in BGeom.GromPts)
-                {
-                    bool uniq = true;
-                    foreach (var pp in CleanPts)
-                        if (p.Equals(pp))
-                            uniq = false;
-                    if (uniq)
-                        CleanPts.Add(p);
-                }
-
-                BGeom.GromPts = CleanPts;
-            }
+                BGeom.GromPts = new List<Point3d>(Point3d.CullDuplicates(BGeom.GromPts, 0.01));
 
             List<Point3d> DivLine(int qty, Line l)
             {
@@ -212,12 +226,11 @@ namespace gjTools.Commands
                 {
                     st_MaxVect.Y -= 0.25;
                     ct_MaxVect.Y += BData.Size_Top;
-                    gr_MaxVect.Y -= BData.gromEdgeOffset;
                 }
                 else
                 {
                     st_MaxVect.Y -= BData.Size_Top;
-                    gr_MaxVect.Y -= BData.Size_Top + BData.gromEdgeOffset;
+                    gr_MaxVect.Y -= BData.Size_Top;
                     ct_MaxVect.Y += BData.Size_Top + StitchExtra(BData.st_Top);
                 }
             }
@@ -227,12 +240,11 @@ namespace gjTools.Commands
                 {
                     st_MinVect.Y += 0.25;
                     ct_MinVect.Y -= BData.Size_Bott;
-                    gr_MinVect.Y += BData.gromEdgeOffset;
                 }
                 else
                 {
                     st_MinVect.Y += BData.Size_Bott;
-                    gr_MinVect.Y += BData.Size_Bott + BData.gromEdgeOffset;
+                    gr_MinVect.Y += BData.Size_Bott;
                     if (BData.Folded)
                         ct_MinVect.Y -= StitchExtra(BData.st_Bott);
                     else
@@ -245,9 +257,12 @@ namespace gjTools.Commands
                 st_MinVect.X += 0.25;
                 ct_MaxVect.X += BData.Size_Side;
                 ct_MinVect.X -= BData.Size_Side;
-                gr_MaxVect.X -= BData.gromEdgeOffset;
-                gr_MinVect.X += BData.gromEdgeOffset;
             }
+
+            gr_MaxVect.Y -= BData.gromEdgeOffset;
+            gr_MinVect.Y += BData.gromEdgeOffset;
+            gr_MaxVect.X -= BData.gromEdgeOffset;
+            gr_MinVect.X += BData.gromEdgeOffset;
 
             // Create the boxes
             var BGeom = new BannerGeom
@@ -268,9 +283,9 @@ namespace gjTools.Commands
         /// <returns></returns>
         public double StitchExtra(BannerDialog.BannerInfo.Stitch stitch)
         {
-            if (stitch == BannerDialog.BannerInfo.Stitch.Single)
+            if (stitch == BannerDialog.BannerInfo.Stitch.Single || stitch == BannerDialog.BannerInfo.Stitch.Weld)
                 return 0.25;
-            if (stitch == BannerDialog.BannerInfo.Stitch.Double)
+            else if (stitch == BannerDialog.BannerInfo.Stitch.Double)
                 return 0.5;
 
             return 0;
