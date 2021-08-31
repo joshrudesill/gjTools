@@ -65,7 +65,7 @@ namespace gjTools.Commands
 
 
             var dt = new DrawTools(doc);
-            BGeom = CreateTextLabels(dt, BGeom, BData); // Only adds the part number at this point
+            BGeom = CreateTextLabels(dt, BGeom, BData); // Part number and banner specs
 
             AddAllObjects(doc, BGeom, BData);           // add the shit to the document
 
