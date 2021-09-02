@@ -41,6 +41,8 @@ namespace gjTools.Commands
             gp.CalcOneUp();
             gp.SetCommandPrompt("This Should be fun");
 
+            RhinoApp.WriteLine("This Cammand does nothing currently, just fun proximity stuff");
+
             gp.Get();
 
             return Result.Success;
