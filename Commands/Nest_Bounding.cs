@@ -34,7 +34,7 @@ namespace gjTools.Commands
 
             // Collect the sheet info later...
             double block = 0.5;
-            var Sheet = new NestGrid((int)(Width / block), (int)(Height / block), block);
+            var Sheet = new NestGrid(1, (int)(Width / block), (int)(Height / block), block);
 
             // Collect Parts
             var count = 0;
@@ -50,8 +50,8 @@ namespace gjTools.Commands
 
                 var pg = new PartGrid((byte)count, new List<ObjRef>(part), block);
                     pg.PixelatePart();
+                TestAddParts(ref Sheet, ref pg);
                 PartGrids.Add(pg);
-                TestAddParts(ref Sheet, pg);
             }
 
             // Time to rock and roll
@@ -61,7 +61,8 @@ namespace gjTools.Commands
                 TestPartGrid(pg, ref DDraw);
 
             doc.Views.Redraw();
-            RhinoGet.GetArc(out Arc arc);
+            string str = "";
+            RhinoGet.GetString("Enter To Continue", true, ref str);
             DDraw.Dispose();
 
             return Result.Success;
@@ -87,29 +88,14 @@ namespace gjTools.Commands
                     if (col > 0)
                         used = true;
 
-                    DDraw.AddPolygon(pts, ColorShift(col), System.Drawing.Color.Aquamarine, used, true);
+                    DDraw.AddPolygon(pts, NestBox.ColorShift(col), System.Drawing.Color.Aquamarine, used, true);
                     count[1]++;
                 }
                 count[1] = 0;
                 count[0]++;
             }
 
-            System.Drawing.Color ColorShift(byte code)
-            {
-                while (code > 5)
-                    code -= 5;
-
-                switch (code)
-                {
-                    case 1: return System.Drawing.Color.Yellow;
-                    case 2: return System.Drawing.Color.Blue;
-                    case 3: return System.Drawing.Color.Green;
-                    case 4: return System.Drawing.Color.Magenta;
-                    case 5: return System.Drawing.Color.Red;
-                }
-
-                return System.Drawing.Color.Black;
-            }
+            NestBox.Image(2);
         }
 
         public void TestPartGrid(PartGrid pg, ref CustomDisplay DDraw)
@@ -131,16 +117,54 @@ namespace gjTools.Commands
             }
         }
 
-        public void TestAddParts(ref NestGrid NestBox, PartGrid part)
+        public void TestAddParts(ref NestGrid NestBox, ref PartGrid part)
         {
             var pt = NestBox.FindOpenSpot(part);
             if (pt.Fit)
+            {
                 NestBox.ReserveSpot(pt, part);
+            }
             else
-                RhinoApp.WriteLine($"Part #{part.ID} didnt fit");
+            {
+                RhinoApp.WriteLine($"Part #{part.ID} didnt fit, I'll Flip it 180 and try again");
+                part.Flip180();
+                pt = NestBox.FindOpenSpot(part);
+                if (pt.Fit)
+                {
+                    NestBox.ReserveSpot(pt, part);
+                }
+                else
+                {
+                    RhinoApp.WriteLine($"Part #{part.ID} didnt fit again, I'll Turn it 90 and try again");
+                    part.Flip90();
+                    pt = NestBox.FindOpenSpot(part);
+                    if (pt.Fit)
+                    {
+                        NestBox.ReserveSpot(pt, part);
+                    }
+                    else
+                    {
+                        RhinoApp.WriteLine($"Part #{part.ID} didnt fit again, I'll Turn it 180 and try one last time");
+                        part.Flip180();
+                        pt = NestBox.FindOpenSpot(part);
+                        if (pt.Fit)
+                        {
+                            NestBox.ReserveSpot(pt, part);
+                        }
+                        else
+                        {
+                            RhinoApp.WriteLine($"Part #{part.ID} wont fit, No more room");
+                        }
+                    }
+                }
+            }
+
         }
 
-
+        public void SortPartsByWidth(ref List<PartGrid> parts)
+        {
+            parts.Sort((x, y) => x.Width.CompareTo(y.Width));
+        }
 
 
 
@@ -171,11 +195,13 @@ namespace gjTools.Commands
             private double Pixel_Size;
             private List<List<byte>> Grid;
             private List<byte> Ledger;
-            public NestGrid(int Columns, int Rows, double PixelSize = 1.0)
+            private byte _ID;
+            public NestGrid(byte id, int Columns, int Rows, double PixelSize = 1.0)
             {
                 Pixel_Size = PixelSize;
                 Grid = new List<List<byte>>();
                 Ledger = new List<byte>();
+                _ID = id;
 
                 var row = new List<byte>();
                 for (int i = 0; i < Columns; i++)
@@ -184,6 +210,7 @@ namespace gjTools.Commands
                 for (int i = 0; i < Rows; i++)
                     Grid.Add(new List<byte>(row));
             }
+            public byte ID { get { return _ID; } }
             public List<byte> GetIDList { get { return Ledger; } }
             public double Pixel { get { return Pixel_Size; } }
             public List<List<byte>> GetGrid { get { return Grid; } }
@@ -266,6 +293,38 @@ namespace gjTools.Commands
                         if (p.GetGrid[i][ii])
                             Grid[pt.Y + i][pt.X + ii] = p.ID;
             }
+
+            public System.Drawing.Bitmap Image(float scale = 1)
+            {
+                var bmp = new System.Drawing.Bitmap(Grid[0].Count, Grid.Count);
+
+                for (int h = 0; h < Grid.Count; h++)
+                    for (int w = 0; w < Grid[0].Count; w++)
+                        bmp.SetPixel(w, h, ColorShift(Grid[h][w]));
+
+                var scaled = new System.Drawing.Bitmap(bmp, new System.Drawing.Size((int)(bmp.Width * scale), (int)(bmp.Height * scale)));
+
+                scaled.Save($"C:\\Temp\\NestImage-{_ID}.bmp");
+
+                return bmp;
+            }
+
+            public System.Drawing.Color ColorShift(byte code)
+            {
+                while (code > 5)
+                    code -= 5;
+
+                switch (code)
+                {
+                    case 1: return System.Drawing.Color.Yellow;
+                    case 2: return System.Drawing.Color.Blue;
+                    case 3: return System.Drawing.Color.Green;
+                    case 4: return System.Drawing.Color.Magenta;
+                    case 5: return System.Drawing.Color.Red;
+                }
+
+                return System.Drawing.Color.Black;
+            }
         }
 
         /// <summary>
@@ -278,6 +337,7 @@ namespace gjTools.Commands
             private BoundingBox _Bounds;
             private List<ObjRef> _Obj;
             private byte _ID;
+            private int Rotated;
 
             public PartGrid(byte PartID, List<ObjRef> part, double PixelSize = 1.0)
             {
@@ -285,6 +345,7 @@ namespace gjTools.Commands
                 _ID = PartID;
                 Grid = new List<List<bool>>();
                 _Obj = new List<ObjRef>();
+                Rotated = 0;
                 _Bounds = BoundingBox.Empty;
 
                 foreach(var p in part)
@@ -312,6 +373,7 @@ namespace gjTools.Commands
             public double Pixel { get { return CellSize; } }
             public int Height { get { return Grid.Count; } }
             public int Width { get { return Grid[0].Count; } }
+            public int GetRotate { get { return Rotated; } }
             public bool IsValid { get { if (Obj.Count > 0) return true; else return false; } }
 
             public bool PixelatePart()
@@ -370,6 +432,31 @@ namespace gjTools.Commands
 
                 for (int i = 0; i < Height; i++)
                     Grid.Add(new List<bool>(Row));
+            }
+            public void Flip180()
+            {
+                Grid.Reverse();
+                for (var i = 0; i < Grid.Count; i++)
+                    Grid[i].Reverse();
+                Rotated += 180;
+            }
+            public void Flip90()
+            {
+                // Tansposing
+                var newGrid = new List<List<bool>>(Grid[0].Count);
+                var newRow = new List<bool>(Grid.Count);
+
+                for(int h = 0; h < Grid[0].Count; h++)
+                {
+                    for(int w = 0; w < Grid.Count; w++)
+                        newRow.Add(Grid[w][h]);
+
+                    newGrid.Add(new List<bool>(newRow));
+                    newRow.Clear();
+                }
+
+                Grid = newGrid;
+                Rotated += 90;
             }
         }
     }
