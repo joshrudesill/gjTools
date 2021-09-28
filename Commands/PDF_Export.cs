@@ -73,7 +73,7 @@ namespace gjTools.Commands
                     StatusBar.UpdateProgressMeter(1, false);
                 }
             }
-            else if (win.SelectedLocation == 2)
+            else if (win.SelectedLocation == 3)
             {
                 //  -------------------------------------------------------------------------------  Prototype Output
                 // Proto Path
@@ -84,7 +84,7 @@ namespace gjTools.Commands
 
                 for (int i = 0; i < win.SelectedItems.Count; i++)
                 {
-                    var l = win.SelectedLayerList[win.SelectedItems[i]];
+                    var l = win.SelectedLayerList[i];
 
                     StatusBar.SetMessagePane($"Saving {l.Name}.pdf");
                     PDF.MakeSinglePagePDF(path + "NESTINGS\\", l.Name, l);
@@ -207,7 +207,7 @@ namespace gjTools.Commands
             if (doc.Path != null)
                 Path[0] = doc.Path.Replace(doc.Name, "");
 
-            Path[3] = Path[0] + new SQLTools().queryDataStore(new List<int> { 1 })[0].stringValue;
+            Path[3] = Path[0] + new SQLTools().queryJobSlots()[0].job + "\\";
 
             return Path;
         }
