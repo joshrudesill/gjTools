@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Collections.Generic;
 using Rhino;
 using Rhino.Commands;
@@ -6,138 +7,22 @@ using Rhino.UI;
 using Rhino.DocObjects;
 using Rhino.Display;
 using Rhino.Geometry;
-using Eto;
-
-
-/// <summary>
-/// Holds all of the data needed to make a PDF file
-/// </summary>
-public struct ePDF
-{
-    public Layer parentLay;
-    public RhinoDoc doc;
-    public RhinoView view;
-
-    public string pdfName;
-    public string path;
-
-    // if the cad filename differs from PDF
-    public bool makeDxf;
-    public bool makeDwg;
-    public bool IsLayout;
-    public string CADFileName;
-
-    public List<double> sheetSize;
-    public int PDFcolorMode;
-    public int dpi;
-
-    public ePDF(RhinoDoc document, Layer parent)
-    {
-        pdfName = parent.Name;
-        path = "";
-        dpi = 400;
-        sheetSize = new List<double> { 11.0, 8.5 };
-        PDFcolorMode = 0;
-        CADFileName = parent.Name;
-
-        makeDwg = true;
-        makeDxf = false;
-        IsLayout = false;
-
-        parentLay = parent;
-        doc = document;
-        view = document.Views.Find("Top", true);
-    }
-
-    private List<Layer> GetSubLayers()
-    {
-        var lays = new List<Layer> { parentLay };
-        if (parentLay.GetChildren() != null)
-            lays.AddRange(parentLay.GetChildren());
-        return lays;
-    }
-    private List<RhinoObject> GetLayerObjs()
-    {
-        var ss = new ObjectEnumeratorSettings();
-        var objs = new List<RhinoObject>();
-        foreach (var l in GetSubLayers())
-        {
-            ss.LayerIndexFilter = l.Index;
-            objs.AddRange(doc.Objects.GetObjectList(ss));
-        }
-        return objs;
-    }
-    private List<RhinoObject> GetCutLayerObjs()
-    {
-        var ss = new ObjectEnumeratorSettings();
-        var objs = new List<RhinoObject>();
-        foreach (var l in GetSubLayers())
-        {
-            if (l.Name.Contains("C_"))
-            {
-                ss.LayerIndexFilter = l.Index;
-                objs.AddRange(doc.Objects.GetObjectList(ss));
-            }
-        }
-        return objs;
-    }
-    public void SelectObjects(bool cutLinesOnly = true)
-    {
-        var ids = new List<Guid>();
-        if (cutLinesOnly)
-            foreach (var o in GetCutLayerObjs())
-                ids.Add(o.Id);
-        else
-            foreach (var o in GetLayerObjs())
-                ids.Add(o.Id);
-        doc.Objects.Select(ids);
-    }
-    public BoundingBox AllObjBounding
-    {
-        get
-        {
-            RhinoObject.GetTightBoundingBox(GetLayerObjs(), out BoundingBox bb);
-            bb.Inflate(bb.GetEdges()[0].Length * 0.02);
-            return bb;
-        }
-    }
-    public BoundingBox CutObjBounding
-    {
-        get
-        {
-            RhinoObject.GetTightBoundingBox(GetCutLayerObjs(), out BoundingBox bb);
-            bb.Inflate(bb.GetEdges()[0].Length * 0.02);
-            return bb;
-        }
-    }
-    public ViewCaptureSettings.ColorMode colorMode
-    {
-        get
-        {
-            var _colorMode = new List<ViewCaptureSettings.ColorMode> {
-                    ViewCaptureSettings.ColorMode.DisplayColor,
-                    ViewCaptureSettings.ColorMode.PrintColor,
-                    ViewCaptureSettings.ColorMode.BlackAndWhite
-                };
-            return _colorMode[PDFcolorMode];
-        }
-    }
-}
 
 namespace gjTools.Commands
 {
-    [CommandStyle(Rhino.Commands.Style.ScriptRunner)]
-    public class EPDF_Export : Command
+    [CommandStyle(Style.ScriptRunner)]
+    public class PDF_Export : Command
     {
-        public EPDF_Export()
+        public PDF_Export()
         {
             Instance = this;
         }
 
-        ///<summary>Makes my PDF Files</summary>
-        public static EPDF_Export Instance { get; private set; }
+        ///<summary>The only instance of the MyCommand command.</summary>
+        public static PDF_Export Instance { get; private set; }
 
         public override string EnglishName => "PDFExport";
+
         public Eto.Drawing.Point PDFwindowPosition = Eto.Drawing.Point.Empty;
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
@@ -145,424 +30,812 @@ namespace gjTools.Commands
             if (PDFwindowPosition == Eto.Drawing.Point.Empty)
                 PDFwindowPosition = new Eto.Drawing.Point((int)MouseCursor.Location.X - 250, 200);
 
-            int currentLayer = doc.Layers.CurrentLayerIndex;
-            var sql = new SQLTools();
-            var lt = new LayerTools(doc);
-            var pdfData = new List<ePDF>();
+            var win = new PDF.PDF_Dialog(doc, PDFwindowPosition);
 
-            var outTypes = new List<string>
-            {
-                "LocalTemp",        // 0
-                "MeasuredDrawing",  // 1
-                "Mylar Color",      // 2
-                "Mylar NonColor",   // 3
-                "MultiPagePDF",     // 4
-                "EPExportLegacy",   // 5
-                "EPExport",         // 6
-                "ProtoNestings",    // 7
-                "WorkingLocation"   // 8
-            };
-
-            var noWorkingPathOptions = new List<string>(outTypes);
-            if (doc.Path == null)
-                noWorkingPathOptions.RemoveRange(5, 4);
-            
-            // get page views
-            var views = doc.Views.GetPageViews();
-            var viewStrings = new List<string>();
-            foreach (var v in views)
-                viewStrings.Add(v.MainViewport.Name);
-
-            // present the dialog for input
-            var pdfDialog = new DualListDialog("PDF Exporter", "Output Type", noWorkingPathOptions, "Layers/Layout Select", lt.getAllParentLayersStrings())
-            {
-                windowPosition = PDFwindowPosition,
-                singleDefaultIndex = 0,
-                multiSelectAlternate = viewStrings
-            };
-            pdfDialog.ShowForm();
-            PDFwindowPosition = pdfDialog.windowPosition;
-
-            if (pdfDialog.CommandResult() != Eto.Forms.DialogResult.Ok)
+            var res = win.ShowForm();
+            if (res == Eto.Forms.DialogResult.Cancel)
                 return Result.Cancel;
 
-            // Get user data
-            var outType = pdfDialog.GetSingleValue();
-            var PDFNames = pdfDialog.GetMultiSelectValue();
-            
-            // See if layers need to be chosen
-            if (outType == outTypes[0] || outType == outTypes[1] || outType == outTypes[4] || outType == outTypes[7] || outType == outTypes[8])
-                foreach(var p in PDFNames)
-                    pdfData.Add( DeterminePath(new ePDF(doc, doc.Layers[doc.Layers.FindByFullPath(p, 0)]), outType, outTypes, sql) );
-            
-            // See if page layouts need to be chosen
-            if (outType == outTypes[2] || outType == outTypes[3])
+            // Make the PDF Classes
+            var PDF = new PDF.PDFJob(doc, win.SelectedColorMode, 400);
+            var PDF_Page = new PDF.PDFJob(doc, win.SelectedColorMode, 600);
+
+            // Get the Path
+            var path = FileLocations.Paths(doc)[win.SelectedLocation];
+
+            // What type is the PDF
+            if (win.SelectedLocation == 4)
             {
-                foreach (var p in pdfDialog.GetMultiSelectAlternateValue())
+                //  -------------------------------------------------------------------------------  EP Output
+                var fn = doc.Name.Replace(".3dm", "");
+                path = $"{path}{fn}\\";
+
+                // Status bar to show progress
+                StatusBar.ShowProgressMeter(0, win.EPItems.Count + win.EPMylar.Count, "Progress: ", false, true);
+
+                // Single Pages, should already be in order
+                for (int i = 0; i < win.EPItems.Count; i++)
                 {
-                    var page = new ePDF(doc, doc.Layers[0]);
-                        page.IsLayout = true;
-                        page.makeDwg = false;
-                        page.view = views[viewStrings.IndexOf(p)];
-                        page.pdfName = page.view.MainViewport.Name;
-                    page = DeterminePath(page, outType, outTypes, sql);
-                    pdfData.Add(page);
+                    var name = $"{fn}_Page {i + 1}";
+                    
+                    StatusBar.SetMessagePane($"Sending {name}.pdf");
+                    PDF.MakeSinglePagePDF(path, name, win.LayerList[win.EPItems[i]]);
+                    StatusBar.UpdateProgressMeter(1, false);
+                }
+                // Layouts of Mylars
+                for (int i = 0; i < win.EPMylar.Count; i++)
+                {
+                    var layName = win.LayoutList[win.EPMylar[i]].PageName;
+                    var name = $"{fn.Substring(0, fn.Length - 1)}_{layName}";
+
+                    StatusBar.SetMessagePane($"Sending {name}");
+                    PDF.MakeLayoutPDF(path, name, layName);
+                    StatusBar.UpdateProgressMeter(1, false);
+                }
+            }
+            else if (win.SelectedLocation == 2)
+            {
+                //  -------------------------------------------------------------------------------  Prototype Output
+                // Proto Path
+                path = FileLocations.Paths(doc)[3];
+
+                // Status Bar
+                StatusBar.ShowProgressMeter(0, win.SelectedItems.Count * 2, "Progress: ", false, true);
+
+                for (int i = 0; i < win.SelectedItems.Count; i++)
+                {
+                    var l = win.SelectedLayerList[win.SelectedItems[i]];
+
+                    StatusBar.SetMessagePane($"Saving {l.Name}.pdf");
+                    PDF.MakeSinglePagePDF(path + "NESTINGS\\", l.Name, l);
+                    StatusBar.UpdateProgressMeter(1, false);
+
+                    MakeCAD_File(doc, path, l.Name);
+                    StatusBar.UpdateProgressMeter(1, false);
+                }
+            }
+            else if (win.SelectedType == 0)
+            {
+                //  -------------------------------------------------------------------------------  Single Pages output
+                // Status bar
+                StatusBar.ShowProgressMeter(0, win.SelectedItems.Count * 3, "Progress: ", false, true);
+
+                for (var i = 0; i < win.SelectedItems.Count; i++)
+                {
+                    var name = win.LayerList[win.SelectedItems[i]].Name;
+                    var modPath = path;
+
+                    // If measured drawing, nest the path
+                    if (win.SelectedLocation == 2)
+                        modPath += name + "\\";
+
+                    StatusBar.SetMessagePane($"Saving: {name}");
+                    PDF.MakeSinglePagePDF(modPath, name, win.LayerList[win.SelectedItems[i]]);
+                    StatusBar.UpdateProgressMeter(1, false);
+
+                    // Working Files
+                    MakeCAD_File(doc, path, name);
+                }
+            }
+            else if (win.SelectedType == 1)
+            {
+                //  -------------------------------------------------------------------------------  Multi-Page Output
+                PDF.MakeMultiPagePDF(path, win.PDF_Name, win.SelectedLayerList);
+            }
+            else if (win.SelectedType == 2)
+            {
+                //  -------------------------------------------------------------------------------  Paper Space layout output
+                // Statusbar
+                StatusBar.ShowProgressMeter(0, win.SelectedItems.Count, "Progress:", false, true);
+
+                for (int i = 0; i < win.SelectedItems.Count; i++)
+                {
+                    var name = win.LayoutList[win.SelectedItems[i]];
+
+                    StatusBar.SetMessagePane($"Saving: {name.PageName}");
+                    PDF_Page.MakeLayoutPDF(path, name.PageName, name.PageName);
+                    StatusBar.UpdateProgressMeter(1, false);
                 }
             }
 
-            // EPExport to be completed with a function
-            if (outType == outTypes[6])
-                pdfData = EPExport(doc, lt, sql);
-
-            // Sort the output types
-            var PDFviewPages = new List<ePDF>();
-            var PDFlayoutPages = new List<ePDF>();
-            foreach (var p in pdfData)
-            {
-                if (p.IsLayout)
-                    PDFlayoutPages.Add(p);
-                else
-                    PDFviewPages.Add(p);
-            }
-
-            // Viewport PDF Maker
-            if (PDFviewPages.Count > 0)
-            {
-                // change the viewport resolution
-                var activeView = doc.Views.Find("Top", true);
-                activeView.Size = new System.Drawing.Size(1100, 850);
-
-                if (outType == outTypes[4])
-                {
-                    PDFMultiPage(PDFviewPages);
-                }
-                else
-                {
-                    foreach (var p in PDFviewPages)
-                    {
-                        HideLayers(p, lt);
-                        PDFViewport(p);
-                    }
-                }
-
-                ShowAllLayers(lt);
-                activeView.Maximized = true;
-            }
-            
-            // Layout PDF Maker
-            if (PDFlayoutPages.Count > 0)
-            {
-                foreach (var p in PDFlayoutPages)
-                    PDFLayout(p);
-            }
-
-            // Make a CAD file?
-            foreach (var p in pdfData)
-            {
-                doc.Objects.UnselectAll();
-                if (p.makeDxf)
-                {
-                    p.SelectObjects(true);
-                    MakeDWG(p.path + p.CADFileName + ".dxf");
-                }
-                if (p.makeDwg && outType != outTypes[4])
-                {
-                    p.SelectObjects(false);
-                    MakeDWG(p.path + p.CADFileName + ".dwg");
-                    doc.ExportSelected(p.path + p.pdfName + ".3dm");
-                }
-            }
-
-            doc.Layers.SetCurrentLayerIndex(currentLayer, true);
-            doc.Views.ActiveView.MainViewport.ZoomExtents();
+            // Clear the statusbar
+            StatusBar.ClearMessagePane();
+            StatusBar.HideProgressMeter();
             return Result.Success;
         }
 
 
 
         /// <summary>
-        /// assembles the plot files in a specific order
+        /// Send out the DWG and 3DM file
         /// </summary>
-        /// <param name="doc"></param>
-        /// <param name="lt"></param>
-        /// <param name="sql"></param>
-        /// <returns></returns>
-        public List<ePDF> EPExport(RhinoDoc doc, LayerTools lt, SQLTools sql)
+        /// <param name="fullPath">No Extension in this</param>
+        public void MakeCAD_File(RhinoDoc doc, string Path, string FileName, string ext = "dwg")
         {
-            var pdfData = new List<ePDF>();
-            var cut = new List<ePDF>();
-            var mylar = new List<ePDF>();
-            var fn = doc.Name.Substring(0, doc.Name.Length - 4);
-            var path = sql.queryLocations()[5].path + fn + "\\";
-            int pNo = 2;
-
-            foreach (var l in lt.getAllParentLayers())
+            if (ext == "dwg")
             {
-                if (l.Name == "Title Block")
-                    pdfData.Add(new ePDF(doc, l) {
-                        makeDwg = false,
-                        path = path,
-                        pdfName = fn + "_Page 1",
-                        dpi = 150
-                    });
+                // No need for a Rhino file if not dwg
+                doc.ExportSelected($"{Path}{FileName}.3dm");
+                StatusBar.UpdateProgressMeter(1, false);
             }
-            foreach (var l in lt.getAllParentLayers())
-            { 
-                if (l.Name.Contains("MYLAR"))
+
+            RhinoApp.RunScript($"_-Export \"{Path}{FileName}.{ext}\" Scheme \"Vomela\" _Enter", false);
+            StatusBar.UpdateProgressMeter(1, false);
+        }
+    }
+
+
+
+    public class FileLocations
+    {
+        // Get the location Path
+        public static Dictionary<string, string> PathDict = new Dictionary<string, string>(8)
+        {
+            { "Working Location", "" },
+            { "Temp Location", @"D:\Temp\" },
+            { "Measured Drawing", @"\\VWS\Cut\MEASURED_DRAWINGS\" },
+            { "Prototype", "" },
+            { "EP",  @"\\VWS\Cut\OEM-CUT\" },
+            { "Default", @"\\VWS\Cut\TEMP-CUT\" },
+            { "Router", @"\\VWS\Cut\ROUTER\" }
+        };
+
+        public static List<string> Names = new List<string>(8)
+        {
+            "Working Location",
+            "Temp Location",
+            "Measured Drawing",
+            "Prototype",
+            "EP",
+            "Default",
+            "Router"
+        };
+
+        public static List<string> Path = new List<string>(8)
+        {
+            "",
+            @"D:\Temp\",
+            @"\\VWS\Cut\MEASURED_DRAWINGS\",
+            "",
+            @"\\VWS\Cut\OEM-CUT\",
+            @"\\VWS\Cut\TEMP-CUT\",
+            @"\\VWS\Cut\ROUTER\"
+        };
+
+        public static List<string> Paths(RhinoDoc doc)
+        {
+            if (doc.Path != null)
+                Path[0] = doc.Path.Replace(doc.Name, "");
+
+            Path[3] = Path[0] + new SQLTools().queryDataStore(new List<int> { 1 })[0].stringValue;
+
+            return Path;
+        }
+    }
+}
+
+
+
+namespace PDF 
+{
+    using Eto.Drawing;
+    using Eto.Forms;
+
+    /// <summary>
+    /// Custom Dialog for Creating Choosing PDF outPuts
+    /// </summary>
+    public class PDF_Dialog
+    {
+        //  -----------------------------------------------------------------------------  Access Controls
+        private Dialog<DialogResult> Window;
+        private Point WinLocation;
+
+        private RadioButtonList OutputLocation;
+        private RadioButtonList OutputType;
+        private RadioButtonList ColorMode;
+        private Button But_Ok;
+        private GridView PDFItems;
+        private TextBox PDFName;
+        private RhinoDoc doc;
+
+        private List<Layer> ParentLayers;
+        private List<List<string>> ds_ParentLayers;
+        private int CurrentLayerIndex;
+        private List<RhinoPageView> PageViews;
+        private List<List<string>> ds_PageViews;
+        private List<int> EP_Layers;
+        private List<int> EP_Pages;
+
+
+
+        public PDF_Dialog(RhinoDoc Document, Point WindowLocation)
+        {
+            doc = Document;
+            WinLocation = WindowLocation;
+        }
+
+
+
+
+        //  -----------------------------------------------------------------------------  Build Controls
+        private void LoadControls()
+        {
+            Window = new Dialog<DialogResult>
+            {
+                Title = "PDF Export",
+                Result = DialogResult.Cancel,
+                AutoSize = true,
+                Minimizable = false,
+                Maximizable = false,
+                Padding = new Padding(5),
+                Resizable = false,
+                Topmost = true,
+                Location = WinLocation
+            };
+
+            But_Ok = new Button { Text = "Ok" };
+            Button But_Cancel = new Button { Text = "Cancel" };
+            But_Ok.Click += But_Ok_Click;
+            But_Cancel.Click += (s, e) => Window.Close(DialogResult.Cancel);
+
+            PDFItems = new GridView
+            {
+                Size = new Size(250, -1),
+                ShowHeader = true,
+                Border = BorderType.Line,
+                GridLines = GridLines.None,
+                AllowMultipleSelection = true,
+                Columns = {
+                    new GridColumn {
+                        HeaderText = "Layer/Page to PDF",
+                        Editable = false,
+                        Expand = true,
+                        DataCell = new TextBoxCell(0)
+                    }
+                }
+            };
+
+            int LocIndex = 0;
+            if (doc.Path == null)
+                LocIndex = 1;
+
+            OutputLocation = new RadioButtonList
+            {
+                Items = { "Working Location", "Local Temp", "Measure Drawing", "Prototype", "E&P" },
+                Orientation = Orientation.Vertical,
+                SelectedIndex = LocIndex,
+                Spacing = new Size(5, 5),
+                ID = "Location"
+            };
+
+            OutputType = new RadioButtonList
+            {
+                Items = { "Single Page", "Multi-Page", "Layout Page" },
+                SelectedIndex = 0,
+                Orientation = Orientation.Vertical,
+                Spacing = new Size(5, 5),
+                ID = "Type"
+            };
+
+            ColorMode = new RadioButtonList
+            {
+                Items = { "Display Color", "Black/White" },
+                SelectedIndex = 0,
+                Orientation = Orientation.Vertical,
+                Spacing = new Size(5, 5),
+                ID = "Color"
+            };
+
+            var LocationGrp = new GroupBox
+            {
+                Text = "Location",
+                Padding = new Padding(8),
+                Content = new TableLayout { Rows = { new TableRow(OutputLocation) } }
+            };
+
+            var TypeGrp = new GroupBox
+            {
+                Text = "Type",
+                Padding = new Padding(8),
+                Content = new TableLayout { Rows = { new TableRow(OutputType) } }
+            };
+
+            var ColorGrp = new GroupBox
+            {
+                Text = "Colors",
+                Padding = new Padding(8),
+                Content = new TableLayout { Rows = { new TableRow(ColorMode) } }
+            };
+
+            PDFName = new TextBox { Enabled = false, PlaceholderText = "PDF FileName" };
+
+            var NameGrp = new TableLayout
+            {
+                Padding = new Padding(5),
+                Spacing = new Size(5,5),
+                Rows =
                 {
-                    mylar.Add(new ePDF(doc, l)
+                    new TableRow(LocationGrp),
+                    new TableRow(TypeGrp),
+                    new TableRow(ColorGrp),
+                    new TableRow(PDFName)
+                }
+            };
+
+            Window.Content = new TableLayout
+            {
+                Spacing = new Size(5, 5),
+                Padding = new Padding(8),
+                Rows =
+                {
+                    new TableRow(NameGrp, PDFItems),
+                    new TableRow( null, 
+                        new TableLayout
+                        {
+                            Spacing = new Size(8, 5),
+                            Rows = {
+                                new TableRow(null, But_Ok, But_Cancel)
+                            }
+                        } )
+                }
+            };
+
+            //  -------------------------------------  Events
+            OutputLocation.SelectedIndexChanged += Radio_SelectedIndexChanged;
+            OutputType.SelectedIndexChanged += Radio_SelectedIndexChanged;
+            PDFItems.SelectedItemsChanged += PDFItems_SelectedItemsChanged;
+        }
+
+        private void LoadLayers()
+        {
+            var parents = new List<Layer>();
+            ds_ParentLayers = new List<List<string>>();
+            ds_PageViews = new List<List<string>>();
+
+            // EP List
+            var TitleBlk = new List<int>(1);
+            var CutPages = new List<int>(12);
+            var MylarPrev = new List<int>(12);
+            var Mylar = new List<int>(12);
+
+            for(var i = 0; i < doc.Layers.Count; i++)
+            {
+                var l = doc.Layers[i];
+                if (l.ParentLayerId == Guid.Empty && !l.IsDeleted && l.Name != "NestBoxes")
+                {
+                    parents.Add(l);
+                    ds_ParentLayers.Add(new List<string> { l.Name });
+                    if (l == doc.Layers.CurrentLayer)
+                        CurrentLayerIndex = ds_ParentLayers.Count - 1;
+
+                    // Collect E&P
+                    if (l.Name == "Title Block")
                     {
-                        makeDwg = false,
-                        path = path,
-                        pdfName = fn + "_Page " + pNo,
-                        dpi = 150
-                    });
-                    pNo++;
+                        TitleBlk.Add(ds_ParentLayers.Count - 1);
+                    }
+                    else if (l.Name.StartsWith("CUT"))
+                    {
+                        CutPages.Add(ds_ParentLayers.Count - 1);
+                    }
+                    else if (l.Name.StartsWith("MYLAR"))
+                    {
+                        MylarPrev.Add(ds_ParentLayers.Count - 1);
+                    }
                 }
             }
-            foreach (var l in lt.getAllParentLayers())
+
+            var layouts = doc.Views.GetPageViews();
+            PageViews = new List<RhinoPageView>();
+            if (layouts.Length > 0)
             {
-                if (l.Name.Contains("CUT"))
+                for(int i = 0; i < layouts.Length; i++)
                 {
-                    cut.Add(new ePDF(doc, l)
-                    {
-                        makeDwg = false,
-                        makeDxf = true,
-                        CADFileName = fn.Substring(0, fn.Length - 1) + "_" + l.Name,
-                        path = path,
-                        pdfName = fn + "_Page " + pNo,
-                        dpi = 150
-                    });
-                    pNo++;
+                    var p = layouts[i];
+
+                    PageViews.Add(p);
+                    ds_PageViews.Add(new List<string> { p.PageName });
+
+                    if (p.PageName.StartsWith("MYLAR"))
+                        Mylar.Add(ds_PageViews.Count - 1);
                 }
             }
-            foreach(var v in doc.Views.GetPageViews())
-            {
-                pdfData.Add(new ePDF(doc, doc.Layers[0]) { 
-                    makeDwg = false,
-                    path = path,
-                    pdfName = fn.Substring(0, fn.Length - 1) + "_" + v.MainViewport.Name,
-                    IsLayout = true,
-                    view = v,
-                    dpi = 72
-                });
-            }
-            pdfData.AddRange(mylar);
-            pdfData.AddRange(cut);
-            MakeEpXML(doc, path, fn);
-            return pdfData;
+
+            // Update the EP Layers
+            EP_Layers = new List<int>(TitleBlk);
+            EP_Layers.AddRange(MylarPrev);
+            EP_Layers.AddRange(CutPages);
+            EP_Pages = Mylar;
+
+            ParentLayers = parents;
         }
 
-        /// <summary>
-        /// create the XML for E&P output
-        /// </summary>
-        /// <param name="cuts"></param>
-        /// <param name="nestBox"></param>
-        /// <param name="path"></param>
-        /// <param name="fileName"></param>
-        public bool MakeEpXML(RhinoDoc doc, string path, string fileName)
+
+
+        //  -----------------------------------------------------------------------------  Events
+        private void Radio_SelectedIndexChanged(object sender, EventArgs e)
         {
-            var CutLay = doc.Layers.FindByFullPath("CUT", -1);
-            var allLays = doc.Layers[CutLay].GetChildren();
-            var nestLay = doc.Layers.FindByFullPath("CUT::NestBox", -1);
+            var rb = (RadioButtonList)sender;
 
-            if (CutLay == -1 || nestLay == -1 || allLays == null)
-                return false;
-
-            var nestBox = doc.Objects.FindByLayer(doc.Layers[nestLay])[0];
-            var bb = nestBox.Geometry.GetBoundingBox(true).GetEdges();
-            var obj = new List<RhinoObject>();
-            foreach(var l in allLays)
+            if (rb.ID == "Location")
             {
-                var o = doc.Objects.FindByLayer(l);
-                if (o.Length > 0 && l.Name.Substring(0,2) == "C_")
-                    obj.AddRange(o);
+                if (doc.Path == null && rb.SelectedIndex == 0)
+                {
+                    rb.SelectedIndex = 1;
+                    return;
+                }
+                if (rb.SelectedIndex == 4)
+                {
+                    OutputType.SelectedIndex = 0;
+                    OutputType.Enabled = false;
+                    PDFItems.Enabled = false;
+                    PDFItems.SelectedRows = EP_Layers;
+                    return;
+                }
+
+                // All others will have the controls enabled
+                if (!OutputType.Enabled) OutputType.Enabled = true;
+                if (!PDFItems.Enabled) PDFItems.Enabled = true;
             }
-            var cuts = new CutSort(obj);
-            var qty = (cuts.groupCount > 0) ? cuts.groupCount : cuts.obj.Count;
+            if (rb.ID == "Type")
+            {
+                if (rb.SelectedIndex == 2)
+                {
+                    if (ds_PageViews.Count == 0)
+                    {
+                        rb.SelectedIndex = 0;
+                    }
+                    else
+                    {
+                        PDFItems.DataStore = ds_PageViews;
+                        PDFItems.SelectedRow = 0;
+                    }
+                }
+                else if (PDFItems.DataStore == ds_PageViews)
+                {
+                    PDFItems.DataStore = ds_ParentLayers;
+                    PDFItems.SelectedRow = CurrentLayerIndex;
+                }
 
-            string xml = "<JDF>\n" +
-                $"<DrawingNumber>{fileName}</DrawingNumber>\n" +
-                $"<CADSheetWidth>{bb[0].Length}</CADSheetWidth>\n" +
-                $"<CADSheetHeight>{bb[1].Length}</CADSheetHeight>\n" +
-                $"<CADNumberUp>{qty}</CADNumberUp>\n" +
-                "</JDF>";
-
-            if (!System.IO.Directory.Exists(path))
-                System.IO.Directory.CreateDirectory(path);
-            System.IO.File.WriteAllText(path + fileName + ".xml", xml);
-
-            return true;
+                //  Control the PDF Name if it's a multipage
+                if (rb.SelectedIndex == 1)
+                {
+                    PDFName.Enabled = true;
+                    if (doc.Name != null)
+                        PDFName.Text = doc.Name.Replace(".3dm", "");
+                    else
+                        PDFName.Text = "MultiPage";
+                }
+                else
+                {
+                    PDFName.Enabled = false;
+                    PDFName.Text = "";
+                }
+                return;
+            }
         }
 
+        private void PDFItems_SelectedItemsChanged(object sender, EventArgs e)
+        {
+            var rows = new List<int>(PDFItems.SelectedRows);
+            if (rows.Count > 0)
+                But_Ok.Enabled = true;
+            else
+                But_Ok.Enabled = false;
+        }
+
+        private void But_Ok_Click(object sender, EventArgs e)
+        {
+            //  Do the pdf thing here or in the command itsself
+
+            Window.Close(DialogResult.Ok);
+        }
+
+
+
+
+
+
+        //  -----------------------------------------------------------------------------  Show Window
+        public DialogResult ShowForm()
+        {
+            LoadControls();
+
+            var thr = new Thread(LoadLayers);
+            thr.Start();
+            thr.Join();
+            PDFItems.DataStore = ds_ParentLayers;
+
+            Window.ShowModal(RhinoEtoApp.MainWindow);
+            WinLocation = Window.Location;
+            return Window.Result;
+        }
+
+
+
+
+
+        //  -----------------------------------------------------------------------------  getters
         /// <summary>
-        /// Hides all layers aside from the one needed
+        /// Selected Indexes
+        /// </summary>
+        public List<int> SelectedItems { get { return new List<int>(PDFItems.SelectedRows); } }
+        /// <summary>
+        /// Gives the order of a New-Style E&P File
+        /// </summary>
+        public List<int> EPItems { get { return EP_Layers; } }
+        /// <summary>
+        /// a List of the Mylars if any for an E&P
+        /// </summary>
+        public List<int> EPMylar { get { return EP_Pages; } }
+        /// <summary>
+        /// Parent layers matches the SelectedItems indexes
+        /// </summary>
+        public List<Layer> LayerList { get { return ParentLayers; } }
+        /// <summary>
+        /// Get a list of layers that were selected
+        /// </summary>
+        public List<Layer> SelectedLayerList
+        {
+            get
+            {
+                var ll = new List<Layer>();
+
+                for (int i = 0; i < SelectedItems.Count; i++)
+                {
+                    ll.Add(ParentLayers[SelectedItems[i]]);
+                }
+
+                return ll;
+            }
+        }
+        /// <summary>
+        /// Page Views matches the SelectedItems indexes
+        /// </summary>
+        public List<RhinoPageView> LayoutList { get { return PageViews; } }
+        /// <summary>
+        /// Chosen Name (if Any)
+        /// </summary>
+        public string PDF_Name { get { return PDFName.Text; } }
+        /// <summary>
+        /// Selected ColorMode for the ouput PDF Files
+        /// </summary>
+        public ViewCaptureSettings.ColorMode SelectedColorMode
+        {
+            get
+            {
+                if (ColorMode.SelectedIndex == 0)
+                    return ViewCaptureSettings.ColorMode.DisplayColor;
+                else
+                    return ViewCaptureSettings.ColorMode.BlackAndWhite;
+            }
+        }
+        /// <summary>
+        /// 0: Working   1: LocTemp   2: MeasDraw   3: Proto   4: EP   5: EP Legacy
+        /// </summary>
+        public int SelectedLocation { get { return OutputLocation.SelectedIndex; } }
+        /// <summary>
+        /// 0: Single    1: Multi   2: PageLayout
+        /// </summary>
+        public int SelectedType { get { return OutputType.SelectedIndex; } }
+        /// <summary>
+        /// Window Location after exit
+        /// </summary>
+        public Point WindowLocation { get { return WinLocation; } }
+    }
+
+
+    /// <summary>
+    /// Create PDF of all Kinds
+    /// </summary>
+    public class PDFJob
+    {
+        //  --------------------------------------------------------------------------------------------------------  PDF Settings
+        private int dpi;
+        private ViewCaptureSettings.ColorMode ColorMode = ViewCaptureSettings.ColorMode.DisplayColor;
+        private RhinoDoc doc;
+
+
+
+
+        //  --------------------------------------------------------------------------------------------------------  PDF Construct
+        public PDFJob(RhinoDoc Document, ViewCaptureSettings.ColorMode PDF_Color = ViewCaptureSettings.ColorMode.DisplayColor, int PDF_Dpi = 400 )
+        {
+            dpi = PDF_Dpi;
+            ColorMode = PDF_Color;
+            doc = Document;
+        }
+
+
+
+
+        //  --------------------------------------------------------------------------------------------------------  PDF Creating Methods
+        /// <summary>
+        /// Sends out a Single Page PDF from Layer Selection
         /// </summary>
         /// <param name="pdfData"></param>
-        public void HideLayers(ePDF pdfData, LayerTools lt)
+        public void MakeSinglePagePDF(string Path, string FileName, Layer OutLayer, double Width = 11.0, double Height = 8.5)
         {
-            pdfData.parentLay.IsVisible = true;
-            pdfData.doc.Layers.SetCurrentLayerIndex(pdfData.parentLay.Index, true);
-
-            foreach(var l in lt.getAllParentLayers())
-                if (l != pdfData.parentLay)
-                    l.IsVisible = false;
-        }
-
-        /// <summary>
-        /// Does what it says
-        /// </summary>
-        /// <param name="doc"></param>
-        public void ShowAllLayers(LayerTools lt)
-        {
-            var plays = lt.getAllParentLayers();
-            foreach (var l in plays)
+            if (!OutLayer.IsVisible)
             {
-                if (l.Name == "NestBoxes")
-                    continue;
-                l.IsVisible = true;
-                if (l == plays[0])
-                    lt.doc.Layers.SetCurrentLayerIndex(l.Index, true);
-            }
-        }
-
-        /// <summary>
-        /// Determines the Path that the thing should be sent to
-        /// </summary>
-        /// <param name="page"></param>
-        /// <param name="ot"></param>
-        /// <param name="otVal"></param>
-        /// <param name="sql"></param>
-        /// <returns></returns>
-        private ePDF DeterminePath(ePDF page, string ot, List<string> otVal, SQLTools sql)
-        {
-            var dbLocation = sql.queryLocations();
-            var workingLocation = (page.doc.Path != null) ? page.doc.Path.Replace(page.doc.Name, "") : dbLocation[3].path;
-
-            // Prototype path
-            if (ot == otVal[7])
-            {
-                var ind = new List<int> { 1 };
-                DataStore jobSlot = sql.queryDataStore(ind)[0];
-                string jobNumber = sql.queryJobSlots()[jobSlot.intValue - 1].job;
-                page.path = page.doc.Path.Replace(page.doc.Name, "") + jobNumber + "\\NESTINGS\\";
+                RhinoApp.WriteLine($"Layer {OutLayer.Name} is Hidden, Skipping...");
+                return;
             }
 
-            // Working path or Local Temp if not Saved
-            if (ot == otVal[2] || ot == otVal[3] || ot == otVal[4] || ot == otVal[8])
-                page.path = workingLocation;
+            // Make sure the PDF will have a place to write
+            ClearPath(Path, FileName);
 
-            // LocalTemp
-            if (ot == otVal[0]) 
-                page.path = dbLocation[3].path;
+            // Get Bounds of the objects on the layer
+            var RObj = GetObjects(OutLayer);
+            if (RObj.Count == 0)
+            {
+                RhinoApp.WriteLine($"Layer {OutLayer.Name} Has no Objects, Skipping..");
+                return;
+            }
 
-            // Measured Drawing
-            if (ot == otVal[1]) 
-                page.path = dbLocation[4].path + page.pdfName + "\\";
-
-            return page;
-        }
-
-        /// <summary>
-        /// Send out the DXF file
-        /// </summary>
-        /// <param name="fullPath"></param>
-        public void MakeDWG(string fullPath)
-        {
-            RhinoApp.RunScript("_-Export \"" + fullPath + "\" Scheme \"Vomela\" _Enter", false);
-        }
-
-        /// <summary>
-        /// Sends out PDF from viewport objects
-        /// </summary>
-        /// <param name="pdfData"></param>
-        public void PDFViewport(ePDF pdfData)
-        {
-            ClearPath(pdfData);
+            RhinoObject.GetTightBoundingBox(RObj, out BoundingBox BB);
+            
+            // Select the objects on the layer
+            doc.Objects.UnselectAll();
+            var obj = new List<Guid>(RObj.Count);
+            for (int i = 0; i < RObj.Count; i++)
+                obj.Add(RObj[i].Id);
+            doc.Objects.Select(obj, true);
 
             // do the proper zooming
-            pdfData.view.MainViewport.ZoomBoundingBox(pdfData.AllObjBounding);
+            var view = doc.Views.Find("Top", true);
+            //view.MainViewport.ZoomBoundingBox(BB);
 
             // Construct the PDF page
             var page = Rhino.FileIO.FilePdf.Create();
-            var capture = new ViewCaptureSettings(
-                pdfData.view, 
-                new System.Drawing.Size((int)(pdfData.sheetSize[0] * pdfData.dpi), (int)(pdfData.sheetSize[1] * pdfData.dpi)),
-                pdfData.dpi
-            );
-            capture.OutputColor = pdfData.colorMode;
+            var capture = new ViewCaptureSettings(view, new System.Drawing.Size((int)(Width * dpi), (int)(Height * dpi)), dpi)
+            {
+                OutputColor = ColorMode,
+                DrawSelectedObjectsOnly = true,
+                ViewArea = ViewCaptureSettings.ViewAreaMapping.Window
+            };
+
+            BB.Inflate(BB.GetEdges()[0].Length * 0.03);
+            capture.SetWindowRect(BB.Corner(true, true, true), BB.Corner(false, false, true));
             page.AddPage(capture);
-            page.Write(pdfData.path + pdfData.pdfName + ".pdf");
+            page.Write($"{Path}{FileName}.pdf");
+
+            capture.Dispose();
         }
 
         /// <summary>
-        /// Sends out PDF from Layouts
+        /// Sends out Single PDF Made from Page Layout
         /// </summary>
         /// <param name="pdfdata"></param>
-        public void PDFLayout(ePDF pdfdata)
+        public void MakeLayoutPDF(string Path, string FileName, string LayoutName)
         {
-            ClearPath(pdfdata);
-            var layout = (RhinoPageView)pdfdata.view;
+            ClearPath(Path, FileName);
+
+            // Get the page view
+            var layouts = new List<RhinoPageView>( doc.Views.GetPageViews() );
+            var PageView = layouts.Find((x) => x.PageName == LayoutName);
 
             var page = Rhino.FileIO.FilePdf.Create();
-            var capture = new ViewCaptureSettings(
-                pdfdata.view,
-                new System.Drawing.Size((int)(layout.PageWidth * pdfdata.dpi), (int)(layout.PageHeight * pdfdata.dpi)),
-                pdfdata.dpi
-            );
-            capture.OutputColor = pdfdata.colorMode;
+            var capture = new ViewCaptureSettings(PageView, new System.Drawing.Size((int)(PageView.PageWidth * dpi), (int)(PageView.PageHeight * dpi)), dpi)
+            {
+                OutputColor = ColorMode
+            };
             page.AddPage(capture);
-            page.Write(pdfdata.path + pdfdata.pdfName + ".pdf");
+            page.Write($"{Path}{FileName}.pdf");
+
+            capture.Dispose();
         }
 
         /// <summary>
         /// Makes a multi-page PDF file
         /// </summary>
         /// <param name="pdfDatas"></param>
-        public void PDFMultiPage(List<ePDF> pdfDatas)
+        public void MakeMultiPagePDF(string Path, string FileName, List<Layer> OutLayers, bool IncrRhinoStatBar = true, double Width = 11.0, double Height = 8.5)
         {
-            ClearPath(pdfDatas[0]);
             var page = Rhino.FileIO.FilePdf.Create();
+            ViewCaptureSettings capture;
+            ClearPath(Path, FileName);
+
+            // Status bar
+            StatusBar.ShowProgressMeter(0, OutLayers.Count + 20, "Progress: ", false, true);
 
             // start the page loop
-            foreach (var p in pdfDatas)
+            for (int i = 0; i < OutLayers.Count; i++)
             {
-                HideLayers(p, new LayerTools(pdfDatas[0].doc));
+                // If Hidden, skip the layer
+                if (!OutLayers[i].IsVisible)
+                {
+                    RhinoApp.WriteLine($"Layer: {OutLayers[i].Name} is Hidden, Skipping...");
+                    StatusBar.UpdateProgressMeter(1, false);
+                    continue;
+                }
+
+                // Get Bounds of the objects on the layer
+                var RObj = GetObjects(OutLayers[i]);
+                if (RObj.Count == 0)
+                {
+                    RhinoApp.WriteLine($"Layer: {OutLayers[i].Name} has no objects");
+                    StatusBar.UpdateProgressMeter(1, false);
+                    continue;
+                }
+
+                RhinoObject.GetTightBoundingBox(RObj, out BoundingBox BB);
+
+                // Select the objects on the layer
+                doc.Objects.UnselectAll();
+                var obj = new List<Guid>(RObj.Count);
+                for (int o = 0; o < RObj.Count; o++)
+                    obj.Add(RObj[o].Id);
+                doc.Objects.Select(obj, true);
 
                 // do the proper zooming
-                p.view.MainViewport.ZoomBoundingBox(p.AllObjBounding);
-                var capture = new ViewCaptureSettings(
-                    p.view,
-                    new System.Drawing.Size((int)(p.sheetSize[0] * p.dpi), (int)(p.sheetSize[1] * p.dpi)),
-                    p.dpi
-                )
-                {
-                    OutputColor = p.colorMode
-                };
+                var view = doc.Views.Find("Top", true);
+                //view.MainViewport.ZoomBoundingBox(BB);
+
                 // Construct the PDF page
+                capture = new ViewCaptureSettings(view, new System.Drawing.Size((int)(Width * dpi), (int)(Height * dpi)), dpi)
+                {
+                    OutputColor = ColorMode,
+                    DrawSelectedObjectsOnly = true,
+                    ViewArea = ViewCaptureSettings.ViewAreaMapping.Window
+                };
+
+                BB.Inflate(BB.GetEdges()[0].Length * 0.03);
+                capture.SetWindowRect(BB.Corner(true, true, true), BB.Corner(false, false, true));
                 page.AddPage(capture);
+
+                StatusBar.UpdateProgressMeter(1, false);
             }
 
-            var pdfName = pdfDatas[0];
-            if (pdfDatas[0].doc.Name != null)
-                pdfName.pdfName = pdfDatas[0].doc.Name.Replace(".3dm", "");
-
-            page.Write(pdfName.path + pdfName.pdfName + ".pdf");
+            page.Write($"{Path}{FileName}.pdf");
         }
 
         /// <summary>
         /// Checks if the file path is created or creates it
         /// </summary>
         /// <param name="pdfData"></param>
-        public void ClearPath(ePDF pdfData)
+        private void ClearPath(string Path, string Name)
         {
-            if (!System.IO.Directory.Exists(pdfData.path))
+            var fullPath = $"{Path}{Name}.pdf";
+
+            if (!System.IO.Directory.Exists(Path))
+            {
                 // see if the folder exists or create it
-                System.IO.Directory.CreateDirectory(pdfData.path);
+                System.IO.Directory.CreateDirectory(Path);
+            }
             else
+            {
                 // directory exists, see if the pdf does, then delete
-                if (System.IO.File.Exists(pdfData.path + pdfData.pdfName + ".pdf"))
-                System.IO.File.Delete(pdfData.path + pdfData.pdfName + ".pdf");
+                if (System.IO.File.Exists(fullPath))  System.IO.File.Delete(fullPath);
+            }
+        }
+
+        /// <summary>
+        /// Get all Visible Objects from parent layer
+        /// </summary>
+        /// <param name="lay"></param>
+        /// <returns></returns>
+        private List<RhinoObject> GetObjects(Layer lay)
+        {
+            var obj = doc.Objects.FindByLayer(lay);
+            var RObj = new List<RhinoObject>();
+
+            if (obj != null)
+                RObj.AddRange(obj);
+
+            var childLay = lay.GetChildren();
+            if (childLay != null)
+            {
+                for (int i = 0; i < childLay.Length; i++)
+                {
+                    if (childLay[i].IsVisible)
+                    {
+                        var cObj = doc.Objects.FindByLayer(childLay[i]);
+                        if (cObj != null)
+                            RObj.AddRange(cObj);
+                    }
+                }
+            }
+            return RObj;
         }
     }
 }
