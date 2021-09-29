@@ -137,10 +137,15 @@ namespace gjTools.Commands
                     StatusBar.UpdateProgressMeter(1, false);
                 }
             }
-
+            
             // Clear the statusbar
             StatusBar.ClearMessagePane();
             StatusBar.HideProgressMeter();
+
+            // Do we want the location open?
+            if (res == Eto.Forms.DialogResult.Yes)
+                System.Diagnostics.Process.Start("explorer.exe", path);
+
             return Result.Success;
         }
 
@@ -233,10 +238,11 @@ namespace PDF
         private RadioButtonList OutputLocation;
         private RadioButtonList OutputType;
         private RadioButtonList ColorMode;
-        private Button But_Ok;
         private GridView PDFItems;
         private TextBox PDFName;
         private RhinoDoc doc;
+        Button But_Open;
+        Button But_Ok;
 
         private List<Layer> ParentLayers;
         private List<List<string>> ds_ParentLayers;
@@ -273,9 +279,11 @@ namespace PDF
                 Location = WinLocation
             };
 
+            But_Open = new Button { Text = "Open", ToolTip = "Ok and Open Location" };
             But_Ok = new Button { Text = "Ok" };
             Button But_Cancel = new Button { Text = "Cancel" };
-            But_Ok.Click += But_Ok_Click;
+            But_Open.Click += (s, e) => Window.Close(DialogResult.Yes);
+            But_Ok.Click += (s, e) => Window.Close(DialogResult.Ok);
             But_Cancel.Click += (s, e) => Window.Close(DialogResult.Cancel);
 
             PDFItems = new GridView
@@ -374,7 +382,7 @@ namespace PDF
                         {
                             Spacing = new Size(8, 5),
                             Rows = {
-                                new TableRow(null, But_Ok, But_Cancel)
+                                new TableRow(null, But_Open, But_Ok, But_Cancel)
                             }
                         } )
                 }
@@ -518,19 +526,16 @@ namespace PDF
         {
             var rows = new List<int>(PDFItems.SelectedRows);
             if (rows.Count > 0)
+            {
                 But_Ok.Enabled = true;
+                But_Open.Enabled = true;
+            }
             else
+            {
                 But_Ok.Enabled = false;
+                But_Open.Enabled = false;
+            }
         }
-
-        private void But_Ok_Click(object sender, EventArgs e)
-        {
-            //  Do the pdf thing here or in the command itsself
-
-            Window.Close(DialogResult.Ok);
-        }
-
-
 
 
 
