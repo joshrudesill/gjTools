@@ -57,7 +57,7 @@ namespace gjTools.Commands
                 for (int i = 0; i < win.EPItems.Count; i++)
                 {
                     var name = $"{fn}_Page {i + 1}";
-                    
+
                     StatusBar.SetMessagePane($"Sending {name}.pdf");
                     PDF.MakeSinglePagePDF(path, name, win.LayerList[win.EPItems[i]]);
                     StatusBar.UpdateProgressMeter(1, false);
@@ -137,7 +137,7 @@ namespace gjTools.Commands
                     StatusBar.UpdateProgressMeter(1, false);
                 }
             }
-            
+
             // Clear the statusbar
             StatusBar.ClearMessagePane();
             StatusBar.HideProgressMeter();
@@ -221,7 +221,7 @@ namespace gjTools.Commands
 
 
 
-namespace PDF 
+namespace PDF
 {
     using Eto.Drawing;
     using Eto.Forms;
@@ -360,7 +360,7 @@ namespace PDF
             var NameGrp = new TableLayout
             {
                 Padding = new Padding(5),
-                Spacing = new Size(5,5),
+                Spacing = new Size(5, 5),
                 Rows =
                 {
                     new TableRow(LocationGrp),
@@ -377,7 +377,7 @@ namespace PDF
                 Rows =
                 {
                     new TableRow(NameGrp, PDFItems),
-                    new TableRow( null, 
+                    new TableRow( null,
                         new TableLayout
                         {
                             Spacing = new Size(8, 5),
@@ -406,7 +406,7 @@ namespace PDF
             var MylarPrev = new List<int>(12);
             var Mylar = new List<int>(12);
 
-            for(var i = 0; i < doc.Layers.Count; i++)
+            for (var i = 0; i < doc.Layers.Count; i++)
             {
                 var l = doc.Layers[i];
                 if (l.ParentLayerId == Guid.Empty && !l.IsDeleted && l.Name != "NestBoxes")
@@ -436,7 +436,7 @@ namespace PDF
             PageViews = new List<RhinoPageView>();
             if (layouts.Length > 0)
             {
-                for(int i = 0; i < layouts.Length; i++)
+                for (int i = 0; i < layouts.Length; i++)
                 {
                     var p = layouts[i];
 
@@ -643,7 +643,7 @@ namespace PDF
 
 
         //  --------------------------------------------------------------------------------------------------------  PDF Construct
-        public PDFJob(RhinoDoc Document, ViewCaptureSettings.ColorMode PDF_Color = ViewCaptureSettings.ColorMode.DisplayColor, int PDF_Dpi = 400 )
+        public PDFJob(RhinoDoc Document, ViewCaptureSettings.ColorMode PDF_Color = ViewCaptureSettings.ColorMode.DisplayColor, int PDF_Dpi = 400)
         {
             dpi = PDF_Dpi;
             ColorMode = PDF_Color;
@@ -678,7 +678,7 @@ namespace PDF
             }
 
             RhinoObject.GetTightBoundingBox(RObj, out BoundingBox BB);
-            
+
             // Select the objects on the layer
             doc.Objects.UnselectAll();
             var obj = new List<Guid>(RObj.Count);
@@ -716,7 +716,7 @@ namespace PDF
             ClearPath(Path, FileName);
 
             // Get the page view
-            var layouts = new List<RhinoPageView>( doc.Views.GetPageViews() );
+            var layouts = new List<RhinoPageView>(doc.Views.GetPageViews());
             var PageView = layouts.Find((x) => x.PageName == LayoutName);
 
             var page = Rhino.FileIO.FilePdf.Create();
@@ -810,7 +810,7 @@ namespace PDF
             else
             {
                 // directory exists, see if the pdf does, then delete
-                if (System.IO.File.Exists(fullPath))  System.IO.File.Delete(fullPath);
+                if (System.IO.File.Exists(fullPath)) System.IO.File.Delete(fullPath);
             }
         }
 
