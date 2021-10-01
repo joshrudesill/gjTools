@@ -114,7 +114,7 @@ namespace gjTools.Commands
                     StatusBar.UpdateProgressMeter(1, false);
 
                     // Working Files
-                    MakeCAD_File(doc, path, name);
+                    MakeCAD_File(doc, modPath, name);
                 }
             }
             else if (win.SelectedType == 1)

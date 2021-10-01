@@ -147,7 +147,7 @@ namespace gjTools.Commands
             }
             Circle fc = new Circle(new Point3d(corners[1].X - 1 - (spacingFromSide / 2), corners[1].Y + (spacingFromSide / 2), 0), 0.125);
             cl.Add(fc.ToNurbsCurve());
-            if (doc.HatchPatterns.FindName("Solid").Index == null)
+            if (doc.HatchPatterns.FindName("Solid") == null)
             {
                 return false;
             }

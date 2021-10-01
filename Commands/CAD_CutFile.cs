@@ -1,163 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using Rhino;
+using Rhino.Commands;
 using Rhino.Geometry;
 using Rhino.DocObjects;
-using Rhino.Commands;
-using Rhino.Input.Custom;
 using Rhino.UI;
-using Eto;
+using Rhino.Input;
 
 namespace gjTools.Commands
 {
-    public struct CutData
-    {
-        public RhinoDoc doc;
-        public Layer parentLayer;
-
-        public string cutType;
-        public string cutName;
-        public string path;
-        
-        public List<Layer> GetAllSubLayers
-        {
-            get
-            {
-                var lays = new List<Layer>();
-                var sublays = parentLayer.GetChildren();
-                if (lays != null)
-                    lays.AddRange(sublays);
-                return lays;
-            }
-        }
-        public List<Layer> GetAllCutLayers
-        {
-            get
-            {
-                var cutLays = new List<Layer>();
-                foreach (var l in GetAllSubLayers)
-                    if (l.Name.Substring(0, 2) == "C_" || l.Name == "NestBox")
-                        cutLays.Add(l);
-                return cutLays;
-            }
-        }
-        public List<RhinoObject> GetCutObjects
-        {
-            get
-            {
-                var obj = new List<RhinoObject>();
-                var ss = new ObjectEnumeratorSettings
-                {
-                    ObjectTypeFilter = ObjectType.Curve | ObjectType.Annotation
-                };
-                foreach(var l in GetAllCutLayers)
-                {
-                    ss.LayerIndexFilter = l.Index;
-                    obj.AddRange(doc.Objects.GetObjectList(ss));
-                }
-                return obj;
-            }
-        }
-        public List<Guid> GetCutObjInNestBoxID(RhinoObject nestBox)
-        {
-            var obj = new List<Guid>();
-            foreach (var o in GetCutObjInNestBox(nestBox))
-                obj.Add(o.Id);
-            return obj;
-        }
-        public List<RhinoObject> GetCutObjInNestBox(RhinoObject nestBox)
-        {
-            var obj = new List<RhinoObject>();
-            var nestBB = nestBox.Geometry.GetBoundingBox(false);
-
-            foreach (var o in GetCutObjects)
-            {
-                if (nestBB.Contains(o.Geometry.GetBoundingBox(true), false))
-                    obj.Add(o);
-            }
-            return obj;
-        }
-        public List<RhinoObject> GetNestBox
-        {
-            get
-            {
-                var nestBox = new List<RhinoObject>();
-                int nestIndex = doc.Layers.FindByFullPath(parentLayer.Name + "::NestBox", -1);
-                if (nestIndex == -1)
-                    return nestBox;
-
-                var ss = new ObjectEnumeratorSettings
-                {
-                    ObjectTypeFilter = ObjectType.Curve,
-                    LayerIndexFilter = nestIndex
-                };
-                nestBox.AddRange(doc.Objects.GetObjectList(ss));
-                return nestBox;
-            }
-        }
-    }
-
-    public struct Paths
-    {
-        public RhinoDoc doc;
-        public SQLTools sql;
-
-        public Paths(RhinoDoc document, SQLTools sqlt)
-        {
-            doc = document;
-            sql = sqlt;
-        }
-        public List<string> cutTypes
-        {
-            get
-            {
-                var types = new List<string>
-                {
-                    "LocalTemp",
-                    "Router",
-                    "Default",
-                    "CustomDefault"
-                };
-                if (doc.Path != null)
-                    types.Add("WorkingLocation");
-                return types;
-            }
-        }
-        public List<string> paths
-        {
-            get
-            {
-                var loc = sql.queryLocations();
-                var path = new List<string>
-                {
-                    loc[3].path,
-                    loc[1].path,
-                    loc[0].path,
-                    loc[0].path
-                };
-                if (doc.Path != null)
-                    path.Add(doc.Path.Replace(doc.Name, ""));
-                return path;
-            }
-        }
-        public string DefaultChoice
-        {
-            get
-            {
-                return cutTypes[2];
-            }
-        }
-        public string PathOfType(string locationName)
-        {
-            if (locationName == null)
-                return locationName;
-            return paths[cutTypes.IndexOf(locationName)];
-        }
-    }
-
-
-
-    [CommandStyle(Rhino.Commands.Style.ScriptRunner)]
+    [CommandStyle(Style.ScriptRunner)]
     public class CAD_CutFile : Command
     {
         public CAD_CutFile()
@@ -169,292 +22,712 @@ namespace gjTools.Commands
         public static CAD_CutFile Instance { get; private set; }
 
         public override string EnglishName => "CAD_CutFile";
-        public Eto.Drawing.Point CutWindowPosition = Eto.Drawing.Point.Empty;
+        public Eto.Drawing.Point windowPosition = Eto.Drawing.Point.Empty;
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            if (CutWindowPosition == Eto.Drawing.Point.Empty)
-                CutWindowPosition = new Eto.Drawing.Point((int)MouseCursor.Location.X - 250, 200);
+            if (windowPosition == Eto.Drawing.Point.Empty)
+                windowPosition = new Eto.Drawing.Point((int)MouseCursor.Location.X - 250, 200);
 
-            var sql = new SQLTools();
-            var lt = new LayerTools(doc);
-            var info = new CutData { doc = doc };
-            doc.Objects.UnselectAll();
+            var cg = new CutFile.CutGui(doc, windowPosition);
+            var res = cg.ShowForm();
+            windowPosition = cg.WinPosition;
 
-            // get locations from DB
-            var loc = new Paths(doc, sql);
+            if (res == Eto.Forms.DialogResult.Cancel)
+                return Result.Cancel;
 
-            // determine the current layer
-            var lays = lt.getAllParentLayersStrings();
-            var currentParentLayer = doc.Layers.CurrentLayer;
-            if (currentParentLayer.ParentLayerId != Guid.Empty)
-                currentParentLayer = doc.Layers.FindId(currentParentLayer.ParentLayerId);
+            var ct = new CutFile.CreateCutFile(doc, GetPath(doc, cg));
 
-            // Present the new form
-            var CutDialog = new DualListDialog("Cut File Export", "Location", loc.cutTypes, "Layer", lays)
+            // Loop the stuff
+            foreach(var i in cg.GetLayers)
             {
-                windowPosition = CutWindowPosition,
-                singleDefaultIndex = 2,
-                multiDefaultIndex = lays.IndexOf(currentParentLayer.Name),
-                multiSelect_selectMultiple = false
-            };
-            CutDialog.ShowForm();
-            CutWindowPosition = CutDialog.windowPosition;
+                var nestBox = ct.CheckMultiNestBox(i);
+                if (nestBox.Count > 0)
+                {
+                    ObjRef SelectedBox = new ObjRef(nestBox[0]);
 
-            if (CutDialog.CommandResult() != Eto.Forms.DialogResult.Ok)
-                return Result.Cancel;
+                    if (nestBox.Count > 1)
+                    {
+                        ct.HighlightCurve(nestBox);
 
-            info.cutType = CutDialog.GetSingleValue();
-            info.path = loc.PathOfType(info.cutType);
-            info.parentLayer = lt.CreateLayer(CutDialog.GetMultiSelectValue()[0]);
+                        // Ask to choose
+                        if (RhinoGet.GetOneObject("Select One Nest Box", false, ObjectType.Curve, out SelectedBox) != Result.Success)
+                        {
+                            ct.Show.Dispose();
+                            return Result.Cancel;
+                        }
+                        ct.Show.Dispose();
+                    }
 
-            // find intended nesting box if multiple
-            var NestingBox = CheckMultipleNestBox(info);
-            if (NestingBox == null)
-                return Result.Cancel;
+                    // Check the Lines for non-polylines
+                    var RObj = ct.GetCutObjects(i, SelectedBox);
+                        RObj.Add(SelectedBox.Object());
+                    var BadPart = ct.CheckPolyLines(RObj);
+                    
+                    // Display Bad Lines (If Any)
+                    if (BadPart)
+                    {
+                        string Fuck = "";
+                        RhinoGet.GetString("Some Bad Lines, No cut file Made...", true, ref Fuck);
+                        ct.Show.Dispose();
+                        doc.Views.Redraw();
+                        return Result.Cancel;
+                    }
+                    ct.Show.Dispose();
+                    doc.Views.Redraw();
 
-            // get the name of the cutfile
-            info.cutName = CutName(doc, info, loc, sql);
-            if (info.cutName == null)
-                return Result.Cancel;
+                    // We are here so the part is good
+                    ct.WriteDXF(RObj, cg.GetCutName[cg.GetLayers.IndexOf(i)]);
+                    cg.IncrementTempCut();
+                    ct.CreateCutText(SelectedBox.Object(), i, cg.GetCutName[cg.GetLayers.IndexOf(i)]);
+                }
+                else
+                    continue;
+            }
 
-            // Make the DXF
-            doc.Objects.UnselectAll();
-            if (!MakeDXF(info, NestingBox))
-                return Result.Cancel;
-
-            // make the cut display box
-            MakeCutNameText(info, NestingBox);
-
-            doc.Views.Redraw();
             return Result.Success;
         }
 
-
-
-
-        /// <summary>
-        /// Ask the user to select a nestbox if there are multiple
-        /// </summary>
-        /// <param name="info"></param>
-        /// <returns>nestbox or null</returns>
-        public RhinoObject CheckMultipleNestBox(CutData info)
+        private string GetPath(RhinoDoc doc, CutFile.CutGui FData)
         {
-            var nestBox = info.GetNestBox;
-            if (nestBox.Count > 1)
-            {
-                var show = new Rhino.Display.CustomDisplay(true);
-                foreach (var o in nestBox)
-                    show.AddCurve((Curve)o.Geometry, System.Drawing.Color.Aquamarine, 5);
-                info.doc.Views.Redraw();
+            var Path = "";
+            var locations = FileLocations.Paths(doc);
 
-                while (true)
-                {
-                    var sel = Rhino.Input.RhinoGet.GetOneObject("Select a Highlighted NestBox", false, ObjectType.Curve, out ObjRef newNestBox);
-                    if (sel != Result.Success)
-                    {
-                        show.Dispose();
-                        info.doc.Views.Redraw();
-                        return null;
-                    }
-                    else
-                    {
-                        foreach(var o in nestBox)
-                            if (newNestBox.ObjectId == o.Id)
-                            {
-                                show.Dispose();
-                                info.doc.Views.Redraw();
-                                RhinoApp.WriteLine("Using selected Nesting Box, thanks");
-                                return newNestBox.Object();
-                            }
-                    }
-                    RhinoApp.WriteLine("That wasnt a valid NestBox on layer {0}...", info.parentLayer.Name);
-                    info.doc.Objects.UnselectAll();
-                    info.doc.Views.Redraw();
-                }
-            }
-            if (nestBox.Count == 1)
+            var type = FData.GetCutType;
+            if (type == "Working Location")
             {
-                return nestBox[0];
+                Path = locations[0];
             }
-            
-            return null;
+            else if (type == "Router")
+            {
+                Path = locations[6];
+            }
+            else if (type == "E&P")
+            {
+                Path = locations[4] + doc.Name.Replace(".3dm", @"\");
+            }
+            else
+            {
+                Path = locations[5];
+            }
+
+            return Path;
+        }
+    }
+
+
+}
+
+
+
+namespace CutFile
+{
+    using Eto.Forms;
+    using Eto.Drawing;
+    using System.Text.RegularExpressions;
+
+    public class CutGui
+    {
+        private Dialog<DialogResult> Window;
+        private Point WindowPosition;
+
+        private RadioButtonList R_CutType;
+
+        private Button But_Ok;
+        private Button But_Cancel;
+
+        private TextBox FileName;
+        private GridView CutItems;
+        private List<List<string>> ds_CutItems;
+        private List<int> ds_EPCutItems;
+        private List<Layer> layers;
+        private int CurrentLayer;
+        private string NextDefaultCutName;
+        private string JobNumber;
+        private int NextDefaultCutNum;
+
+        private gjTools.SQLTools sql;
+        private RhinoDoc doc;
+
+
+
+
+
+        //  --------------------------------------------------  Load Form Data
+        public CutGui(RhinoDoc Document, Point WinLocation)
+        {
+            doc = Document;
+            WindowPosition = WinLocation;
+
+            // Launch on new thread
+            Thread thr = new Thread(LoadLayers);
+            thr.Start();
+            thr.Join();
+
+            LoadControls();
+            LoadEvents();
         }
 
-        /// <summary>
-        /// Determine the cut name based on info gathered
-        /// </summary>
-        /// <param name="doc"></param>
-        /// <param name="info"></param>
-        /// <param name="loc"></param>
-        /// <param name="sql"></param>
-        /// <returns></returns>
-        public string CutName(RhinoDoc doc, CutData info, Paths loc, SQLTools sql)
+        private void LoadLayers()
         {
-            if (info.cutType == loc.cutTypes[2])
+            var lays = doc.Layers;
+            ds_CutItems = new List<List<string>>();
+            ds_EPCutItems = new List<int>();
+            layers = new List<Layer>();
+            CurrentLayer = 0;
+            sql = new gjTools.SQLTools();
+
+            // Create the job regex
+            var regX = new Regex(@"J\d{9}-\d");
+            if (doc.Path != null)
+                JobNumber = regX.Match(doc.Path).Value;
+            else
+                JobNumber = "";
+
+            for (int i = 0; i < lays.Count; i++)
             {
-                var vb = sql.queryVariableData()[0];
-                var cutNum = string.Format("{0}{1}", vb.userInitials, vb.cutNumber);
-                vb.cutNumber++;
-                sql.updateVariableData(vb);
-                return cutNum;
+                var l = lays[i];
+
+                // Check if its a parent layer
+                if (l.ParentLayerId != Guid.Empty)
+                    continue;
+
+                // Only Visible Layers
+                if (l.IsDeleted || l.Name == "" || !l.IsVisible)
+                    continue;
+
+                // add items
+                ds_CutItems.Add(new List<string> { l.Name });
+                layers.Add(l);
+
+                if (l.Name.StartsWith("CUT"))
+                    ds_EPCutItems.Add(ds_CutItems.Count - 1);
+
+                // Get current layer index
+                if (l == doc.Layers.CurrentLayer)
+                    CurrentLayer = ds_CutItems.Count - 1;
             }
-            else if (info.cutType == loc.cutTypes[3])
+
+            // Find the next cut name
+            var cut = sql.queryVariableData()[0];
+            NextDefaultCutName = $"{cut.userInitials}{cut.cutNumber}";
+            NextDefaultCutNum = cut.cutNumber;
+        }
+
+        private void LoadControls()
+        {
+            Window = new Dialog<DialogResult>
             {
-                var num = 1000;
-                var res = Rhino.Input.RhinoGet.GetInteger("Specify Cut Number", false, ref num, 1000, 10000);
-                if (res != Result.Success)
-                    return null;
-                var vb = sql.queryVariableData()[0];
-                return string.Format("{0}{1}", vb.userInitials, num);
-            }
-            else if (info.cutType == loc.cutTypes[1])
+                Title = "CutFile Export",
+                Result = DialogResult.Cancel,
+                AutoSize = true,
+                Minimizable = false,
+                Maximizable = false,
+                Padding = new Padding(5),
+                Resizable = false,
+                Topmost = true,
+                Location = WindowPosition
+            };
+
+            R_CutType = new RadioButtonList
             {
-                var route = "";
-                if (doc.Path != null && doc.Path.Contains("J0"))
+                Items = { "Working Location", "Router", "Default", "Default Custom", "E&P" },
+                Orientation = Orientation.Vertical,
+                SelectedIndex = 2,
+                Spacing = new Size(5, 5),
+                TabIndex = 0,
+                ID = "Location"
+            };
+
+            But_Ok = new Button { Text = "OK", TabIndex = 3 };
+            But_Cancel = new Button { Text = "Cancel" };
+
+            FileName = new TextBox
+            {
+                PlaceholderText = "CutName",
+                Text = NextDefaultCutName,
+                ToolTip = "CTRL+J Adds the Job Number (If Any)",
+                ID = "FileName",
+                TabIndex = 2,
+                Enabled = false
+            };
+
+            CutItems = new GridView
+            {
+                Size = new Size(250, 300),
+                ShowHeader = true,
+                Border = BorderType.Line,
+                GridLines = GridLines.None,
+                AllowEmptySelection = false,
+                AllowMultipleSelection = false,
+                TabIndex = 1,
+                Columns =
                 {
-                    var regx = new System.Text.RegularExpressions.Regex(@"J\d{9}");
-                    var job = regx.Match(doc.Path).Value;
-                    route = GetStringPremade("Choose a Route Name", new List<string> { info.parentLayer.Name, job }, 0);
+                    new GridColumn
+                    {
+                        HeaderText = "Layer",
+                        Editable = false,
+                        Expand = true,
+                        DataCell = new TextBoxCell(0)
+                    }
+                },
+                DataStore = ds_CutItems,
+                SelectedRow = CurrentLayer
+            };
+
+            //  ---------------------------------------  Make Layout
+            var LocGroup = new GroupBox
+            {
+                Text = "Location",
+                Padding = new Padding(5),
+                Content = new TableLayout{ Rows = { new TableRow(R_CutType) } }
+            };
+
+            var space = new Size(5, 5);
+            Window.Content = new TableLayout
+            {
+                Spacing = space,
+                Rows =
+                {
+                    new TableLayout
+                    {
+                        Spacing = space,
+                        Rows =
+                        {
+                            new TableRow(LocGroup, CutItems)
+                        }
+                    },
+                    new TableLayout
+                    {
+                        Spacing = space,
+                        Rows =
+                        {
+                            new TableRow(new Label{ Text = "Cut Name:" }, FileName)
+                        }
+                    },
+                    new TableLayout
+                    {
+                        Spacing = space,
+                        Rows =
+                        {
+                            new TableRow(null, But_Ok, But_Cancel)
+                        }
+                    }
+                }
+            };
+        }
+
+        private void LoadEvents()
+        {
+            R_CutType.SelectedIndexChanged += R_CutType_SelectedIndexChanged;
+            CutItems.SelectedItemsChanged += CutItems_SelectedItemsChanged;
+            But_Cancel.Click += (s, e) => Window.Close(DialogResult.Cancel);
+            But_Ok.Click += (s, e) => Window.Close(DialogResult.Ok);
+            FileName.KeyUp += FileName_KeyUp;
+            FileName.KeyDown += FileName_KeyDown;
+            Window.KeyUp += Window_KeyUp;
+        }
+
+
+
+        //  --------------------------------------------------  Show the Form
+        /// <summary>
+        /// Show the Dialog and freeze Mainwindow
+        /// </summary>
+        /// <returns></returns>
+        public DialogResult ShowForm()
+        {
+            Window.ShowModal(RhinoEtoApp.MainWindow);
+            WindowPosition = Window.Location;
+            return Window.Result;
+        }
+
+
+
+
+
+        //  --------------------------------------------------  Event Functions
+        private void R_CutType_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            int sel = R_CutType.SelectedIndex;
+            var path = doc.Path;
+            var name = doc.Name;
+
+            // enable the filename field
+            if (sel == 0 || sel == 1 || sel == 3)
+                FileName.Enabled = true;
+            else
+                FileName.Enabled = false;
+
+            // See if file is saved
+            if (sel == 0 && path == null)
+                R_CutType.SelectedIndex = 2;
+
+            if (CutItems.AllowMultipleSelection)
+            {
+                CutItems.AllowMultipleSelection = false;
+                CutItems.Enabled = true;
+                CutItems.SelectedRow = CurrentLayer;
+            }
+
+            // Preset the filename field per cuttype
+            if (sel == 0)
+            {
+                // Working Location
+                FileName.Text = layers[CutItems.SelectedRow].Name;
+            }
+            else if (sel == 1)
+            {
+                // Router
+                FileName.Text = layers[CutItems.SelectedRow].Name + "-ROUTE";
+                return;
+            }
+            else if (sel == 2)
+            {
+                // Default Next up cut number
+                FileName.Text = NextDefaultCutName;
+                return;
+            }
+            else if (sel == 3)
+            {
+                // Custom Default
+                FileName.Text = NextDefaultCutName.Substring(0, 2);
+                return;
+            }
+            else if (sel == 4 && ds_EPCutItems.Count != 0)
+            {
+                // E&P Output
+                CutItems.AllowMultipleSelection = true;
+                CutItems.SelectedRows = ds_EPCutItems;
+                CutItems.Enabled = false;
+                FileName.Text = "";
+            }
+            else
+            {
+                R_CutType.SelectedIndex = 2;
+            }
+        }
+
+        private void FileName_KeyUp(object sender, KeyEventArgs e)
+        {
+            if (FileName.Text == "")
+                But_Ok.Enabled = false;
+            else
+                But_Ok.Enabled = true;
+        }
+
+        private void FileName_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Keys.J && e.Modifiers == Keys.Control)
+            {
+                int ind = FileName.CaretIndex;
+
+                FileName.Text = FileName.Text.Insert(FileName.CaretIndex, JobNumber);
+                FileName.CaretIndex = JobNumber.Length + ind;
+            }
+        }
+
+        private void CutItems_SelectedItemsChanged(object sender, EventArgs e)
+        {
+            var locSel = R_CutType.SelectedIndex;
+            int sel = CutItems.SelectedRow;
+
+            if (locSel == 0 || locSel == 1)
+            {
+                // router or working
+                FileName.Text = layers[CutItems.SelectedRow].Name;
+                if (locSel == 1)
+                    FileName.Text += "-ROUTE";
+            }
+        }
+
+        private void Window_KeyUp(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Keys.Escape)
+                Window.Close(DialogResult.Cancel);
+        }
+
+
+
+
+        //  --------------------------------------------------  Getters
+        /// <summary>
+        /// Return the new position of the window
+        /// </summary>
+        public Point WinPosition { get { return WindowPosition; } }
+
+        /// <summary>
+        /// Chosen Layer or Layers if E&P and more than one cut
+        /// </summary>
+        public List<Layer> GetLayers
+        {
+            get
+            {
+                var l = new List<Layer>();
+
+                if (R_CutType.SelectedIndex == 4)
+                {
+                    foreach (var i in ds_EPCutItems)
+                        l.Add(layers[i]);
                 }
                 else
                 {
-                    route = GetStringPremade("Choose a Route Name", new List<string> { info.parentLayer.Name }, 0);
+                    l.Add(layers[CutItems.SelectedRow]);
                 }
-                if (route == null)
-                    return null;
 
-                int rNum = 0;
-                var res = Rhino.Input.RhinoGet.GetInteger("Route Number", true, ref rNum);
-                if (res == Result.Nothing || rNum == 0)
-                    return $"{route}-ROUTE";
-                if (res == Result.Cancel)
-                    return null;
-                if (res == Result.Success)
-                    return $"{route}-ROUTE{rNum}";
+                return l;
             }
-
-            return info.parentLayer.Name;
         }
 
         /// <summary>
-        /// Rhino's getstring custom with options bundled up
+        /// Chosen Name or names if E&P and more than one cut
         /// </summary>
-        /// <param name="prompt"></param>
-        /// <param name="options"></param>
-        /// <param name="defaultIndex"></param>
+        public List<string> GetCutName
+        {
+            get
+            {
+                var cNames = new List<string>();
+
+                if (R_CutType.SelectedIndex == 4)
+                {
+                    foreach (var i in ds_EPCutItems)
+                        cNames.Add(doc.Name.Replace("A.3dm", $"_{layers[i].Name}"));
+                }
+                else
+                {
+                    cNames.Add(FileName.Text);
+                }
+
+                return cNames;
+            }
+        }
+
+        /// <summary>
+        /// Return a string saying what cut type this is
+        /// <para>"Working Location", "Router", "Default", "Default Custom", "E&P"</para>
+        /// </summary>
+        public string GetCutType
+        {
+            get
+            {
+                var list = new List<string> { "Working Location", "Router", "Default", "Default Custom", "E&P" };
+                return list[R_CutType.SelectedIndex];
+            }
+        }
+        
+        /// <summary>
+        /// Get the SQL ref obj
+        /// </summary>
+        public gjTools.SQLTools GetSql { get { return sql; } }
+
+        /// <summary>
+        /// Uptick the cut number for next time
+        /// </summary>
+        public void IncrementTempCut()
+        {
+            var vd = sql.queryVariableData()[0];
+                vd.cutNumber++;
+
+            sql.updateVariableData(vd);
+        }
+    }
+
+    public class CreateCutFile
+    {
+        private RhinoDoc doc;
+        private string Path;
+        public Rhino.Display.CustomDisplay Show { get; set; }
+
+        public CreateCutFile(RhinoDoc Document, string path)
+        {
+            doc = Document;
+            Path = path;
+        }
+
+
+        /// <summary>
+        /// Return objects on nest layer
+        /// </summary>
+        /// <param name="l"></param>
         /// <returns></returns>
-        public string GetStringPremade(string prompt, List<string> options, int defaultIndex)
+        public List<RhinoObject> CheckMultiNestBox(Layer l)
         {
-            var gs = new GetString();
+            var NestBox = new List<RhinoObject>();
+            var sl = new List<Layer>( l.GetChildren() );
 
-            if (options.Count > 0)
+            if (sl.Count == 0)
+                return NestBox;
+
+            Layer nestLay = null;
+            for (int i = 0; i < sl.Count; i++)
             {
-                foreach (var o in options)
-                    gs.AddOption(o);
-                gs.SetDefaultString(options[defaultIndex]);
+                if (sl[i].Name == "NestBox")
+                {
+                    nestLay = sl[i];
+                    break;
+                }
             }
 
-            gs.SetCommandPrompt(prompt);
-            var result = gs.Get();
+            if (nestLay == null)
+                return NestBox;
 
-            if (result == Rhino.Input.GetResult.Option)
-                return gs.Option().EnglishName;
-            else if (result == Rhino.Input.GetResult.String)
-                return gs.StringResult().Trim();
-            else
-                return null;
+            var items = new List<RhinoObject>( doc.Objects.FindByLayer(nestLay) );
+
+            return items;
         }
 
         /// <summary>
-        /// Makes a DXF CutFile if the directory exists
+        /// Highlight Objects Blue
         /// </summary>
-        /// <param name="info"></param>
-        /// <returns>True if the file output is successfull</returns>
-        public bool MakeDXF(CutData info, RhinoObject nestbox)
+        /// <param name="Obj"></param>
+        /// <returns></returns>
+        public void HighlightCurve(List<RhinoObject> Obj)
         {
-            if (!System.IO.Directory.Exists(info.path))
+            Show = new Rhino.Display.CustomDisplay(true);
+
+            foreach(var crv in Obj)
             {
-                // Directory is not reachable right now
-                RhinoApp.WriteLine($"Path: {info.path}");
-                RhinoApp.WriteLine("The Above Cut Directory is not available, No CutFile was Made..");
-                return false;
+                var c = crv as CurveObject;
+                if (c != null)
+                    Show.AddCurve(c.CurveGeometry, System.Drawing.Color.Aquamarine, 5);
             }
 
-            // check for Non-Polylines
-            var dt = new DrawTools(info.doc);
-            var obj = info.GetCutObjInNestBox(nestbox);
-
-            if (!dt.CheckPolylines(obj, true))
-            {
-                var tmp = "";
-                Rhino.Input.RhinoGet.GetString("Not all lines are Polylines...", true, ref tmp);
-                dt.hideDynamicDraw();
-            }
-            else
-            {
-                dt.hideDynamicDraw();
-                info.doc.Objects.Select(info.GetCutObjInNestBoxID(nestbox));
-                return RhinoApp.RunScript($"_-Export \"{info.path}{info.cutName}.dxf\" Scheme \"Vomela\" _Enter", false);
-            }
-            
-            return false;
+            doc.Views.Redraw();
         }
 
         /// <summary>
-        /// Create the top box with cut name
+        /// Return the Cut Objects
         /// </summary>
-        /// <param name="info"></param>
-        /// <param name="nestBox"></param>
-        public void MakeCutNameText(CutData info, RhinoObject nestBox)
+        /// <param name="l"></param>
+        /// <returns></returns>
+        public List<RhinoObject> GetCutObjects(Layer l, ObjRef NestBox)
         {
-            // Time to create the text
-            var dt = new DrawTools(info.doc);
+            var cutLays = l.GetChildren();
+            var RObj = new List<RhinoObject>();
+            var nBB = NestBox.Geometry().GetBoundingBox(true);
+
+            for (int i = 0; i < cutLays.Length; i++)
+            {
+                var sl = cutLays[i];
+
+                if (sl.Name.Substring(0,2) == "C_")
+                {
+                    var layerObjects = doc.Objects.FindByLayer(sl);
+
+                    // Check if the objects are within the box
+                    foreach(var ro in layerObjects)
+                    {
+                        if (nBB.Contains(ro.Geometry.GetBoundingBox(true), false))
+                            RObj.Add(ro);
+                    }
+                }
+            }
+
+            return RObj;
+        }
+
+        /// <summary>
+        /// Highlight Bad Lines (if any)
+        /// </summary>
+        /// <param name="RObj"></param>
+        /// <returns></returns>
+        public bool CheckPolyLines(List<RhinoObject> RObj)
+        {
+            Show = new Rhino.Display.CustomDisplay(true);
+            var c_red = System.Drawing.Color.OrangeRed;
+            var BadPart = false;
+
+            for (int i = 0; i < RObj.Count; i++)
+            {
+                var typ = RObj[i].Geometry.ObjectType;
+
+                if (typ == ObjectType.Curve)
+                {
+                    var crv = RObj[i] as CurveObject;
+                    var segs = crv.CurveGeometry.DuplicateSegments();
+
+                    // Replace Circle
+                    if (crv.CurveGeometry.IsCircle())
+                    {
+                        // Convert to circle
+                        crv.CurveGeometry.TryGetCircle(out Circle Cir, 0.05);
+
+                        if (Cir.IsValid)
+                            doc.Objects.Replace(RObj[i].Id, Cir);
+                        continue;
+                    }
+
+                    for (int ii = 0; ii < segs.Length; ii++)
+                    {
+                        var s = segs[ii];
+
+                        if (!s.IsLinear() && !s.IsArc() && !s.IsPlanar())
+                        {
+                            Show.AddCurve(s, c_red, 5);
+                            BadPart = true;
+                        }
+                    }
+                }
+                else if (typ == ObjectType.Annotation)
+                {
+                    var te = RObj[i] as TextObject;
+
+                    if (te == null)
+                        BadPart = true;
+                }
+            }
+
+            doc.Views.Redraw();
+            return BadPart;
+        }
+
+        /// <summary>
+        /// Does what it say
+        /// </summary>
+        /// <param name="RObj"></param>
+        public bool WriteDXF(List<RhinoObject> RObj, string FileName)
+        {
+            var FullPath = Path + FileName;
+            doc.Objects.UnselectAll();
+
+            for (int i = 0; i < RObj.Count; i++)
+                doc.Objects.Select(RObj[i].Id, true);
+
+            return RhinoApp.RunScript($"_-Export \"{FullPath}.dxf\" Scheme \"Vomela\" _Enter", false);
+        }
+
+        /// <summary>
+        /// Create the Cut text
+        /// </summary>
+        /// <param name="RObj"></param>
+        /// <param name="CutName"></param>
+        public void CreateCutText(RhinoObject NestBox, Layer parent, string CutName)
+        {
+            var nBB = NestBox.Geometry.GetBoundingBox(false);
+            var dt = new DrawTools(doc);
             var ds = dt.StandardDimstyle();
-            var txtHeader = dt.AddText("Cut Name:", new Point3d(0, 0, 0), ds, 0.75, 0, 0, 6);
-            var txtName = dt.AddText(info.cutName.ToUpper(), new Point3d(0,-1,0), ds, 1.5, 0, 0, 0);
+            var offsetPt = new Point3d(-0.5, 0.5, 0);
+            var scaleFact = (CutName.Length > 9) ? 0.4 : 0.25;
 
-            BoundingBox bb = new BoundingBox();
-                bb.Union(txtHeader.GetBoundingBox(true));
-                bb.Union(txtName.GetBoundingBox(true));
-            bb.Inflate(0.5);
+            var txt = dt.AddText("Cut Name:", nBB.Corner(false, false, true) + new Point3d(0, 0.75, 0), ds, 0.65, 0, 0, 6);
+            var cName = dt.AddText(CutName, nBB.Corner(false, false, true), ds, 1.5, 1, 0, 0);
 
-            var textBox = new Rectangle3d(Plane.WorldXY, bb.GetCorners()[0], bb.GetCorners()[2]);
-            var nc = nestBox.Geometry.GetBoundingBox(true).GetCorners()[2];
+            var rect = new Rectangle3d(Plane.WorldXY,
+                txt.GetBoundingBox(true).Corner(true, false, true) + offsetPt,
+                cName.GetBoundingBox(true).Corner(false, true, true) + -offsetPt);
 
-            // Move the box to location
-            Transform move = Transform.Translation(nc.X - textBox.Corner(1).X, nc.Y - textBox.Corner(1).Y, 0);
-            Transform scale;
-            if (info.cutType == "Router")
-                scale = Transform.Scale(nc, (nestBox.Geometry.GetBoundingBox(true).GetEdges()[0].Length * 0.4) / textBox.Width);
-            else
-                scale = Transform.Scale(nc, (nestBox.Geometry.GetBoundingBox(true).GetEdges()[0].Length * 0.25) / textBox.Width);
+            var xForm = Transform.Translation(nBB.Corner(false, false, true) - rect.Corner(1));
+            var scale = Transform.Scale(nBB.Corner(false, false, true), (nBB.GetEdges()[0].Length * scaleFact) / rect.Width);
 
-            textBox.Transform(move);
-            textBox.Transform(scale);
-            txtHeader.Transform(move);
-            txtHeader.Transform(scale, info.doc.DimStyles[ds]);
-            txtName.Transform(move);
-            txtName.Transform(scale, info.doc.DimStyles[ds]);
+            txt.Transform(xForm); cName.Transform(xForm); rect.Transform(xForm);
+            txt.Transform(scale, doc.DimStyles[ds]); cName.Transform(scale, doc.DimStyles[ds]); rect.Transform(scale);
 
-            // add them to the drawing
-            var cutBox = new List<RhinoObject> {
-                info.doc.Objects.FindId(info.doc.Objects.AddText(txtHeader)),
-                info.doc.Objects.FindId(info.doc.Objects.AddText(txtName)),
-                info.doc.Objects.FindId(info.doc.Objects.AddRectangle(textBox))
-            };
+            var attr = new ObjectAttributes { LayerIndex = parent.Index };
+                attr.AddToGroup(doc.Groups.Add());
 
-            // make a group
-            var group = info.doc.Groups.Add();
-
-            // change their layer
-            foreach(var o in cutBox)
-            {
-                o.Attributes.LayerIndex = info.parentLayer.Index;
-                o.Attributes.AddToGroup(group);
-                o.CommitChanges();
-            }
-            info.doc.Views.Redraw();
+            doc.Objects.AddText(txt, attr);
+            doc.Objects.AddText(cName, attr);
+            doc.Objects.AddRectangle(rect, attr);
         }
     }
 }
