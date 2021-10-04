@@ -549,6 +549,7 @@ namespace PDF
             thr.Start();
             thr.Join();
             PDFItems.DataStore = ds_ParentLayers;
+            PDFItems.SelectedRow = CurrentLayerIndex;
 
             Window.ShowModal(RhinoEtoApp.MainWindow);
             WinLocation = Window.Location;
