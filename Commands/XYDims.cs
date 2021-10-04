@@ -24,124 +24,161 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            var obj = CollectObjects();
-            if (obj.Count == 0)
+            if (RhinoGet.GetMultipleObjects("Select Objects", false, ObjectType.AnyObject, out ObjRef[] objs) != Result.Success)
                 return Result.Cancel;
 
-            //  Get the needed layer
-            var lay = GetObjectData(obj, out BoundingBox bb);
+            var gp = new XYDimVisual(doc.DimStyles.Current, new List<ObjRef>(objs));
+            gp.Get();
 
-            // create the dimensions
-            Point3d[] pts = bb.GetCorners();
+            if (gp.CommandResult() != Result.Success)
+                return Result.Cancel;
 
-            // add the dims to the drawing and swap the layer
-            var dims = new List<Guid> { 
-                doc.Objects.AddLinearDimension(MakeDim(doc.DimStyles.Current, pts[3], pts[2], false, dimlevel)), 
-                doc.Objects.AddLinearDimension(MakeDim(doc.DimStyles.Current, pts[0], pts[3], true, dimlevel))
-            };
-            foreach(var d in dims)
-            {
-                var o = doc.Objects.FindId(d);
-                    o.Attributes.LayerIndex = lay.Index;
-                    o.CommitChanges();
-            }
-                                                    
-            doc.Views.Redraw();                     
-            return Result.Success;                  
+            var lDims = gp.GetDimObjects();
+            var parentlayer = doc.Layers[objs[0].Object().Attributes.LayerIndex];
+            if (parentlayer.ParentLayerId != Guid.Empty)
+                parentlayer = doc.Layers.FindId(parentlayer.ParentLayerId);
+
+            var attr = new ObjectAttributes { LayerIndex = parentlayer.Index };
+            doc.Objects.AddLinearDimension(lDims[0], attr);
+            doc.Objects.AddLinearDimension(lDims[1], attr);
+
+            doc.Views.Redraw();
+            return Result.Success;
+        }
+    }
+
+
+
+    public class XYDimVisual : GetPoint
+    {
+        public DimensionStyle ds { get; private set; }
+        public LinearDimension VertDimension { get; private set; }
+        public LinearDimension HorizDimension { get; private set; }
+
+        private Box BB;
+        private Box inf;
+
+        private System.Drawing.Color Clr_Blu = System.Drawing.Color.DeepSkyBlue;
+
+        public XYDimVisual(DimensionStyle DimStyle, List<ObjRef> Objs)
+        {
+            ds = DimStyle;
+            ProcessSelection(Objs);
         }
 
 
+        private void ProcessSelection(List<ObjRef> sel)
+        {
+            var tmpBB = BoundingBox.Empty;
 
+            foreach (var s in sel)
+            {
+                var bb = s.Geometry().GetBoundingBox(true);
+                tmpBB.Union(bb);
+            }
 
+            BB = new Box(tmpBB);
+        }
 
         /// <summary>
-        /// Makes a linear dimension 
-        /// <para>Vertical Dim extends to the left</para>
-        /// <para>Horizontal Dim extends above</para>
+        /// Gets the dim objects if there are any
+        /// </summary>
+        /// <returns></returns>
+        public List<LinearDimension> GetDimObjects()
+        {
+            var cnr2 = inf.GetCorners();
+            var cnr = BB.GetCorners();
+
+            return new List<LinearDimension>
+            {
+                MakeDim(ds, new Line(cnr[0], cnr[3]), cnr2[0], true),
+                MakeDim(ds, new Line(cnr[3], cnr[2]), cnr2[2], false)
+            };
+        }
+
+        /// <summary>
+        /// Tailored make dim for this command
         /// </summary>
         /// <param name="ds"></param>
-        /// <param name="start"></param>
-        /// <param name="end"></param>
-        /// <param name="verticalDim"></param>
-        /// <param name="dimOffset"></param>
+        /// <param name="l"></param>
+        /// <param name="pt"></param>
+        /// <param name="VorH"></param>
         /// <returns></returns>
-        public static LinearDimension MakeDim(DimensionStyle ds, Point3d start, Point3d end, bool verticalDim = false, int dimlevel = 1, double dimOffset = 0)
+        private LinearDimension MakeDim(DimensionStyle ds, Line l, Point3d pt, bool VorH)
         {
-            var dm_Center = new Line(start, end).PointAtLength(start.DistanceTo(end) / 2);
-            
-            // Set the correct offset
-            dimOffset = (dimOffset > 0) ? dimOffset : ds.TextHeight * ds.DimensionScale * dimlevel * 2.25;
+            var dm_Center = l.PointAtLength(l.Length / 2);
 
-            if (verticalDim)
-                dm_Center.X -= dimOffset;
+            if (VorH)
+                dm_Center.X = pt.X;
             else
-                dm_Center.Y += dimOffset;
+                dm_Center.Y = pt.Y;
 
-            Plane p = new Plane(start, end, dm_Center);
-                  p.ClosestParameter(start, out double sX, out double sY);
-                  p.ClosestParameter(dm_Center, out double mX, out double mY);
-                  p.ClosestParameter(end, out double eX, out double eY);
-            
+            Plane p = new Plane(l.From, l.To, dm_Center);
+            p.ClosestParameter(l.From, out double sX, out double sY);
+            p.ClosestParameter(dm_Center, out double mX, out double mY);
+            p.ClosestParameter(l.To, out double eX, out double eY);
+
             return new LinearDimension(p, new Point2d(sX, sY), new Point2d(eX, eY), new Point2d(mX, mY)) { Aligned = true, DimensionStyleId = ds.Id };
         }
 
         /// <summary>
-        /// Ask for user input either a number and/or the objects
-        /// <para>TODO: make dimlevel part of the datastore in the database</para>
+        /// Custom Bounding visual for the dims
         /// </summary>
-        /// <param name="dimLevel"></param>
-        /// <returns></returns>
-        public List<ObjRef> CollectObjects()
+        /// <param name="e"></param>
+        protected override void OnDynamicDraw(GetPointDrawEventArgs e)
         {
-            var obj = new List<ObjRef>();
+            base.OnDynamicDraw(e);
+            e.Display.DrawBox(BB, Clr_Blu, 1);
+            inf = new Box(BB);
 
-            var go = new GetObject();
-                go.SetCommandPrompt($"Select Objects <Dim Level = {dimlevel}>");
-                go.AcceptNumber(true, false);
-                go.GroupSelect = true;
-
-            while (true)
+            if (!BB.Contains(e.CurrentPoint))
             {
-                var res = go.GetMultiple(1, 0);
-                if (res == GetResult.Number)
+                double dist = BB.ClosestPoint(e.CurrentPoint).DistanceTo(e.CurrentPoint);
+
+                // Inflate the box and draw it for now
+                inf.Inflate(dist);
+                e.Display.DrawBox(inf, Clr_Blu);
+                var Icnrs = inf.GetCorners();
+
+                // other data
+                var arrLen = ds.ArrowLength;
+                var txtH = ds.TextHeight;
+                var dsScale = ds.DimensionScale;
+                var lns = new List<Line>
                 {
-                    dimlevel = (int)go.Number();
-                    go.SetCommandPrompt($"Select Objects <Dim Level = {dimlevel}>");
-                }
-                else if (res == GetResult.Object)
-                {
-                    obj.AddRange(go.Objects());
-                    break;
-                }
-                else
-                {
-                    break;
-                }
+                    new Line(Icnrs[0], Icnrs[3]),
+                    new Line(Icnrs[3], Icnrs[2])
+                };
+
+                
+                e.Display.DrawArrowHead(lns[1].From, -lns[1].Direction, Clr_Blu, 0, arrLen * dsScale);
+                e.Display.DrawArrowHead(lns[1].To, lns[1].Direction, Clr_Blu, 0, arrLen * dsScale);
+                e.Display.Draw3dText(
+                    "X.XX",
+                    Clr_Blu,
+                    new Plane(lns[1].PointAtLength(lns[1].Length / 2), Vector3d.ZAxis),
+                    txtH * dsScale,
+                    ds.Font.EnglishFaceName,
+                    false,
+                    false,
+                    TextHorizontalAlignment.Center,
+                    TextVerticalAlignment.Middle);
+
+                e.Display.DrawArrowHead(lns[0].From, -lns[0].Direction, Clr_Blu, 0, arrLen * dsScale);
+                e.Display.DrawArrowHead(lns[0].To, lns[0].Direction, Clr_Blu, 0, arrLen * dsScale);
+                var rPlane = new Plane(lns[0].PointAtLength(lns[0].Length / 2), Vector3d.ZAxis);
+                rPlane.Rotate(3.14 / 2, Vector3d.ZAxis);
+                e.Display.Draw3dText(
+                    "X.XX", 
+                    Clr_Blu, 
+                    rPlane, 
+                    txtH * dsScale, 
+                    ds.Font.EnglishFaceName, 
+                    false, 
+                    false, 
+                    TextHorizontalAlignment.Center, 
+                    TextVerticalAlignment.Middle);
             }
-
-            return obj;
-        }
-
-        /// <summary>
-        /// Get the parent layer and produce a bounding box from input geometry
-        /// </summary>
-        /// <param name="obj"></param>
-        /// <param name="bb"></param>
-        /// <returns></returns>
-        public Layer GetObjectData(List<ObjRef> obj, out BoundingBox bb)
-        {
-            var doc = obj[0].Object().Document;
-
-            var lay = doc.Layers[obj[0].Object().Attributes.LayerIndex];
-            if (lay.ParentLayerId != Guid.Empty)
-                lay = doc.Layers.FindId(lay.ParentLayerId);
-
-            // collect the objects
-            bb = obj[0].Geometry().GetBoundingBox(true);
-            foreach (var o in obj)
-                bb.Union(o.Geometry().GetBoundingBox(true));
-
-            return lay;
         }
     }
 }
