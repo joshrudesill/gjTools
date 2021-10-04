@@ -114,8 +114,6 @@ namespace gjTools.Commands
             return Path;
         }
     }
-
-
 }
 
 
