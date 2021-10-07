@@ -49,13 +49,20 @@ namespace gjTools.Commands
         public void DrawNestBox(NestBoxMaker NestBox)
         {
             var nestLayer = new LayerTools(NestBox.doc).CreateLayer("NestBox", NestBox.ParentLayer.Name);
+            var grp = NestBox.doc.Groups.Add();
             var attr = new ObjectAttributes { LayerIndex = NestBox.ParentLayer.Index };
-            var attr1 = new ObjectAttributes { LayerIndex = nestLayer.Index };
+                attr.AddToGroup(grp);
+            var attr1 = new ObjectAttributes { LayerIndex = nestLayer.Index, Name = "NestBox" };
+                attr1.SetUserString("Width", NestBox.Width.ToString());
+                attr1.SetUserString("Height", NestBox.Height.ToString());
+                attr1.SetUserString("QtyObj", NestBox.Geoms.ObjCount.ToString());
+                attr1.SetUserString("QtyGrp", NestBox.Geoms.GroupCount.ToString());
 
             foreach (var te in NestBox.Geoms.TxtEnt)
                 NestBox.doc.Objects.AddText(te, attr);
 
             NestBox.doc.Objects.AddRectangle(NestBox.Geoms.NestBox, attr1);
+            NestBox.doc.Objects.AddRectangle(NestBox.Geoms.LabelBox, attr);
             NestBox.doc.Objects.AddLine(NestBox.Geoms.DividerLine, attr);
         }
     }
@@ -75,7 +82,6 @@ namespace gjTools.Commands
         public List<Cut_Layer> CutLayers { get; private set; }
         public double Height { get; private set; }
         public double Width { get; private set; }
-        private List<Point3d> CornerPoints = new List<Point3d>(4);
         private Point3d Center = Point3d.Origin;
 
         /// <summary>
@@ -131,17 +137,7 @@ namespace gjTools.Commands
             var edges = tmpBBox.GetEdges();
             Width = edges[0].Length;
             Height = edges[1].Length;
-            UpdatePoints(tmpBBox);
-        }
-
-        /// <summary>
-        /// Sets the corner points for the cut objects
-        /// </summary>
-        /// <param name="BBox"></param>
-        private void UpdatePoints(BoundingBox BBox)
-        {
-            Center = BBox.Center;
-            CornerPoints = new List<Point3d>(BBox.GetCorners()).GetRange(0, 4);
+            Center = tmpBBox.Center;
         }
 
         /// <summary>
@@ -151,9 +147,9 @@ namespace gjTools.Commands
         /// <returns></returns>
         private double RoundQuarter(double Num)
         {
-            double Rounded = (int)(Num * 4) / 4;
+            double Rounded = Math.Round(Num * 4, 0) / 4;
 
-            if (Rounded - Num > 0.125)
+            if (Num - Rounded > 0.11)
                 Rounded += 0.25;
 
             return Rounded;
@@ -196,22 +192,22 @@ namespace gjTools.Commands
 
             var boxPlane = new Plane(Center + new Point3d(-Width / 2, -Height / 2, 0), Vector3d.ZAxis);
 
-            double BaseTxtHeight = Width * 0.0125;
+            double BaseTxtHeight = Width * 0.0135;
             var txtHeight = new List<double>(5)
             {
-                BaseTxtHeight * 1.25,
+                BaseTxtHeight * 1.5,
                 BaseTxtHeight * 0.90,
-                BaseTxtHeight * 0.50,
+                BaseTxtHeight * 0.60,
                 BaseTxtHeight * 0.90,
                 BaseTxtHeight * 0.90
             };
 
-            double inset = BaseTxtHeight / 2;
+            double inset = BaseTxtHeight / 1.5;
             var ptOffsets = new List<Point3d>(5)
             {
                 new Point3d(inset, -inset, 0),
                 new Point3d(inset, -(inset + txtHeight[0] * 1.5), 0),
-                new Point3d(Width - 1, -inset, 0),
+                new Point3d(Width - inset, -inset, 0),
                 new Point3d(inset, -(inset + (txtHeight[0] + txtHeight[1]) * 2), 0),
                 new Point3d(inset, -(inset + (txtHeight[0] + txtHeight[1] + txtHeight[3]) * 2), 0)
             };
@@ -230,6 +226,8 @@ namespace gjTools.Commands
                 qty = (qty >= c.Obj.Count) ? qty : c.Obj.Count;
                 grps += c.GroupCount;
             }
+            NestGeom.ObjCount = qty;
+            NestGeom.GroupCount = grps;
             if (grps > 0)
                 qty = grps;
 
@@ -238,7 +236,7 @@ namespace gjTools.Commands
                 $"PN: {ParentLayer.Name}",
                 $"Path: {path}",
                 $"{name}\n{DateTime.Now}",
-                $"Sheet Size: {Width}w x {Height}h    (Part Area: {tmpBB.GetEdges()[0].Length}w x {tmpBB.GetEdges()[1].Length}h)",
+                $"Sheet Size: {Width}w x {Height}h    (Part Area: {Math.Round(tmpBB.GetEdges()[0].Length, 2)}w x {Math.Round(tmpBB.GetEdges()[1].Length, 2)}h)",
                 $"Items up: {qty}   Kerf: {cutLengths}"
             };
 
@@ -251,23 +249,25 @@ namespace gjTools.Commands
                 TextEntity.Create(strVals[4], ModifyPlane(boxPlane, ptOffsets[4]), DimStyle, false, 0, 0)
             };
             txtList[0].SetBold(true);
+            txtList[3].SetBold(true);
             txtList[2].Justification = TextJustification.Right;
 
             tmpBB = BoundingBox.Empty;
             for (int i = 0; i < 5; i++)
             {
                 txtList[i].TextHeight = txtHeight[i];
+                txtList[i].Font = Font.FromQuartetProperties("Consolas", false, false);
                 tmpBB.Union(txtList[i].GetBoundingBox(true));
             }
 
             NestGeom.TxtEnt = txtList;
             NestGeom.NestBox = new Rectangle3d(boxPlane, Width, Height);
-            NestGeom.LabelBox = new Rectangle3d(boxPlane, Width, -(tmpBB.GetEdges()[1].Length + 1));
+            NestGeom.LabelBox = new Rectangle3d(boxPlane, Width, -(tmpBB.GetEdges()[1].Length + (inset * 2)));
             
             var LabelCenter = NestGeom.LabelBox.Center;
             NestGeom.DividerLine = new Line(
                 LabelCenter + new Point3d(-(Width / 2) + (inset * 2), 0, 0), 
-                LabelCenter + new Point3d(Width / 2 - 1, 0, 0)
+                LabelCenter + new Point3d(Width / 2 - (inset * 2), 0, 0)
                 );
 
             Plane ModifyPlane(Plane pl, Point3d off)
@@ -285,6 +285,9 @@ namespace gjTools.Commands
             public Rectangle3d NestBox { get; set; }
             public Rectangle3d LabelBox { get; set; }
             public Line DividerLine { get; set; }
+
+            public int ObjCount { get; set; }
+            public int GroupCount { get; set; }
 
             public List<TextEntity> TxtEnt { get; set; }
         }
@@ -372,7 +375,7 @@ namespace gjTools.Commands
                     // Cut length
                     var crv = o.Curve();
                     if (crv != null)
-                        CutLength += crv.GetLength();
+                        CutLength += crv.GetLength(0.1);
 
                     // Group count
                     if (o_attr.GroupCount > 0)
