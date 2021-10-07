@@ -30,12 +30,12 @@ namespace gjTools.Commands
             // This crushes the data
             var NestBox = new NestBoxMaker(doc, new List<ObjRef>(sel));
 
-            double height = NestBox.Height;
+            double height = 1;
             if (RhinoGet.GetNumber("Layout Height (Values Below 3 Shrinks to the Content)", false, ref height) != Result.Success)
                 return Result.Cancel;
             NestBox.SetSheetDims(height, -1);
 
-            double width = NestBox.Width;
+            double width = 1;
             if (RhinoGet.GetNumber("Layout Width (Values Below 3 Shrinks to the Content)", false, ref width) != Result.Success)
                 return Result.Cancel;
             NestBox.SetSheetDims(-1, width);
