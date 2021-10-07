@@ -523,6 +523,9 @@ namespace CutFile
         /// </summary>
         public void IncrementTempCut()
         {
+            if (R_CutType.SelectedIndex != 2)
+                return;
+
             var vd = sql.queryVariableData()[0];
                 vd.cutNumber++;
 
@@ -641,14 +644,14 @@ namespace CutFile
 
                 if (typ == ObjectType.Curve)
                 {
-                    var crv = RObj[i] as CurveObject;
-                    var segs = crv.CurveGeometry.DuplicateSegments();
+                    var crv = RObj[i].Geometry as Curve;
+                    var segs = crv.DuplicateSegments();
 
                     // Replace Circle
-                    if (crv.CurveGeometry.IsCircle())
+                    if (crv.IsCircle())
                     {
                         // Convert to circle
-                        crv.CurveGeometry.TryGetCircle(out Circle Cir, 0.05);
+                        crv.TryGetCircle(out Circle Cir, 0.05);
 
                         if (Cir.IsValid)
                             doc.Objects.Replace(RObj[i].Id, Cir);
@@ -657,9 +660,9 @@ namespace CutFile
 
                     for (int ii = 0; ii < segs.Length; ii++)
                     {
-                        var s = segs[ii];
+                        Curve s = segs[ii];
 
-                        if (!s.IsLinear() && !s.IsArc() && !s.IsPlanar())
+                        if (!s.IsLinear() && !s.IsArc())
                         {
                             Show.AddCurve(s, c_red, 5);
                             BadPart = true;
