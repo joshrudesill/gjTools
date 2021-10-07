@@ -29,6 +29,11 @@ namespace gjTools.Commands
 
             // This crushes the data
             var NestBox = new NestBoxMaker(doc, new List<ObjRef>(sel));
+            if (NestBox.CutLayers.Count == 0)
+            {
+                RhinoApp.WriteLine("No Cut Layers Were in your Selection");
+                return Result.Cancel;
+            }
 
             double height = 1;
             if (RhinoGet.GetNumber("Layout Height (Values Below 3 Shrinks to the Content)", false, ref height) != Result.Success)
@@ -108,9 +113,12 @@ namespace gjTools.Commands
                 if (leftovers.Count == 0) break;
             }
 
-            UpdateActualSizes();
-            GetParentLayer();
-            SetupGeometry();
+            if (CutLayers.Count > 0)
+            {
+                UpdateActualSizes();
+                GetParentLayer();
+                SetupGeometry();
+            }
         }
 
         /// <summary>
@@ -321,16 +329,16 @@ namespace gjTools.Commands
             IsCut = false;
             Name = Layer.Name;
 
+            // object Setup
+            Obj = new List<ObjRef>(selection.Count);
+            Leftovers = new List<ObjRef>(selection.Count);
+            CutLength = 0;
+
             // is this a cut object layer
             if (Name.StartsWith("C_"))
             {
                 IsCut = true;
                 Name = Name.Replace("C_", "");
-
-                // object Setup
-                Obj = new List<ObjRef>(selection.Count);
-                Leftovers = new List<ObjRef>(selection.Count);
-                CutLength = 0;
 
                 // Process all parts an count groups
                 ProcessParts(selection);
