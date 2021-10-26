@@ -657,7 +657,7 @@ namespace gjTools.Commands
             var sql = new SQLTools();
             var color = sql.queryOEMColors(user_ds[4][0]);
 
-            if (color[0].colorName.Length > 1)
+            if (color.Count > 0)
                 res_ds[4][0] = $"{color[0].colorNum} - {color[0].colorName}";
             else
                 res_ds[4][0] = "";
@@ -741,7 +741,7 @@ namespace gjTools.Commands
             window = new Dialog<DialogResult>
             {
                 Padding = 10,
-                Title = "Liebinger Label",
+                Title = "OEM Color Manager",
                 AutoSize = true,
                 Topmost = true,
                 Result = DialogResult.Cancel,
