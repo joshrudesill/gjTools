@@ -17,12 +17,12 @@ namespace gjTools.Commands
 
         public static JTest Instance { get; private set; }
         public override string EnglishName => "asdf";
-
+        enum testenum
+        {
+            t1 , t2,t3,t4
+        }
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            var ban = new BannerDialog();
-            ban.ShowForm();
-
             return Result.Success;
         }
     }

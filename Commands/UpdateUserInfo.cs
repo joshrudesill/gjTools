@@ -32,7 +32,8 @@ namespace gjTools.Commands
         public bool updateUserInfo()
         {
             var sql = new SQLTools();
-            VariableData creds = sql.queryVariableData()[0];
+            /// VariableData creds2 = sql.queryVariableData()[0];
+            VariableData creds = SQLTools2.queryVariableData();
             List<string> credVals = new List<string> { creds.userLastName, creds.userFirstName, creds.userInitials, creds.cutNumber.ToString() };
             List<string> credLabels = new List<string> { "Last Name", "First Name", "Initials", "Cut Number" };
 

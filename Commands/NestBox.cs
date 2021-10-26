@@ -221,7 +221,7 @@ namespace gjTools.Commands
             };
 
             var path = (doc.Path == null) ? "File Not Saved" : doc.Path;
-            var name = new SQLTools().queryVariableData()[0].userFirstName;
+            var name = new SQLTools().queryVariableData().userFirstName;
             int qty = 0;
             int grps = 0;
             string cutLengths = "";
