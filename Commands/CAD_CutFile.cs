@@ -207,7 +207,7 @@ namespace CutFile
             }
 
             // Find the next cut name
-            var cut = sql.queryVariableData()[0];
+            var cut = sql.queryVariableData();
             NextDefaultCutName = $"{cut.userInitials}{cut.cutNumber}";
             NextDefaultCutNum = cut.cutNumber;
         }
@@ -526,7 +526,7 @@ namespace CutFile
             if (R_CutType.SelectedIndex != 2)
                 return;
 
-            var vd = sql.queryVariableData()[0];
+            var vd = sql.queryVariableData();
                 vd.cutNumber++;
 
             sql.updateVariableData(vd);

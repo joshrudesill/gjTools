@@ -4,21 +4,12 @@ using Rhino;
 
 namespace gjTools
 {
-    interface ISQLHelper
-    {
-        void testConnection(); // Test connection. For debugging only.
-        List<CustomBlurb> queryCustomBlurbs();  // Definitions in summaries. Query all items.
-        List<JobSlot> queryJobSlots();
-        List<Location> queryLocations();
-        List<OEMColor> queryOEMColors();
-        VariableData queryVariableData();
-        int executeCommand(string command); // Execute non query command on database.
-    }
+    
 
     // Custom structs for return types from database
-    public struct CustomBlurb
+    public struct CustomBlurb2
     {
-        public CustomBlurb(int ids, string blurbs)
+        public CustomBlurb2(int ids, string blurbs)
         {
             id = ids;
             blurb = blurbs;
@@ -26,9 +17,9 @@ namespace gjTools
         public int id;
         public string blurb;
     }
-    public struct OEMColor
+    public struct OEMColor2
     {
-        public OEMColor(string colorNum, string colorName, int id)
+        public OEMColor2(string colorNum, string colorName, int id)
         {
             _colorNum = colorNum;
             _colorName = colorName;
@@ -60,9 +51,9 @@ namespace gjTools
             }
         }
     }
-    public struct JobSlot
+    public struct JobSlot2
     {
-        public JobSlot(int slot, string job, string due, string description, int quantity, string material)
+        public JobSlot2(int slot, string job, string due, string description, int quantity, string material)
         {
             _slot = slot;
             _job = job;
@@ -122,9 +113,9 @@ namespace gjTools
         }
 
     }
-    public struct Location
+    public struct Location2
     {
-        public Location(string locName, string path, int id)
+        public Location2(string locName, string path, int id)
         {
             _locName = locName;
             _path = path;
@@ -156,9 +147,9 @@ namespace gjTools
             }
         }
     }
-    public struct VariableData
+    public struct VariableData2
     {
-        public VariableData(string userLastName, string userFirstName, string userInitials, int cutNumber)
+        public VariableData2(string userLastName, string userFirstName, string userInitials, int cutNumber)
         {
             _userFirstName = userFirstName;
             _userLastName = userLastName;
@@ -218,14 +209,14 @@ namespace gjTools
         }
     }
 
-    public struct DataStore
+    public struct DataStore2
     {
         private int _index;
         public string stringValue;
         public int intValue;
         public double doubleValue;
         public string ProgName;
-        public DataStore(int i, string sv, int iv, double dv, string owner)
+        public DataStore2(int i, string sv, int iv, double dv, string owner)
         {
             _index = i;
             stringValue = sv;
@@ -242,18 +233,18 @@ namespace gjTools
         }
     }
 
-    public sealed class SQLTools : ISQLHelper
+    public static class SQLTools2
     {
-        SQLiteConnection con;
-        string connectionString;
+        static readonly SQLiteConnection con;
+        static readonly string connectionString;
         
-        public SQLTools()
+        static SQLTools2()
         {
             connectionString = "Data Source=C:\\Gtools_RhinoENV\\gjToolsDatabase.db";
             con = new SQLiteConnection(connectionString);
             con.Open();
         }
-        public void testConnection()
+        public static void testConnection()
         {
             string stm = "SELECT SQLITE_VERSION()";
             var cmd = new SQLiteCommand(stm, con);
@@ -267,7 +258,7 @@ namespace gjTools
         /// <para>---Warning: must return all columns in order!---</para>
         /// </summary>
         /// <returns></returns>
-        public List<CustomBlurb> queryCustomBlurbs()
+        public static List<CustomBlurb> queryCustomBlurbs()
         {
             List<CustomBlurb> rList = new List<CustomBlurb>();
             string stm;
@@ -287,7 +278,7 @@ namespace gjTools
         /// This function will return a JobSlot object. 
         /// <para>---Warning: must return all columns in order!---</para></summary>
         /// <returns></returns>
-        public List<JobSlot> queryJobSlots()
+        public static List<JobSlot> queryJobSlots()
         {
             var rList = new List<JobSlot>();
             string stm;
@@ -306,7 +297,7 @@ namespace gjTools
         /// This function will return a Location object. 
         /// <para>---Warning: must return all columns in order!---</para></summary>
         /// <returns></returns>
-        public List<Location> queryLocations()
+        public static List<Location> queryLocations()
         {
             var rList = new List<Location>();
             string stm = "SELECT * FROM locations;";
@@ -324,7 +315,7 @@ namespace gjTools
         /// This function will return a OEMColor object. 
         /// <para>---Warning: must return all columns in order!---</para></summary>
         /// <returns></returns>
-        public List<OEMColor> queryOEMColors()
+        public static List<OEMColor> queryOEMColors()
         {
             List<OEMColor> rList = new List<OEMColor>();
             string stm = "SELECT * FROM oemColors;";
@@ -336,7 +327,7 @@ namespace gjTools
             }
             return rList;
         }
-        public List<OEMColor> queryOEMColors(string search)
+        public static List<OEMColor> queryOEMColors(string search)
         {
             var res = new List<OEMColor>();
             string que = string.Format("SELECT * FROM oemColors WHERE colorNum LIKE \"%{0}%\"", search);
@@ -353,7 +344,7 @@ namespace gjTools
         /// This function will return a VariableData object. 
         /// <para>---Warning: must return all columns in order!---</para></summary>
         /// <returns></returns>
-        public VariableData queryVariableData()
+        public static VariableData queryVariableData()
         {
             var rList = new VariableData();
             string stm  = "SELECT * FROM variableData;";
@@ -373,7 +364,7 @@ namespace gjTools
         /// </summary>
         /// <param name="indexList"></param>
         /// <returns></returns>
-        public List<DataStore> queryDataStore(List<int> indexList)
+        public static List<DataStore> queryDataStore(List<int> indexList)
         {
             if (indexList.Count == 0)
                 return null;
@@ -403,7 +394,7 @@ namespace gjTools
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
-        public bool updateDataStore(DataStore data)
+        public static bool updateDataStore(DataStore data)
         {
             string que = string.Format("UPDATE dataStore SET string = '{1}', int = {2}, float = {3}, ProgName = '{4}' WHERE id = {0}", 
                 data.DBindex, data.stringValue, data.intValue, data.doubleValue, data.ProgName);
@@ -418,7 +409,7 @@ namespace gjTools
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
-        public bool insertDataStore(DataStore data)
+        public static bool insertDataStore(DataStore data)
         {
             string que = string.Format("INSERT INTO dataStore (string, int, float) VALUES ('{0}', {1}, {2})",
                 data.stringValue, data.intValue, data.doubleValue);
@@ -434,7 +425,7 @@ namespace gjTools
         /// </summary>
         /// <param name="c"></param>
         /// <returns></returns>
-        public bool updateCustomBlurb(CustomBlurb c)
+        public static bool updateCustomBlurb(CustomBlurb c)
         {
             string s = string.Format("UPDATE customBlurbs SET blurb = '{0}' WHERE id = '{1}';", c.blurb, c.id);
             int r = executeCommand(s);
@@ -451,7 +442,7 @@ namespace gjTools
         /// </summary>
         /// <param name="c"></param>
         /// <returns></returns>
-        public bool updateJobSlot(JobSlot c)
+        public static bool updateJobSlot(JobSlot c)
         {
             string s = string.Format(
                 "UPDATE jobSlots SET slot = {0}, job = '{1}', due = '{2}', description = '{3}', qty = {4}, material = '{5}' WHERE slot = {0}", 
@@ -472,7 +463,7 @@ namespace gjTools
         /// </summary>
         /// <param name="c"></param>
         /// <returns></returns>
-        public bool updateLocation(Location c)
+        public static bool updateLocation(Location c)
         {
             string s = string.Format("UPDATE locations SET locName = '{0}', path = '{1}, id = '{2}' WHERE id = '{3}';", c.locName, c.path, c.id, c.id);
             int r = executeCommand(s);
@@ -489,7 +480,7 @@ namespace gjTools
         /// </summary>
         /// <param name="c"></param>
         /// <returns></returns>
-        public bool updateOemColor(OEMColor c)
+        public static bool updateOemColor(OEMColor c)
         {
             string s = string.Format("UPDATE oemColors SET colorNum = '{0}', colorName = '{1}', id = '{2}' WHERE id = '{3}'", c.colorNum, c.colorName, c.id, c.id);
             int r = executeCommand(s);
@@ -506,7 +497,7 @@ namespace gjTools
         /// </summary>
         /// <param name="c"></param>
         /// <returns></returns>
-        public bool insertOemColor(OEMColor c)
+        public static bool insertOemColor(OEMColor c)
         {
             string s = string.Format("INSERT INTO oemColors (colorNum, colorName, id) VALUES ('{0}', '{1}', '{2}')", c.colorNum, c.colorName, c.id);
             int r = executeCommand(s);
@@ -517,7 +508,7 @@ namespace gjTools
             return true;
         }
 
-        public bool updateVariableData(VariableData c)
+        public static bool updateVariableData(VariableData c)
         {
             string s = string.Format("UPDATE variableData SET userLastName = '{0}', userFirstName = '{1}', userInitials = '{2}', cutNumber = '{3}';", c.userLastName, c.userFirstName, c.userInitials, c.cutNumber);
             int r = executeCommand(s);
@@ -529,7 +520,7 @@ namespace gjTools
         }
 
 
-        private SQLiteDataReader executeQuery(string command)
+        public static SQLiteDataReader executeQuery(string command)
         {
             SQLiteCommand cmd = new SQLiteCommand(command, con);
             SQLiteDataReader r = cmd.ExecuteReader();
@@ -541,7 +532,7 @@ namespace gjTools
         /// Executes a non-query command on the database.
         /// </summary>
         /// <param name="command"></param>
-        public int executeCommand(string command)
+        public static int executeCommand(string command)
         {
             var cmd = new SQLiteCommand(con);
             cmd.CommandText = command;
