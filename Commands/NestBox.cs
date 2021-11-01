@@ -271,7 +271,16 @@ namespace gjTools.Commands
             NestGeom.TxtEnt = txtList;
             NestGeom.NestBox = new Rectangle3d(boxPlane, Width, Height);
             NestGeom.LabelBox = new Rectangle3d(boxPlane, Width, -(tmpBB.GetEdges()[1].Length + (inset * 2)));
-            
+
+            // Resize the path if too big
+            var pBB = txtList[1].GetBoundingBox(true);
+            if (pBB.GetEdges()[0].Length > NestGeom.LabelBox.Width + (inset * 2))
+            {
+                double scal = (NestGeom.LabelBox.Width - (inset * 2)) / pBB.GetEdges()[0].Length;
+                var xForm = Transform.Scale(pBB.Corner(true, true, true), scal);
+                txtList[1].Transform(xForm, DimStyle);
+            }
+
             var LabelCenter = NestGeom.LabelBox.Center;
             NestGeom.DividerLine = new Line(
                 LabelCenter + new Point3d(-(Width / 2) + (inset * 2), 0, 0), 
