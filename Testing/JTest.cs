@@ -23,6 +23,7 @@ namespace gjTools.Commands
         }
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
+            MDBox.deleteBox(doc);
             return Result.Success;
         }
     }

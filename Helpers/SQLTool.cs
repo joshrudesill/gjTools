@@ -2,14 +2,14 @@
 using System.Data.SQLite;
 using Rhino;
 
-namespace gjTools
+namespace SQL
 {
     
 
     // Custom structs for return types from database
-    public struct CustomBlurb2
+    public struct CustomBlurb
     {
-        public CustomBlurb2(int ids, string blurbs)
+        public CustomBlurb(int ids, string blurbs)
         {
             id = ids;
             blurb = blurbs;
@@ -17,9 +17,9 @@ namespace gjTools
         public int id;
         public string blurb;
     }
-    public struct OEMColor2
+    public struct OEMColor
     {
-        public OEMColor2(string colorNum, string colorName, int id)
+        public OEMColor(string colorNum, string colorName, int id)
         {
             _colorNum = colorNum;
             _colorName = colorName;
@@ -51,9 +51,9 @@ namespace gjTools
             }
         }
     }
-    public struct JobSlot2
+    public struct JobSlot
     {
-        public JobSlot2(int slot, string job, string due, string description, int quantity, string material)
+        public JobSlot(int slot, string job, string due, string description, int quantity, string material)
         {
             _slot = slot;
             _job = job;
@@ -113,9 +113,9 @@ namespace gjTools
         }
 
     }
-    public struct Location2
+    public struct Location
     {
-        public Location2(string locName, string path, int id)
+        public Location(string locName, string path, int id)
         {
             _locName = locName;
             _path = path;
@@ -147,9 +147,9 @@ namespace gjTools
             }
         }
     }
-    public struct VariableData2
+    public struct VariableData
     {
-        public VariableData2(string userLastName, string userFirstName, string userInitials, int cutNumber)
+        public VariableData(string userLastName, string userFirstName, string userInitials, int cutNumber)
         {
             _userFirstName = userFirstName;
             _userLastName = userLastName;
@@ -209,14 +209,14 @@ namespace gjTools
         }
     }
 
-    public struct DataStore2
+    public struct DataStore
     {
         private int _index;
         public string stringValue;
         public int intValue;
         public double doubleValue;
         public string ProgName;
-        public DataStore2(int i, string sv, int iv, double dv, string owner)
+        public DataStore(int i, string sv, int iv, double dv, string owner)
         {
             _index = i;
             stringValue = sv;
@@ -233,12 +233,12 @@ namespace gjTools
         }
     }
 
-    public static class SQLTools2
+    public static class SQLTool
     {
         static readonly SQLiteConnection con;
         static readonly string connectionString;
         
-        static SQLTools2()
+        static SQLTool()
         {
             connectionString = "Data Source=C:\\Gtools_RhinoENV\\gjToolsDatabase.db";
             con = new SQLiteConnection(connectionString);
