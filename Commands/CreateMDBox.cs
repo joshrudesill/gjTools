@@ -58,11 +58,14 @@ namespace gjTools.Commands
             {
                 scale = bb.GetEdges()[0].Length / 10.85; // if part wider than tall (10.85 is width of box in its original form)
             } 
-            else
+            else if (bb.GetEdges()[0].Length < bb.GetEdges()[1].Length)
             {
                 scale = bb.GetEdges()[1].Length / ((8.415-.75) * .95); // part taller than wide 8.415 is how tall the 8.5 x 11 is if the 11 is scaled down to 10.85 then you take off .75 because thats how tall the inof box is
             }                                                              // then you take off 5% to not have the part or dims touch info box.
-
+            else
+            {
+                scale = bb.GetEdges()[1].Length / ((8.415 - .75) * .95);
+            }
             var dtm = ((8.415 * scale) - (bb.GetEdges()[1].Length)) / 2; // dtm or distance to move is for moving the box down to have the part centered vertically based on the outside bounding box.
             Plane pl = new Plane(bb.GetCorners()[0], Vector3d.ZAxis); //starting plane for object placement
             pl.OriginY -= dtm + ((scale * .75) / 2); // moving origin down the dtm plus an extra half the height of the info box once it is scaled. (remember the dtm is calculated based on the entire boudning box)
