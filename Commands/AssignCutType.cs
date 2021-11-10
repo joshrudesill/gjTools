@@ -70,7 +70,9 @@ namespace gjTools.Commands
                     objLayer = doc.Layers.FindId(objLayer.ParentLayerId);
 
                 Layer cutLayer = lt.CreateLayer("C_" + cutType, objLayer.Name, cutColor[cutName.IndexOf(cutType)]);
-                
+
+                subObj.Attributes.ColorSource = ObjectColorSource.ColorFromLayer;
+                subObj.Attributes.PlotColorSource = ObjectPlotColorSource.PlotColorFromLayer;
                 subObj.Attributes.LayerIndex = cutLayer.Index;
                 subObj.CommitChanges();
             }
