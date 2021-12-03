@@ -56,15 +56,18 @@ namespace gjTools.Commands
             var scale = 0.0; //getting scale
             if (bb.GetEdges()[0].Length > bb.GetEdges()[1].Length)
             {
-                scale = bb.GetEdges()[0].Length / 10.85; // if part wider than tall (10.85 is width of box in its original form)
+                scale = bb.GetEdges()[0].Length / 10.85 * 1.1;
+                RhinoApp.WriteLine("asdfasdf1");// if part wider than tall (10.85 is width of box in its original form)
             } 
             else if (bb.GetEdges()[0].Length < bb.GetEdges()[1].Length)
             {
-                scale = bb.GetEdges()[1].Length / ((8.415-.75) * .95); // part taller than wide 8.415 is how tall the 8.5 x 11 is if the 11 is scaled down to 10.85 then you take off .75 because thats how tall the inof box is
+                scale = bb.GetEdges()[1].Length / ((8.415-.75) * .95);
+                RhinoApp.WriteLine("asdfasdf2");// part taller than wide 8.415 is how tall the 8.5 x 11 is if the 11 is scaled down to 10.85 then you take off .75 because thats how tall the inof box is
             }                                                              // then you take off 5% to not have the part or dims touch info box.
-            else
+            else if (bb.GetEdges()[0].Length == bb.GetEdges()[1].Length)
             {
                 scale = bb.GetEdges()[1].Length / ((8.415 - .75) * .95);
+                RhinoApp.WriteLine("asdfasdf3");
             }
             var dtm = ((8.415 * scale) - (bb.GetEdges()[1].Length)) / 2; // dtm or distance to move is for moving the box down to have the part centered vertically based on the outside bounding box.
             Plane pl = new Plane(bb.GetCorners()[0], Vector3d.ZAxis); //starting plane for object placement

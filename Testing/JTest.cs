@@ -17,13 +17,14 @@ namespace gjTools.Commands
 
         public static JTest Instance { get; private set; }
         public override string EnglishName => "asdf";
-        enum testenum
-        {
-            t1 , t2,t3,t4
-        }
+        
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            MDBox.deleteBox(doc);
+            var layern = "";
+            var res = RhinoGet.GetString("PN:", false, ref layern);
+            LayerTools lt = new LayerTools(doc);
+            lt.CreateLayer(layern + "-FLOOD-48IN");
+            lt.CreateLayer(layern + "-FLOOD-54IN");
             return Result.Success;
         }
     }
