@@ -59,7 +59,7 @@ namespace gjTools.Commands
 
             double scale;
 
-            if (bb.GetEdges()[0].Length > bb.GetEdges()[1].Length && (1.43 < (bb.GetEdges()[0].Length / bb.GetEdges()[1].Length) || 1.29 > (bb.GetEdges()[0].Length / bb.GetEdges()[1].Length)))
+            if (bb.GetEdges()[0].Length > bb.GetEdges()[1].Length && 1.43 <= (bb.GetEdges()[0].Length / bb.GetEdges()[1].Length))
             {
                 scale = bb.GetEdges()[0].Length / 10.89; 
                 RhinoApp.WriteLine("wider");
