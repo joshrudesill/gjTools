@@ -654,10 +654,9 @@ namespace gjTools.Commands
             var user_ds = protoUserVals.DataStore as List<List<string>>;
             var res_ds = protoResults.DataStore as List<List<string>>;
 
-            var sql = new SQLTools();
-            var color = sql.queryOEMColors(user_ds[4][0]);
+            var color = SQL.SQLTool.queryOEMColors(user_ds[4][0]);
 
-            if (color[0].colorName.Length > 1)
+            if (color.Count > 0)
                 res_ds[4][0] = $"{color[0].colorNum} - {color[0].colorName}";
             else
                 res_ds[4][0] = "";

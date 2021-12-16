@@ -178,8 +178,10 @@ namespace gjTools.Commands
             if (!part.IsValid)
                 return false;
 
+            var LabelTxt = $"{part.drawingNumber} - {part.partName}";
+            
             var gp = new GetPoint();
-                gp.SetCommandPrompt(string.Format("Place label for {0} - {1}", part.drawingNumber, part.partName));
+                gp.SetCommandPrompt($"Place label for {LabelTxt}");
                 gp.Get();
 
             if (gp.CommandResult() != Result.Success)
@@ -226,21 +228,23 @@ namespace gjTools.Commands
 
             // create a group and add stuff to it after added to the doc
             var group = doc.Groups.Add();
+            var attr = new Rhino.DocObjects.ObjectAttributes() { LayerIndex = C_TEXT.Index };
+            attr.AddToGroup(group);
+
             foreach(var crv in docObject)
             {
-                var id = doc.Objects.AddCurve(crv);
-                doc.Groups.AddToGroup(group, id);
-
-                var obj = doc.Objects.FindId(id);
-                obj.Attributes.LayerIndex = C_TEXT.Index;
-                obj.CommitChanges();
+                doc.Objects.AddCurve(crv, attr);
             }
-            var textId = doc.Objects.AddText(partText);
-            doc.Groups.AddToGroup(group, textId);
+            
+            doc.Objects.AddText(partText, attr);
 
-            var tobj = doc.Objects.FindId(textId);
-            tobj.Attributes.LayerIndex = C_TEXT.Index;
-            tobj.CommitChanges();
+            attr.RemoveFromAllGroups();
+            attr.LayerIndex = parentLayer.Index;
+            var OffsetPt = gp.Point();
+            OffsetPt.Y += 1;
+
+            var ReadLabel = dt.AddText(LabelTxt, OffsetPt, ds, 0.75, 0, 1, 3);
+            doc.Objects.AddText(ReadLabel, attr);
 
             doc.Views.Redraw();
             return true;
