@@ -195,48 +195,44 @@ namespace gjTools.Commands
             Layer C_TEXT = lt.CreateLayer("C_TEXT", parentLayer.Name);
 
             // create the doc block
+            var docObject = new List<Curve>();
             TextEntity docNo = dt.AddText( part.DOC, gp.Point(), ds, 0.75, 1, 1, 3 );
             var docCrv = docNo.Explode();
             BoundingBox docbb = docCrv[0].GetBoundingBox(true);
             for (int i = 0;i < docCrv.Length; i++)
             {
                 docCrv[i] = docCrv[i].ToPolyline(0.2, RhinoMath.ToRadians(15), 0, 0);
+                docObject.Add(docCrv[i]);
                 docbb.Union(docCrv[i].GetBoundingBox(true));
             }
             
             // create the rectangle around the docnumber
-            var docRect = new Rectangle3d(Plane.WorldXY, docbb.GetCorners()[0], docbb.GetCorners()[2]).ToNurbsCurve().Offset(
-                Plane.WorldXY, 0.06, doc.ModelAbsoluteTolerance, CurveOffsetCornerStyle.Round);
-
-            // create the hatches
-            var docObject = new List<Curve>(docRect);
-            docObject.AddRange(docCrv);
-            var hatch = Hatch.Create(docObject, doc.HatchPatterns.FindName("Grid60").Index, 0, 0.15, doc.ModelAbsoluteTolerance);
-            foreach (var h in hatch)
-            {
-                var pieces = h.Explode();
-                foreach (var p in pieces)
-                    docObject.Add(p as Curve);
-            }
+            docObject.Add( new Rectangle3d(Plane.WorldXY, docbb.GetCorners()[0], docbb.GetCorners()[2]).ToNurbsCurve().Offset(
+                Plane.WorldXY, 0.06, doc.ModelAbsoluteTolerance, CurveOffsetCornerStyle.Round)[0] );
 
             // make the information text
             var partText = dt.AddText(
-                string.Format("{0} {1}\n{2}\n{3}\n{4}", part.year, part.customer, part.partName, part.drawingNumber, part.partsPerUnit),
+                $"{part.year} {part.customer}\n{part.partName}\n{part.drawingNumber}",
                 new Point3d(docbb.GetCorners()[2].X + 0.131, docbb.GetCorners()[2].Y + 0.06, 0),
                 ds, 0.15, 0, 3, 0
             );
 
+            if (part.partsPerUnit.Contains("Sets"))
+                partText.PlainText += " - RH";
+
             // create a group and add stuff to it after added to the doc
             var group = doc.Groups.Add();
-            var attr = new Rhino.DocObjects.ObjectAttributes() { LayerIndex = C_TEXT.Index };
+            var attr = new ObjectAttributes() { LayerIndex = C_TEXT.Index };
             attr.AddToGroup(group);
 
-            foreach(var crv in docObject)
-            {
-                doc.Objects.AddCurve(crv, attr);
-            }
+            // Collect the Leibinger label GUIDs
+            var LLGuids = new List<Guid>();
+
+            foreach (var crv in docObject)
+                LLGuids.Add( doc.Objects.AddCurve(crv, attr) );
             
-            doc.Objects.AddText(partText, attr);
+            LLGuids.Add( doc.Objects.AddText(partText, attr) );
+            
 
             attr.RemoveFromAllGroups();
             attr.LayerIndex = parentLayer.Index;
