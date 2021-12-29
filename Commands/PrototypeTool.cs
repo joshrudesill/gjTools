@@ -196,7 +196,7 @@ namespace gjTools.Commands
 
             // create the doc block
             var docObject = new List<Curve>();
-            TextEntity docNo = dt.AddText( part.DOC, gp.Point(), ds, 0.75, 1, 1, 3 );
+            TextEntity docNo = dt.AddText( part.DOC, gp.Point(), ds, 0.5, 1, 1, 3 );
             var docCrv = docNo.Explode();
             BoundingBox docbb = docCrv[0].GetBoundingBox(true);
             for (int i = 0;i < docCrv.Length; i++)
@@ -217,8 +217,12 @@ namespace gjTools.Commands
                 ds, 0.15, 0, 3, 0
             );
 
+            bool sets = false;
             if (part.partsPerUnit.Contains("Sets"))
-                partText.PlainText += " - RH";
+            {
+                sets = true;
+                partText.PlainText += " - LH";
+            }
 
             // create a group and add stuff to it after added to the doc
             var group = doc.Groups.Add();
@@ -232,7 +236,31 @@ namespace gjTools.Commands
                 LLGuids.Add( doc.Objects.AddCurve(crv, attr) );
             
             LLGuids.Add( doc.Objects.AddText(partText, attr) );
-            
+
+            // Copy and change to LH
+            if (sets)
+            {
+                // Move the previous down 1"
+                foreach( var gui in LLGuids)
+                {
+                    var obj = doc.Objects.FindId(gui);
+                    obj.Geometry.Translate(0, -1.125, 0);
+                    obj.CommitChanges();
+                }
+
+                // create new group
+                group = doc.Groups.Add();
+                attr.RemoveFromAllGroups();
+                attr.AddToGroup(group);
+
+                // change the text
+                partText.PlainText = $"{part.year} {part.customer}\n{part.partName}\n{part.drawingNumber} - RH";
+
+                // add them to the doc
+                foreach (var crv in docObject)
+                    doc.Objects.AddCurve(crv, attr);
+                doc.Objects.AddText(partText, attr);
+            }
 
             attr.RemoveFromAllGroups();
             attr.LayerIndex = parentLayer.Index;
