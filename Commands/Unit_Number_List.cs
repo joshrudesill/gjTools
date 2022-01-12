@@ -21,6 +21,12 @@ namespace gjTools.Commands
 
         public override string EnglishName => "UnitNumberList";
 
+        public struct TxtEnt
+        {
+            public List<Curve> Crvs;
+            public BoundingBox BB;
+        }
+
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             // Get the sized unit number
@@ -38,41 +44,58 @@ namespace gjTools.Commands
             if (!Dialogs.ShowEditBox("List Import", "Paste Here", "Each Line will be a new part...", true, out string rawInput))
                 return Result.Cancel;
 
+            // Parse the unit numbers
             var unitNumbers = new List<string> (rawInput.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries));
 
-            double height = 0.0;
-            double width = 0.0;
+            // List of New entities
+            var txtEntList = new List<TxtEnt>();
+            double width = 0;
+            double height = 0;
+
+            // Gather Unit number info
             foreach (var u in unitNumbers)
             {
-                txt.PlainText = u;
+                var te = TextEntity.CreateWithRichText(
+                    txt.RichText.Replace($" {txt.PlainText}", $" {u}"), 
+                    Plane.WorldXY, txt.DimensionStyle, false, txt.FormatWidth, 0
+                );
+                te.Justification = TextJustification.Center;
+                te.TextHorizontalAlignment = TextHorizontalAlignment.Center;
+                te.TextVerticalAlignment = TextVerticalAlignment.Middle;
+                te.TextHeight = txt.TextHeight;
 
-                // explode for better size results
-                var explTxt = txt.Explode();
-                var crvBB = BoundingBox.Empty;
-                foreach(var c in explTxt)
-                    crvBB.Union(c.GetBoundingBox(true));
+                var crv = new List<Curve>(te.Explode());
+                var BB = BoundingBox.Empty;
+                foreach (var c in crv)
+                    BB.Union(c.GetBoundingBox(true));
 
-                // Test Dims
-                var edges = crvBB.GetEdges();
-                if (edges[0].Length > width)
-                    width = edges[0].Length;
-                if (edges[1].Length > height)
-                    height = edges[1].Length;
+                // Make new entry
+                txtEntList.Add( new TxtEnt { Crvs = crv, BB = BB } );
+
+                // update the width
+                width = (BB.GetEdges()[0].Length > width) ? BB.GetEdges()[0].Length : width;
+                height = (BB.GetEdges()[1].Length > height) ? BB.GetEdges()[1].Length : height;
             }
 
-            var box = new Rectangle3d(Plane.WorldXY, width + 0.5, height + 0.5);
-            var pt = txt.GetBoundingBox(true).GetCorners()[0];
-            txt.Transform(Transform.Translation(0.25 - pt.X, 0.25 - pt.Y, 0));
-
-            var moveTxt = Transform.Translation(0, box.Height, 0);
-            // create the text and boxes
-            foreach (var u in unitNumbers)
+            // Resize, stack and add to the document
+            var attr = example.Object().Attributes;
+            var plane = Plane.WorldXY;
+            for (int i = 0; i < txtEntList.Count; i++)
             {
-                txt.PlainText = u;
-                txt.Transform(moveTxt);
-                box.Transform(moveTxt);
-                doc.Objects.AddText(txt);
-                doc.Objects.AddRectangle(box);
+                var te = txtEntList[i];
+                var Rec = new Rectangle3d(plane, width + 0.5, height + 0.5);
+
+                var crvs = te.Crvs;
+                for (int c = 0; c < crvs.Count; c++)
+                {
+                    var crv = crvs[c];
+                    crv.Translate(Rec.Center - te.BB.Center);
+                    doc.Objects.AddCurve(crv, attr);
+                }
+
+                doc.Objects.AddRectangle(Rec, attr);
+
+                plane.OriginY += height + 0.5;
             }
 
             doc.Views.Redraw();
