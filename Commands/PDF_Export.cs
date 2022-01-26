@@ -288,7 +288,7 @@ namespace PDF
 
             PDFItems = new GridView
             {
-                Size = new Size(250, -1),
+                Size = new Size(250, 300),
                 ShowHeader = true,
                 Border = BorderType.Line,
                 GridLines = GridLines.None,
@@ -701,6 +701,48 @@ namespace PDF
             };
 
             BB.Inflate(BB.GetEdges()[0].Length * 0.03);
+            capture.SetWindowRect(BB.Corner(true, true, true), BB.Corner(false, false, true));
+            page.AddPage(capture);
+            page.Write($"{Path}{FileName}.pdf");
+
+            capture.Dispose();
+        }
+
+        /// <summary>
+        /// Sends out a Single Page PDF from Layer Selection
+        /// </summary>
+        /// <param name="pdfData"></param>
+        public void MakeSinglePagePDF(string Path, string FileName, List<RhinoObject> RObj)
+        {
+            // Make sure the PDF will have a place to write
+            ClearPath(Path, FileName);
+
+            // Get Bounds of the objects on the layer
+            RhinoObject.GetTightBoundingBox(RObj, out BoundingBox BB);
+            double Width = BB.GetEdges()[0].Length;
+            double Height = BB.GetEdges()[1].Length;
+
+            // Select the objects on the layer
+            doc.Objects.UnselectAll();
+            var obj = new List<Guid>(RObj.Count);
+            for (int i = 0; i < RObj.Count; i++)
+                obj.Add(RObj[i].Id);
+            doc.Objects.Select(obj, true);
+
+            // do the proper zooming
+            var view = doc.Views.Find("Top", true);
+            //view.MainViewport.ZoomBoundingBox(BB);
+
+            // Construct the PDF page
+            var page = Rhino.FileIO.FilePdf.Create();
+
+            var capture = new ViewCaptureSettings(view, new System.Drawing.Size((int)(Width * dpi), (int)(Height * dpi)), dpi)
+            {
+                OutputColor = ColorMode,
+                DrawSelectedObjectsOnly = true,
+                ViewArea = ViewCaptureSettings.ViewAreaMapping.Window
+            };
+            
             capture.SetWindowRect(BB.Corner(true, true, true), BB.Corner(false, false, true));
             page.AddPage(capture);
             page.Write($"{Path}{FileName}.pdf");

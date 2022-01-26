@@ -77,6 +77,7 @@ namespace gjTools.Commands
                     doc.Views.Redraw();
 
                     // We are here so the part is good
+                    //ct.WritePDF_CutFile(RObj, cg.GetCutName[cg.GetLayers.IndexOf(i)]);
                     ct.WriteDXF(RObj, cg.GetCutName[cg.GetLayers.IndexOf(i)]);
                     cg.IncrementTempCut();
                     ct.CreateCutText(SelectedBox.Object(), i, cg.GetCutName[cg.GetLayers.IndexOf(i)]);
@@ -628,7 +629,7 @@ namespace CutFile
         }
 
         /// <summary>
-        /// Highlight Bad Lines (if any)
+        /// Highlight Bad Lines (if any) (All inputs are Assumed Curves or text)
         /// </summary>
         /// <param name="RObj"></param>
         /// <returns></returns>
@@ -668,6 +669,12 @@ namespace CutFile
                             BadPart = true;
                         }
                     }
+
+                    // Testing to see if the Curve is planar
+                    if (!crv.IsPlanar(0.001))
+                    {
+                        RhinoApp.WriteLine("Curve is not Planar, and that's real bad cowboy...");
+                    }
                 }
                 else if (typ == ObjectType.Annotation)
                 {
@@ -695,6 +702,24 @@ namespace CutFile
                 doc.Objects.Select(RObj[i].Id, true);
 
             return RhinoApp.RunScript($"_-Export \"{FullPath}.dxf\" Scheme \"Vomela\" _Enter", false);
+        }
+
+        /// <summary>
+        /// Testing writeing a PDF CutFile
+        /// </summary>
+        /// <param name="RObl"></param>
+        /// <param name="FileName"></param>
+        /// <returns></returns>
+        public bool WritePDF_CutFile(List<RhinoObject> RObj, string FileName)
+        {
+            if (RObj.Count == 0)
+                return false;
+
+            // Get the pdf Class
+            var pdf = new PDF.PDFJob(doc, Rhino.Display.ViewCaptureSettings.ColorMode.DisplayColor, 72);
+            pdf.MakeSinglePagePDF(Path, FileName, RObj);
+
+            return true;
         }
 
         /// <summary>

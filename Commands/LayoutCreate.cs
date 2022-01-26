@@ -56,15 +56,19 @@ namespace gjTools.Commands
             var lay = lt.CreateLayer("Detail", System.Drawing.Color.White);
 
             // objects size
-            BoundingBox bb = oRef[0].Object().Geometry.GetBoundingBox(true);
+            BoundingBox bb = BoundingBox.Empty;
             foreach (var o in oRef)
-                bb.Union(o.Object().Geometry.GetBoundingBox(true));
+                bb.Union(o.Geometry().GetBoundingBox(true));
+
+            // Size of the objects
+            double s_Width = bb.GetEdges()[0].Length * scale;
+            double s_Height = bb.GetEdges()[1].Length * scale;
 
             // make page
-            var layout = doc.Views.AddPageView(layoutName, bb.GetEdges()[0].Length * scale, bb.GetEdges()[1].Length * scale);
+            var layout = doc.Views.AddPageView(layoutName, s_Width, s_Height);
             var detail = layout.AddDetailView(layoutName, 
                 new Point2d(0,0), 
-                new Point2d(bb.GetEdges()[0].Length * scale, bb.GetEdges()[1].Length * scale), 
+                new Point2d(s_Width, s_Height), 
                 Rhino.Display.DefinedViewportProjection.Top);
 
             layout.SetPageAsActive();               //activate the page
