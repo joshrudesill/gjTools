@@ -640,7 +640,8 @@ namespace PDF
         private ViewCaptureSettings.ColorMode ColorMode = ViewCaptureSettings.ColorMode.DisplayColor;
         private RhinoDoc doc;
 
-
+        // Add text to the pages
+        public bool AddInfo = false;
 
 
         //  --------------------------------------------------------------------------------------------------------  PDF Construct
@@ -703,9 +704,22 @@ namespace PDF
             BB.Inflate(BB.GetEdges()[0].Length * 0.03);
             capture.SetWindowRect(BB.Corner(true, true, true), BB.Corner(false, false, true));
             page.AddPage(capture);
+
+            // testing the write of info to the footer
+            if (AddInfo)
+                AddInfoFooter(page);
+
             page.Write($"{Path}{FileName}.pdf");
 
             capture.Dispose();
+        }
+
+        private void AddInfoFooter(Rhino.FileIO.FilePdf Page)
+        {
+            Page.DrawText(
+                1, "I have written Text to this PDF", 0.25, 0.25, 14, Rhino.DocObjects.Font.FromQuartetProperties("Consolas", false, false),
+                System.Drawing.Color.Black, System.Drawing.Color.White, 0.01f, 0, TextHorizontalAlignment.Left, TextVerticalAlignment.Top
+            );
         }
 
         /// <summary>
