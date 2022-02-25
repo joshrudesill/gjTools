@@ -331,7 +331,7 @@ namespace gjTools
             SQLiteDataReader r = executeQuery(stm);
             while (r.Read())
             {
-                var oemColor = new OEMColor(r.GetString(0), r.GetString(1), r.GetInt32(2));
+                var oemColor = new OEMColor((string)r.GetValue(0), (string)r.GetValue(1), r.GetInt32(2));
                 rList.Add(oemColor);
             }
             return rList;

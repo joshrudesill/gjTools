@@ -30,27 +30,23 @@ namespace gjTools.Commands
             if (RhinoGet.GetPoint("Start Point", false, out Point3d start) != Result.Success)
                 return Result.Cancel;
 
-            var qtyOpt = new OptionInteger(CF_qty, true, 2);
-            var cf = new CopyFit();
-                cf.SetCommandPrompt("Select Start Point");
-                cf.AddOptionInteger("QTY", ref qtyOpt);
-                cf.SetBasePoint(start, true);
-                cf.CopyQty = CF_qty;
-                cf.obj = new List<ObjRef>(obj);
-                cf.start = start;
+            // Custom GetPoint
+            var cf = new CopyFit(CF_qty, start, obj);
             var res = cf.Get();
 
             while (true)
             {
-                if (res == GetResult.Cancel || res == GetResult.Point)
+                if (res == GetResult.Cancel)
+                    return Result.Cancel;
+                else if (res == GetResult.Point)
                     break;
-                cf.CopyQty = CF_qty = qtyOpt.CurrentValue;
+                else if (res == GetResult.Option)
+                    CF_qty = cf.OptionChosen();
+
                 res = cf.Get();
             }
 
-            if (res == GetResult.Cancel)
-                return Result.Cancel;
-
+            // Create the objects
             DupeObjects(cf);
 
             doc.Views.Redraw();
@@ -59,22 +55,20 @@ namespace gjTools.Commands
 
 
 
-        public void DupeObjects(CopyFit CFit)
+        private void DupeObjects(CopyFit CFit)
         {
+            // Get the document
             var doc = CFit.obj[0].Object().Document;
-            var oID = new List<Guid>();
+            var lastItem = new List<Guid>(CFit.obj.Count);
 
-            foreach (var o in CFit.obj)
-                oID.Add(o.ObjectId);
+            // populate the guid list
+            foreach (var item in CFit.obj)
+                lastItem.Add(item.ObjectId);
 
+            // loop through the items and transform duplicate them
             for (var i = 1; i < CFit.CopyQty; i++)
-            {
-                var tmp = new List<Guid>();
-                foreach(var o in oID)
-                    tmp.Add(doc.Objects.Transform(o, CFit.xform, false));
-
-                oID = tmp;
-            }
+                for (int ii = 0; ii < CFit.obj.Count; ii++)
+                    lastItem[ii] = doc.Objects.Transform(lastItem[ii], CFit.xform, false);
         }
     }
 
@@ -84,6 +78,39 @@ namespace gjTools.Commands
         public int CopyQty { get; set; }
         public Point3d start { get; set; }
         public Transform xform { get; private set; }
+
+        private OptionInteger q_Option;
+
+        /// <summary>
+        /// Construct the object and setup the Get parameters
+        /// </summary>
+        /// <param name="initialQty"></param>
+        /// <param name="intialPoint"></param>
+        public CopyFit(int i_Qty, Point3d i_Point, ObjRef[] i_Objects)
+        {
+            SetCommandPrompt("End Point");
+
+            // Create the option to change QTY
+            CopyQty = i_Qty;
+            q_Option = new OptionInteger(CopyQty, true, 2);
+            AddOptionInteger("Qty", ref q_Option);
+
+            // Setup the geometry
+            start = i_Point;
+            SetBasePoint(start, true);
+            obj = new List<ObjRef>(i_Objects);
+        }
+
+        /// <summary>
+        /// Simply updates the qty and returns it
+        /// </summary>
+        /// <returns></returns>
+        public int OptionChosen()
+        {
+            CopyQty = q_Option.CurrentValue;
+            return CopyQty;
+        }
+
         protected override void OnDynamicDraw(GetPointDrawEventArgs e)
         {
             base.OnDynamicDraw(e);

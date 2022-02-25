@@ -262,7 +262,7 @@ namespace Nest_Interact.Prog_Classes
             // Transforms
             var xformUp = new Vector3d(SData.BasePts.Up - SData.BasePts.Base);
             var xformRight = new Vector3d(SData.BasePts.Right - SData.BasePts.Base);
-
+            
             // Draw the objects
             for (int i = 0; i < SData.Crv.Count; i++)
             {

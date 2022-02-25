@@ -128,7 +128,7 @@ namespace Nest_Interact.Commands
                     var ContPoint = Draw.Number();
                     if (ContPoint == 1 || ContPoint == 2)
                         Draw.PointSelect = (int)ContPoint;
-                    
+
                     continue;
                 }
 

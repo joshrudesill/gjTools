@@ -63,11 +63,10 @@ namespace gjTools.Commands
                 return Result.Failure;
             }
 
-            var offsetCurve = weedBoxRegions[0].Offset(Plane.WorldXY, 0.1, 0.001, CurveOffsetCornerStyle.Smooth)[0];
+            var offsetCurve = weedBoxRegions[0].Offset(Plane.WorldXY, 0.1, 0.001, CurveOffsetCornerStyle.Sharp)[0];
 
             // find the layer that the object is on
-            int layInd = objRefs[0].Object().Attributes.LayerIndex;
-            Layer lay = doc.Layers[layInd];
+            Layer lay = doc.Layers[objRefs[0].Object().Attributes.LayerIndex];
             if (lay.ParentLayerId != Guid.Empty)
                 lay = doc.Layers.FindId(lay.ParentLayerId);
 
