@@ -126,7 +126,7 @@ namespace gjTools.Testing
             }
 
             // Move the original to the top center
-            doc.Objects.Transform(NData.oRef, Transform.Translation(bb.GetEdges()[0].Length / 2, 65, 0), true);
+            doc.Objects.Transform(NData.oRef, Transform.Translation(bb.GetEdges()[0].Length / 2, 75, 0), true);
         }
 
 
