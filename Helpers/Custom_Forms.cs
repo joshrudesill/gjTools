@@ -952,7 +952,7 @@ namespace gjTools.Commands
         public TextBox Code = new TextBox();
 
         // buttons
-        private Button UnlockButt = new Button { Text = "Change Defualts" };
+        private Button UnlockButt = new Button { Text = "Change Defaults" };
         private Button OkButt = new Button { Text = "Ok", Enabled = false };
         private Button CancelButt = new Button { Text = "Cancel" };
 
