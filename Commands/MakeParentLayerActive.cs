@@ -18,23 +18,18 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            var lt = new LayerTools(doc);
             if (RhinoGet.GetMultipleObjects("Select Object(s) to change parent layer", false, ObjectType.Curve | ObjectType.Annotation, out ObjRef[] obj) != Result.Success)
                 return Result.Cancel;
 
-            var li = lt.ObjLayer(obj[0].Object());
+            // get the layer
+            Layer lay = doc.Layers[obj[0].Object().Attributes.LayerIndex];
+            lay = (lay.ParentLayerId == Guid.Empty) ? lay : doc.Layers.FindId(lay.ParentLayerId);
             
-            if(li.ParentLayerId == Guid.Empty)
-            {
-                RhinoApp.WriteLine(li.Name.ToString());
-                doc.Layers.SetCurrentLayerIndex(li.Index, true);
-            } 
-            else
-            {
-                RhinoApp.WriteLine(Layer.GetParentName(li.FullPath).ToString());
-                var name = Layer.GetParentName(li.FullPath);
-                doc.Layers.SetCurrentLayerIndex(doc.Layers.FindName(name).Index, true);
-            }
+            // set the layer
+            doc.Layers.SetCurrentLayerIndex(lay.Index, true);
+
+            // print the layer
+            RhinoApp.Write($"Current Layer: {lay.Name}");
             
             return Result.Success;
         }

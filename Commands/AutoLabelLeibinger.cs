@@ -29,6 +29,10 @@ namespace gjTools.Commands
         public int layerIndex;
         public string labelLayer;
 
+        // custom text
+        public string textLine1;
+        public string textLine2;
+
         public List<string> parentLayerNames()
         {
             var lnames = new List<string>(pLays.Count);
@@ -101,8 +105,9 @@ namespace gjTools.Commands
             var lTool = new LayerTools(doc);
             var lay = lTool.CreateLayer(UData.labelLayer, pLays[UData.layerIndex].Name );
             foreach(var d in DData.AllDots)
-                if (d.Text == DData.AllDots[UData.dotIndex].Text)
-                    pTool.PlaceProductionLabel(doc, UData.label, lay, d.Point);
+                if (d.Text == DData.UniqueDotNames[UData.dotIndex])
+                    if (!pTool.PlaceProductionLabel(doc, UData.label, lay, d.Point))
+                        AddCustomText(UData, doc, d.Point, lay);
 
             // set the part name to the updated name
             m_PartName = UData.PartName;
@@ -113,6 +118,36 @@ namespace gjTools.Commands
         }
 
 
+        /// <summary>
+        /// use this for when the oem label is not found
+        /// </summary>
+        /// <param name="UData"></param>
+        /// <param name="doc"></param>
+        /// <param name="pt"></param>
+        /// <param name="lay"></param>
+        private void AddCustomText(UserStrings UData, RhinoDoc doc, Point3d pt, Layer lay)
+        {
+            var attr = new ObjectAttributes { LayerIndex = lay.Index };
+            var dt = new DrawTools(doc);
+            var ds = dt.StandardDimstyle();
+
+            if (UData.textLine1.Length > 0)
+            {
+                var tEntity = dt.AddText(UData.textLine1, pt, ds, 0.16, 0, 3, 6);
+                doc.Objects.Add(tEntity, attr);
+            }
+            if (UData.textLine2.Length > 0)
+            {
+                var tEntity = dt.AddText(UData.textLine1, new Point3d(pt.X, pt.Y - 0.25, 0), ds, 0.14, 0, 3, 0);
+                doc.Objects.Add(tEntity, attr);
+            }
+        }
+
+        /// <summary>
+        /// returns a list of custom dot object structs
+        /// </summary>
+        /// <param name="rObj"></param>
+        /// <returns></returns>
         private DotData GetDotList(List<RhinoObject> rObj)
         {
             var DData = new DotData();
@@ -158,9 +193,15 @@ namespace GUI
         private TextBox m_tbox_partNumber = new TextBox { ID = "PN", Width = 250 };
         private TextBox m_tbox_layerName = new TextBox { ID = "LAYNAME" };
 
-        private Label m_label_partResult1 = new Label { Text = "" };
-        private Label m_label_partResult2 = new Label { Text = "" };
+        private TextBox m_tbox_partResult1 = new TextBox { Text = "" };
+        private TextBox m_tbox_partResult2 = new TextBox { Text = "" };
 
+
+        /// <summary>
+        /// construct the dialog and display it
+        /// </summary>
+        /// <param name="UData"></param>
+        /// <param name="DData"></param>
         public AutoLabelLeibingerGUI(gjTools.Commands.UserStrings UData, gjTools.Commands.DotData DData)
         {
             windowPosition = UData.windowPosition;
@@ -174,7 +215,7 @@ namespace GUI
             m_Dialog = new Dialog<DialogResult>
             {
                 Padding = 10,
-                Title = "Liebinger Label",
+                Title = "Text Label Maker",
                 AutoSize = true,
                 Topmost = true,
                 Result = DialogResult.Cancel,
@@ -210,8 +251,12 @@ namespace GUI
                 Spacing = new Size(5, 5),
                 Rows =
                 {
-                    new TableRow(m_label_partResult1),
-                    new TableRow(m_label_partResult2)
+                    new TableRow(new Label{Text = "Label Line 1:"}),
+                    new TableRow(m_tbox_partResult1),
+                    new TableRow(new Label{Text = "Ex. PART_NUMBER        <datamatrix,PART_NUMBER>", TextColor = Color.FromGrayscale(0.5f)}),
+                    new TableRow(new Label{Text = "Label Line 2:"}),
+                    new TableRow(m_tbox_partResult2),
+                    new TableRow(new Label{Text = "Ex. CUSTOMER_PTNO   PART_DESCRIPTION CUT DATE: <date,MM/dd/yyyy> <orderid>", TextColor = Color.FromGrayscale(0.5f)})
                 }
             };
 
@@ -241,7 +286,8 @@ namespace GUI
             m_button_cancel.Click += (s,e) => m_Dialog.Close(DialogResult.Cancel);
             m_button_search.Click += M_button_search_Click;
             m_tbox_partNumber.KeyDown += M_tbox_partNumber_KeyDown;
-            m_tbox_partNumber.TextChanged += M_tbox_partNumber_TextChanged;
+            m_tbox_partResult1.KeyUp += M_tbox_partResult_KeyUp;
+            m_tbox_partResult2.KeyUp += M_tbox_partResult_KeyUp;
 
             // show the window
             m_Dialog.ShowModal(RhinoEtoApp.MainWindow);
@@ -251,21 +297,24 @@ namespace GUI
             UData.PartName = m_tbox_partNumber.Text;
             UData.windowPosition = windowPosition;
 
+            // ok to write the form values 
             if (m_Dialog.Result == DialogResult.Ok)
             {
                 UData.label = LabelInfo;
                 UData.dotIndex = m_drop_dots.SelectedIndex;
                 UData.layerIndex = m_drop_layers.SelectedIndex;
                 UData.labelLayer = m_tbox_layerName.Text;
+                UData.textLine1 = m_tbox_partResult1.Text;
+                UData.textLine2 = m_tbox_partResult2.Text;
             }
         }
 
-        private void M_tbox_partNumber_TextChanged(object sender, EventArgs e)
+        private void M_tbox_partResult_KeyUp(object sender, KeyEventArgs e)
         {
-            m_button_search.Enabled = true;
-            m_label_partResult1.Text = "";
-            m_label_partResult2.Text = "";
-            m_button_ok.Enabled = false;
+            if (m_tbox_partResult1.Text.Length > 0 || m_tbox_partResult2.Text.Length > 0)
+                m_button_ok.Enabled = true;
+            else
+                m_button_ok.Enabled = false;
         }
 
         private void M_tbox_partNumber_KeyDown(object sender, KeyEventArgs e)
@@ -288,20 +337,16 @@ namespace GUI
             LabelInfo = new gjTools.Commands.OEM_Label(m_tbox_partNumber.Text);
             if (LabelInfo.IsValid)
             {
-                m_label_partResult1.Text = $"{LabelInfo.drawingNumber}        <datamatrix,{LabelInfo.drawingNumber}>";
-                m_label_partResult2.Text = $"{LabelInfo.customerPartNumber}   {LabelInfo.partName} CUT DATE: <date,MM/dd/yyyy> <orderid>";
+                m_tbox_partResult1.Text = $"{LabelInfo.drawingNumber}        <datamatrix,{LabelInfo.drawingNumber}>";
+                m_tbox_partResult2.Text = $"{LabelInfo.customerPartNumber}   {LabelInfo.partName} CUT DATE: <date,MM/dd/yyyy> <orderid>";
                 m_button_search.Enabled = false;
                 m_button_ok.Enabled = true;
             }
-            else
-            {
-                m_label_partResult1.Text = "";
-                m_label_partResult2.Text = "";
-            }
         }
 
-
-
+        /// <summary>
+        /// command result getter
+        /// </summary>
         public DialogResult CommandResult { get { return m_Dialog.Result; } }
     }
 }
