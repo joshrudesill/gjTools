@@ -56,6 +56,9 @@ namespace gjTools.Commands
 
         public override string EnglishName => "AutoLabelLeibinger";
         private string m_PartName = "DUT-21-78365A";
+        private string m_LayerName = "C_TEXT";
+        private string m_TextBox1 = "";
+        private string m_TextBox2 = "";
         private Eto.Drawing.Point m_windowPosition;
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
@@ -86,19 +89,24 @@ namespace gjTools.Commands
             {
                 PartName = m_PartName,
                 DotName = DData.UniqueDotNames[0],
-                LayerName = "C_TEXT",
+                LayerName = "",
+                labelLayer = m_LayerName,
                 ParentLayer = pLays[0].Name,
                 windowPosition = m_windowPosition,
-                pLays = pLays
+                pLays = pLays,
+                textLine1 = m_TextBox1,
+                textLine2 = m_TextBox2
             };
 
             // create the gui
             var GetInfo = new GUI.AutoLabelLeibingerGUI(UData, DData);
+            m_windowPosition = UData.windowPosition;
+            m_PartName = UData.PartName;
+            m_LayerName = UData.labelLayer;
+            m_TextBox1 = UData.textLine1;
+            m_TextBox2 = UData.textLine2;
             if (GetInfo.CommandResult == Eto.Forms.DialogResult.Cancel)
-            {
-                m_windowPosition = UData.windowPosition;
                 return Result.Cancel;
-            }
 
             // place the labels
             var pTool = new PrototypeTool();
@@ -108,10 +116,6 @@ namespace gjTools.Commands
                 if (d.Text == DData.UniqueDotNames[UData.dotIndex])
                     if (!pTool.PlaceProductionLabel(doc, UData.label, lay, d.Point))
                         AddCustomText(UData, doc, d.Point, lay);
-
-            // set the part name to the updated name
-            m_PartName = UData.PartName;
-            m_windowPosition = GetInfo.windowPosition;
 
             doc.Views.Redraw();
             return Result.Success;
@@ -138,7 +142,7 @@ namespace gjTools.Commands
             }
             if (UData.textLine2.Length > 0)
             {
-                var tEntity = dt.AddText(UData.textLine1, new Point3d(pt.X, pt.Y - 0.25, 0), ds, 0.14, 0, 3, 0);
+                var tEntity = dt.AddText(UData.textLine2, new Point3d(pt.X, pt.Y - 0.25, 0), ds, 0.14, 0, 3, 0);
                 doc.Objects.Add(tEntity, attr);
             }
         }
@@ -184,7 +188,7 @@ namespace GUI
         public gjTools.Commands.OEM_Label LabelInfo;
 
         private Button m_button_search = new Button { Text = "Search", Width = 80 };
-        private Button m_button_ok = new Button { Text = "Ok", Enabled = false };
+        private Button m_button_ok = new Button { Text = "OK" };
         private Button m_button_cancel = new Button { Text = "Cancel" };
 
         private DropDown m_drop_dots = new DropDown { SelectedIndex = 0, Width = 180 };
@@ -211,6 +215,11 @@ namespace GUI
 
             m_drop_dots.DataStore = DData.UniqueDotNames;
             m_drop_layers.DataStore = UData.parentLayerNames();
+
+            m_tbox_partResult1.Text = UData.textLine1;
+            m_tbox_partResult2.Text = UData.textLine2;
+
+            m_tbox_layerName.Text = UData.labelLayer;
 
             m_Dialog = new Dialog<DialogResult>
             {
@@ -286,8 +295,6 @@ namespace GUI
             m_button_cancel.Click += (s,e) => m_Dialog.Close(DialogResult.Cancel);
             m_button_search.Click += M_button_search_Click;
             m_tbox_partNumber.KeyDown += M_tbox_partNumber_KeyDown;
-            m_tbox_partResult1.KeyUp += M_tbox_partResult_KeyUp;
-            m_tbox_partResult2.KeyUp += M_tbox_partResult_KeyUp;
 
             // show the window
             m_Dialog.ShowModal(RhinoEtoApp.MainWindow);
@@ -296,44 +303,26 @@ namespace GUI
             windowPosition = m_Dialog.Location;
             UData.PartName = m_tbox_partNumber.Text;
             UData.windowPosition = windowPosition;
-
-            // ok to write the form values 
-            if (m_Dialog.Result == DialogResult.Ok)
-            {
-                UData.label = LabelInfo;
-                UData.dotIndex = m_drop_dots.SelectedIndex;
-                UData.layerIndex = m_drop_layers.SelectedIndex;
-                UData.labelLayer = m_tbox_layerName.Text;
-                UData.textLine1 = m_tbox_partResult1.Text;
-                UData.textLine2 = m_tbox_partResult2.Text;
-            }
-        }
-
-        private void M_tbox_partResult_KeyUp(object sender, KeyEventArgs e)
-        {
-            if (m_tbox_partResult1.Text.Length > 0 || m_tbox_partResult2.Text.Length > 0)
-                m_button_ok.Enabled = true;
-            else
-                m_button_ok.Enabled = false;
+            UData.textLine1 = m_tbox_partResult1.Text;
+            UData.textLine2 = m_tbox_partResult2.Text;
+            UData.labelLayer = m_tbox_layerName.Text;
+            UData.label = LabelInfo;
+            UData.dotIndex = m_drop_dots.SelectedIndex;
+            UData.layerIndex = m_drop_layers.SelectedIndex;
         }
 
         private void M_tbox_partNumber_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Keys.Enter)
-            {
-                if (m_button_search.Enabled)
-                    M_button_search_Click(sender, e);
-                else
-                    m_Dialog.Close(DialogResult.Ok);
-            }
-            else if (e.Key == Keys.Escape)
-            {
-                m_Dialog.Close(DialogResult.Cancel);
-            }
+                M_button_search_Click(sender, e);
         }
 
         private void M_button_search_Click(object sender, EventArgs e)
         {
+            // clear the text fields no matter what
+            m_tbox_partResult1.Text = "";
+            m_tbox_partResult2.Text = "";
+
             LabelInfo = new gjTools.Commands.OEM_Label(m_tbox_partNumber.Text);
             if (LabelInfo.IsValid)
             {
