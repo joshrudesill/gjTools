@@ -311,8 +311,8 @@ namespace gjTools.Testing
 
                 // testing ball
                 ballUp = new BallVectorWidget(center, new Point3d(center.X, center.Y + 10, 0));
-                ballRh = new BallVectorWidget(center, new Point3d(center.X + edges[0].Length, center.Y, 0));
-                ballStk2 = new BallVectorWidget(center, new Point3d(center.X + (edges[0].Length * 2), center.Y, 0));
+                ballRh = new BallVectorWidget(center, new Point3d(center.X + (edges[0].Length * 0.5), center.Y, 0));
+                ballStk2 = new BallVectorWidget(center, new Point3d(center.X + (edges[0].Length * 1.1), center.Y, 0));
             }
 
             // Colors for the draw objects

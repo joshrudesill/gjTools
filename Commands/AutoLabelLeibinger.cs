@@ -197,8 +197,8 @@ namespace GUI
         private TextBox m_tbox_partNumber = new TextBox { ID = "PN", Width = 250 };
         private TextBox m_tbox_layerName = new TextBox { ID = "LAYNAME" };
 
-        private TextBox m_tbox_partResult1 = new TextBox { Text = "" };
-        private TextBox m_tbox_partResult2 = new TextBox { Text = "" };
+        private TextBox m_tbox_partResult1 = new TextBox { Text = "", ToolTip = "ctrl+P: Add selected text to standard datamatrix" };
+        private TextBox m_tbox_partResult2 = new TextBox { Text = "", ToolTip = "ctrl+D: Add selected text to standard part description" };
 
 
         /// <summary>
@@ -295,6 +295,8 @@ namespace GUI
             m_button_cancel.Click += (s,e) => m_Dialog.Close(DialogResult.Cancel);
             m_button_search.Click += M_button_search_Click;
             m_tbox_partNumber.KeyDown += M_tbox_partNumber_KeyDown;
+            m_tbox_partResult1.KeyUp += M_tbox_partResult_KeyUp;
+            m_tbox_partResult2.KeyUp += M_tbox_partResult_KeyUp;
 
             // show the window
             m_Dialog.ShowModal(RhinoEtoApp.MainWindow);
@@ -309,6 +311,17 @@ namespace GUI
             UData.label = LabelInfo;
             UData.dotIndex = m_drop_dots.SelectedIndex;
             UData.layerIndex = m_drop_layers.SelectedIndex;
+        }
+
+        private void M_tbox_partResult_KeyUp(object sender, KeyEventArgs e)
+        {
+            var tbox = sender as TextBox;
+            var sel = tbox.SelectedText;
+
+            if (e.Key == Keys.P && e.Modifiers == Keys.Control)
+                tbox.Text = $"{sel}        <datamatrix,{sel}>";
+            else if (e.Key == Keys.D && e.Modifiers == Keys.Control)
+                tbox.Text = $"   {sel} CUT DATE: <date,MM/dd/yyyy> <orderid>";
         }
 
         private void M_tbox_partNumber_KeyDown(object sender, KeyEventArgs e)

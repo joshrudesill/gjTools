@@ -67,8 +67,26 @@ namespace gjTools.Commands
 
             // loop through the items and transform duplicate them
             for (var i = 1; i < CFit.CopyQty; i++)
+            {
+                int grp = -1;
+
                 for (int ii = 0; ii < CFit.obj.Count; ii++)
+                {
                     lastItem[ii] = doc.Objects.Transform(lastItem[ii], CFit.xform, false);
+                    var robj = doc.Objects.FindId(lastItem[ii]);
+                    
+                    // gotta respect grouping, only supports single groups
+                    if (robj.Attributes.GroupCount > 0)
+                    {
+                        // create a group if its' unset
+                        grp = (grp == -1) ? doc.Groups.Add() : grp;
+
+                        robj.Attributes.RemoveFromAllGroups();
+                        robj.Attributes.AddToGroup(grp);
+                        robj.CommitChanges();
+                    }
+                }
+            }
         }
     }
 
