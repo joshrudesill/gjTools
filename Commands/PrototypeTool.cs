@@ -9,58 +9,7 @@ using Rhino.UI;
 
 namespace gjTools.Commands
 {
-    public struct OEM_Label
-    {
-        public List<string> rawLines;
-        public string drawingNumber;
-        public bool IsValid;
-        
-        public OEM_Label(string OEMPartNumber)
-        {
-            rawLines = new List<string>();
-            drawingNumber = OEMPartNumber.ToUpper();
-            IsValid = false;
-            IsValid = GetData();
-        }
-
-        private bool GetData()
-        {
-            string folderPath = "\\\\spi\\art\\PROTOTYPE\\AutoCAD_XML\\";
-            if (System.IO.File.Exists(folderPath + drawingNumber + ".xml") && drawingNumber.Length > 4)
-            {
-                var XMLfile = System.IO.File.OpenText(folderPath + drawingNumber + ".xml");
-                while (true)
-                {
-                    string Line = XMLfile.ReadLine();
-                    if (Line == "<AUTOCAD>")
-                        continue;
-                    if (Line == "</AUTOCAD>" || Line == null)
-                        break;
-
-                    rawLines.Add(Line);
-                }
-                return true;
-            }
-            else
-                return false;
-        }
-
-        public string partName { get { return rawLines[1]; } }
-        public string year { get { return rawLines[2]; } }
-        public string customer { get { return rawLines[3]; } }
-        public string process { get { return rawLines[4]; } }
-        public string partsPerUnit { get { return rawLines[5]; } }
-        public string DOC { get { return rawLines[6]; } }
-        public string path { get { return rawLines[7]; } }
-        public string customerPartNumber { 
-            get {
-                if (rawLines.Count > 9)
-                    return rawLines[9];
-                else
-                    return "";
-            } 
-        }
-    }
+    
 
     public class PrototypeTool : Command
     {

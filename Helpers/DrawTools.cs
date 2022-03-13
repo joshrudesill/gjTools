@@ -345,4 +345,20 @@ public class DrawTools : IDrawTools
 
         return txtEntity;
     }
+
+    public TextEntity AddText(string text, Point3d pt, double height = 1, bool bold = false, bool italic = false, TextHorizontalAlignment horiz = TextHorizontalAlignment.Left, TextVerticalAlignment vert = TextVerticalAlignment.Top)
+    {
+        TextEntity txtEnt = new TextEntity
+        {
+            PlainText = text,
+            DimensionStyleId = doc.DimStyles.FindIndex(StandardDimstyle()).Id,
+            TextHorizontalAlignment = horiz,
+            TextVerticalAlignment = vert,
+            Plane = new Plane(pt, Vector3d.ZAxis),
+            TextHeight = height,
+            Font = Font.FromQuartetProperties("Consolas", bold, italic),
+        };
+
+        return txtEnt;
+    }
 }

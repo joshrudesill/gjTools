@@ -4,17 +4,20 @@ using Rhino;
 using Rhino.Commands;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Rhino.Input;
 
 namespace gjTools.Commands
 {
     public class ProtoValues
     {
+        public RhinoDoc document;
+        public Layer parentLayer;
+
         public string Job;
         public DateTime DueDate;
         public string Description;
         public int CutQTY;
         public string Film;
-        public string FilmValue;
 
         public List<string> PartNumbers = new List<string>(10);
         public List<string> PartDescriptions = new List<string>(10);
@@ -34,7 +37,6 @@ namespace gjTools.Commands
             Description = JobInfo.description;
             CutQTY = JobInfo.quantity;
             Film = JobInfo.material;
-            FilmValue = "";
             CreateLabels = true;
 
             for (int i = 0; i < 10; i++)
@@ -45,6 +47,60 @@ namespace gjTools.Commands
         }
     }
 
+    public struct OEM_Label
+    {
+        public List<string> rawLines;
+        public string drawingNumber;
+        public bool IsValid;
+
+        public OEM_Label(string OEMPartNumber)
+        {
+            rawLines = new List<string>();
+            drawingNumber = OEMPartNumber.ToUpper();
+            IsValid = false;
+            IsValid = GetData();
+        }
+
+        private bool GetData()
+        {
+            string folderPath = "\\\\spi\\art\\PROTOTYPE\\AutoCAD_XML\\";
+            if (System.IO.File.Exists(folderPath + drawingNumber + ".xml") && drawingNumber.Length > 4)
+            {
+                var XMLfile = System.IO.File.OpenText(folderPath + drawingNumber + ".xml");
+                while (true)
+                {
+                    string Line = XMLfile.ReadLine();
+                    if (Line == "<AUTOCAD>")
+                        continue;
+                    if (Line == "</AUTOCAD>" || Line == null)
+                        break;
+
+                    rawLines.Add(Line);
+                }
+                return true;
+            }
+            else
+                return false;
+        }
+
+        public string partName { get { return rawLines[1]; } }
+        public string year { get { return rawLines[2]; } }
+        public string customer { get { return rawLines[3]; } }
+        public string process { get { return rawLines[4]; } }
+        public string partsPerUnit { get { return rawLines[5]; } }
+        public string DOC { get { return rawLines[6]; } }
+        public string path { get { return rawLines[7]; } }
+        public string customerPartNumber
+        {
+            get
+            {
+                if (rawLines.Count > 9)
+                    return rawLines[9];
+                else
+                    return "";
+            }
+        }
+    }
 
 
     public class PrototypeTool_V2 : Command
@@ -64,10 +120,134 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            var pGui = new GUI.ProtoGui(PData);
+            // assign the fresh document definition
+            PData.document = doc;
 
+            // show the form and collect the values
+            var pGui = new GUI.ProtoGui(PData);
+            if (pGui.CommandResult != Eto.Forms.DialogResult.Ok)
+                return Result.Cancel;
+
+            // get the nestbox entity to place titleblock
+            if (RhinoGet.GetOneObject("Select NestBox", false, ObjectType.AnyObject, out ObjRef nestBox) != Result.Success)
+                return Result.Cancel;
+
+            // check if the selection is a nestbox
+            if (nestBox.Object().Name != "NestBox")
+            {
+                RhinoApp.WriteLine("Selection Was not a NestBox object, cancelling...");
+                return Result.Cancel;
+            }
+
+            CreateProtoTitleBlock(nestBox);
 
             return Result.Success;
+        }
+
+
+
+        private void CreateProtoTitleBlock(ObjRef nestBox)
+        {
+            var dt = new DrawTools(PData.document);
+            int ds = dt.StandardDimstyle();
+            BoundingBox nestBoxBB = nestBox.Geometry().GetBoundingBox(true);
+            Point3d pt = nestBoxBB.GetCorners()[3];
+                pt.Y += 0.5;
+
+            TextEntity mainblock = dt.AddText(
+                $"Job: {PData.Job}  Due: {PData.DueDate.ToShortDateString()}\n{PData.Description}\n\n",
+                pt, ds, 1, 0, 0, 6);
+
+            // include the parts in the block
+            for (int i = 0; i < PData.PartNumbers.Count; i++)
+            {
+                if (PData.PartNumbers[i].Length > 5)
+                {
+                    mainblock.PlainText += $"\n{PData.PartNumbers[i]} - {PData.PartDescriptions[i]}";
+                }
+            }
+            
+            BoundingBox mainBlockBB = mainblock.GetBoundingBox(true);
+            pt = mainBlockBB.GetCorners()[2];
+            pt.X += 2;
+
+            TextEntity cutBlock = dt.AddText(
+                $"{PData.Film}\nCut: {PData.CutQTY}x",
+                pt, ds);
+
+            mainBlockBB.Union(cutBlock.GetBoundingBox(true));
+
+            // now scale the text to the proper width
+            var xForm = Transform.Scale(mainBlockBB.Corner(true, true, true),
+                (nestBoxBB.GetEdges()[0].Length * 0.7) / mainBlockBB.GetEdges()[0].Length);
+            
+            mainblock.Transform(xForm, PData.document.DimStyles[ds]);
+            cutBlock.Transform(xForm, PData.document.DimStyles[ds]);
+
+            // find the parent layer
+            PData.parentLayer = PData.document.Layers[nestBox.Object().Attributes.LayerIndex];
+            PData.parentLayer = PData.document.Layers.FindId(PData.parentLayer.ParentLayerId);
+
+            // add the items to the document
+            ObjectAttributes attr = new ObjectAttributes { LayerIndex = PData.parentLayer.Index };
+            PData.document.Objects.AddText(mainblock, attr);
+            PData.document.Objects.AddText(cutBlock, attr);
+        }
+
+        public void CreateProtoLabels()
+        {
+            var doc = PData.document;
+            var lt = new LayerTools(doc);
+            var dt = new DrawTools(doc);
+
+            // create the base text entities to reuse as needed
+            TextEntity baseDocText = dt.AddText("", Point3d.Origin, 0.5, bold: true, horiz: TextHorizontalAlignment.Center, vert: TextVerticalAlignment.Middle);
+            TextEntity baseLabelText = dt.AddText("", Point3d.Origin, 0.15);
+            TextEntity baseLGLabelText = dt.AddText("", Point3d.Origin, 0.75, horiz: TextHorizontalAlignment.Center, vert: TextVerticalAlignment.Middle);
+
+            // need the proper layer and base attributes
+            Layer labelLayer = lt.CreateLayer("C_TEXT", PData.parentLayer.Name);
+            ObjectAttributes attrLabel = new ObjectAttributes { LayerIndex = PData.parentLayer.Index };
+            ObjectAttributes attrLGLabel = new ObjectAttributes { LayerIndex = labelLayer.Index };
+
+            // cycle through the parts and place them in the document
+            for (int i = 0; i < PData.PartNumbers.Count; i++)
+            {
+                OEM_Label partInfo = new OEM_Label(PData.PartNumbers[i]);
+
+                if (!partInfo.IsValid)
+                    continue;
+                
+                if (RhinoGet.GetPoint($"Place Label for {partInfo.drawingNumber} - {partInfo.partName}", false, out Point3d pt) != Result.Success)
+                    return;
+                Plane ptPlain = new Plane(pt, Vector3d.ZAxis);
+
+                // replace the text in the base text
+                baseDocText.PlainText = partInfo.DOC;
+                baseLabelText.PlainText = $"{partInfo.year} {partInfo.customer}\n{partInfo.partName}\n{partInfo.drawingNumber}";
+                baseLGLabelText.PlainText = $"{partInfo.drawingNumber} - {partInfo.partName}";
+
+                // Create the doc number as Geometry
+                baseDocText.Plane = ptPlain;
+                var DocCurves = new List<Curve>(baseDocText.Explode());
+
+                // add a round box corner box around the doc number
+                BoundingBox BB = baseDocText.GetBoundingBox(true);
+                            BB.Inflate(0.06);
+                NurbsCurve box = NurbsCurve.Create(true, 1, new List<Point3d>(BB.GetCorners()).GetRange(0, 5));
+                DocCurves.Add(NurbsCurve.CreateFilletCornersCurve(box, 0.06, 0.01, 0.01));
+
+                // Move the part description
+                baseLabelText.Plane = new Plane(BB.Corner(false, false, true), Vector3d.ZAxis);
+                baseLabelText.Translate(0.06, 0, 0);
+
+                // move the label to the point chosen
+                baseLGLabelText.Plane = ptPlain;
+                baseLGLabelText.Translate(0, 1.5, 0);
+
+                // create groups
+
+            }
         }
     }
 }
@@ -119,6 +299,7 @@ namespace GUI
             m_date.Value = PData.DueDate;
             m_tbox_description.Text = PData.Description;
             m_tbox_cutQty.Text = PData.CutQTY.ToString();
+            m_AddLabels.Enabled = PData.CreateLabels;
             m_tbox_Film.Text = PData.Film;
             FindFilm();
 
@@ -128,6 +309,7 @@ namespace GUI
                     ID = i.ToString(), 
                     ShowBorder = false,
                     Width = 120,
+                    AutoSelectMode = AutoSelectMode.Never,
                     ToolTip = "Ctrl+D to Copy the Above Part number" 
                 });
                 m_label_Partlist.Add(new Label {  ID = i.ToString() });
@@ -148,6 +330,7 @@ namespace GUI
             // button events
             m_butt_cancelButt.Click += (s, e) => window.Close(DialogResult.Cancel);
             m_butt_okButt.Click += (s, e) => window.Close(DialogResult.Ok);
+            m_AddLabels.EnabledChanged += (s, e) => PData.CreateLabels = m_AddLabels.Enabled;
 
             // film event
             m_tbox_Film.LostFocus += (s, e) => FindFilm();
@@ -260,16 +443,20 @@ namespace GUI
                 return;
 
             if (e.Key == Keys.D && e.Modifiers == Keys.Control)
+            {
                 p.Text = PData.PartNumbers[indx - 1];
+
+                if (p.Text.Length > 10)
+                    p.Selection = new Range<int>(p.Text.Length - 4, p.Text.Length - 2);
+            }
         }
 
         private void PartFocus(object sender, EventArgs e)
         {
             var p = sender as TextBox;
-            p.Selection = new Range<int>(0);
 
-            if (p.Text.Length > 5)
-                p.CaretIndex = p.Text.Length - 2;
+            if (p.Text.Length > 10)
+                p.Selection = new Range<int>(p.Text.Length - 4, p.Text.Length - 2);
         }
 
         private void PartCheck(object sender, EventArgs e)
@@ -306,7 +493,9 @@ namespace GUI
                 return;
 
             m_tbox_Film.Text = $"{matl[0].colorNum} - {matl[0].colorName}";
-            PData.FilmValue = m_tbox_Film.Text;
+            PData.Film = m_tbox_Film.Text;
         }
+
+        public DialogResult CommandResult { get { return window.Result; } }
     }
 }
