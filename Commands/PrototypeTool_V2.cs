@@ -45,6 +45,18 @@ namespace gjTools.Commands
                 PartDescriptions.Add("");
             }
         }
+
+        public void WriteJobValueToDatabase()
+        {
+            var SQL_Rows = new List<int> { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
+
+            // add the parts to the database
+            for (int i = 0; i < 10; i++)
+                SQL.SQLTool.updateDataStore(new SQL.DataStore(SQL_Rows[i], PartNumbers[i].ToUpper(), 0, 0.0, "PrototypeTool"));
+
+            // update the job slot information
+            SQL.SQLTool.updateJobSlot(new SQL.JobSlot(1, Job, DueDate.ToShortDateString(), Description, CutQTY, Film));
+        }
     }
 
     public struct OEM_Label
@@ -125,6 +137,10 @@ namespace gjTools.Commands
 
             // show the form and collect the values
             var pGui = new GUI.ProtoGui(PData);
+
+            // Update the database values
+            PData.WriteJobValueToDatabase();
+
             if (pGui.CommandResult != Eto.Forms.DialogResult.Ok)
                 return Result.Cancel;
 
@@ -140,6 +156,7 @@ namespace gjTools.Commands
             }
 
             CreateProtoTitleBlock(nestBox);
+            CreateProtoLabels();
 
             return Result.Success;
         }
@@ -207,8 +224,8 @@ namespace gjTools.Commands
 
             // need the proper layer and base attributes
             Layer labelLayer = lt.CreateLayer("C_TEXT", PData.parentLayer.Name);
-            ObjectAttributes attrLabel = new ObjectAttributes { LayerIndex = PData.parentLayer.Index };
-            ObjectAttributes attrLGLabel = new ObjectAttributes { LayerIndex = labelLayer.Index };
+            ObjectAttributes attrLGLabel = new ObjectAttributes { LayerIndex = PData.parentLayer.Index };
+            ObjectAttributes attrLabel = new ObjectAttributes { LayerIndex = labelLayer.Index };
 
             // cycle through the parts and place them in the document
             for (int i = 0; i < PData.PartNumbers.Count; i++)
@@ -220,7 +237,9 @@ namespace gjTools.Commands
                 
                 if (RhinoGet.GetPoint($"Place Label for {partInfo.drawingNumber} - {partInfo.partName}", false, out Point3d pt) != Result.Success)
                     return;
+
                 Plane ptPlain = new Plane(pt, Vector3d.ZAxis);
+                bool sets = partInfo.partsPerUnit.Contains("Sets") || partInfo.partsPerUnit.Contains("Usage");
 
                 // replace the text in the base text
                 baseDocText.PlainText = partInfo.DOC;
@@ -234,7 +253,7 @@ namespace gjTools.Commands
                 // add a round box corner box around the doc number
                 BoundingBox BB = baseDocText.GetBoundingBox(true);
                             BB.Inflate(0.06);
-                NurbsCurve box = NurbsCurve.Create(true, 1, new List<Point3d>(BB.GetCorners()).GetRange(0, 5));
+                NurbsCurve box = NurbsCurve.Create(true, 1, new List<Point3d>(BB.GetCorners()).GetRange(0, 4));
                 DocCurves.Add(NurbsCurve.CreateFilletCornersCurve(box, 0.06, 0.01, 0.01));
 
                 // Move the part description
@@ -246,7 +265,33 @@ namespace gjTools.Commands
                 baseLGLabelText.Translate(0, 1.5, 0);
 
                 // create groups
+                attrLabel.RemoveFromAllGroups();
+                attrLabel.AddToGroup(doc.Groups.Add());
 
+                baseLabelText.PlainText += sets ? " - RH" : "";
+
+                // add the object to the document
+                foreach (var c in DocCurves)
+                    doc.Objects.AddCurve(c, attrLabel);
+                doc.Objects.AddText(baseLabelText, attrLabel);
+                doc.Objects.AddText(baseLGLabelText, attrLGLabel);
+
+                // if the LH side is needed
+                if (!sets)
+                    continue;
+
+                baseLabelText.PlainText = baseLabelText.PlainText.Replace(" - RH", " - LH");
+                baseLabelText.Translate(0, -1, 0);
+                attrLabel.RemoveFromAllGroups();
+                attrLabel.AddToGroup(doc.Groups.Add());
+
+                // add the new label text
+                doc.Objects.AddText(baseLabelText, attrLabel);
+                foreach (var c in DocCurves)
+                {
+                    c.Translate(0, -1, 0);
+                    doc.Objects.AddCurve(c, attrLabel);
+                }
             }
         }
     }
@@ -268,7 +313,8 @@ namespace GUI
         private TextBox m_tbox_jobNumber = new TextBox();
         private DateTimePicker m_date = new DateTimePicker { Value = DateTime.Now, Mode = DateTimePickerMode.Date };
         private TextBox m_tbox_description = new TextBox();
-        private TextBox m_tbox_cutQty = new TextBox();
+        private Label m_label_cutQty = new Label { Text = "Cut Qty(1)", TextAlignment = TextAlignment.Right };
+        private Slider m_slid_cutQty = new Slider { MinValue = 1, MaxValue = 12, Value = 1, SnapToTick = true, TickFrequency = 1, Orientation = Orientation.Horizontal };
         private TextBox m_tbox_Film = new TextBox();
 
         // part info
@@ -278,6 +324,7 @@ namespace GUI
         // buttons
         private CheckBox m_AddLabels = new CheckBox { Text = "Add Proto Labels too?", Checked = true };
         private Button m_butt_okButt = new Button { Text = "Place Block" };
+        private Button m_butt_clearParts = new Button { Text = "Clear Parts", ToolTip = "Not Implemented" };
         private Button m_butt_cancelButt = new Button { Text = "Cancel" };
 
         public ProtoGui(gjTools.Commands.ProtoValues PartData)
@@ -298,7 +345,7 @@ namespace GUI
             m_tbox_jobNumber.Text = PData.Job;
             m_date.Value = PData.DueDate;
             m_tbox_description.Text = PData.Description;
-            m_tbox_cutQty.Text = PData.CutQTY.ToString();
+            m_slid_cutQty.Value = PData.CutQTY;
             m_AddLabels.Enabled = PData.CreateLabels;
             m_tbox_Film.Text = PData.Film;
             FindFilm();
@@ -331,6 +378,7 @@ namespace GUI
             m_butt_cancelButt.Click += (s, e) => window.Close(DialogResult.Cancel);
             m_butt_okButt.Click += (s, e) => window.Close(DialogResult.Ok);
             m_AddLabels.EnabledChanged += (s, e) => PData.CreateLabels = m_AddLabels.Enabled;
+            m_butt_clearParts.MouseDoubleClick += clearParts_MouseDoubleClick;
 
             // film event
             m_tbox_Film.LostFocus += (s, e) => FindFilm();
@@ -339,7 +387,7 @@ namespace GUI
             m_tbox_jobNumber.LostFocus += LostFocus_JobInfoUpdate;
             m_date.ValueChanged += LostFocus_JobInfoUpdate;
             m_tbox_description.LostFocus += LostFocus_JobInfoUpdate;
-            m_tbox_cutQty.LostFocus += LostFocus_JobInfoUpdate;
+            m_slid_cutQty.ValueChanged += LostFocus_JobInfoUpdate;
 
             // part number events
             foreach(var p in m_tbox_partList)
@@ -348,7 +396,7 @@ namespace GUI
                 p.GotFocus += PartFocus;
                 p.KeyUp += PartHotKeys;
             }
-
+            
             // time to setup the form
             var JobLayout = new GroupBox
             {
@@ -364,7 +412,7 @@ namespace GUI
                         new TableRow(new Label { Text = "Due Date", TextAlignment = TextAlignment.Right }, m_date),
                         new TableRow(new Label { Text = "Descrption", TextAlignment = TextAlignment.Right }, m_tbox_description),
                         new TableRow(new Label { Text = "Film", TextAlignment = TextAlignment.Right }, m_tbox_Film),
-                        new TableRow(new Label { Text = "Cut Qty", TextAlignment = TextAlignment.Right }, m_tbox_cutQty),
+                        new TableRow(m_label_cutQty, m_slid_cutQty)
                     }
                 }
             };
@@ -398,7 +446,7 @@ namespace GUI
                 Padding = new Padding(5, 5, 5, 5),
                 Spacing = new Size(5, 5),
                 Rows = {
-                    new TableRow(m_AddLabels, null, m_butt_okButt, m_butt_cancelButt)
+                    new TableRow(m_AddLabels, null, m_butt_clearParts, m_butt_okButt, m_butt_cancelButt)
                 }
             };
 
@@ -417,21 +465,20 @@ namespace GUI
             PData.windowPosition = window.Location;
         }
 
+        private void clearParts_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            // TODO: decide if this is going to be a thing
+            return;
+        }
+
         private void LostFocus_JobInfoUpdate(object sender, EventArgs e)
         {
             PData.Job = m_tbox_jobNumber.Text;
             PData.DueDate = (DateTime)m_date.Value;
             PData.Description = m_tbox_description.Text;
 
-            if (!int.TryParse(m_tbox_cutQty.Text, out int num))
-            {
-                PData.CutQTY = 1;
-                m_tbox_cutQty.Text = "1";
-            }
-            else
-            {
-                PData.CutQTY = num;
-            }
+            PData.CutQTY = m_slid_cutQty.Value;
+            m_label_cutQty.Text = $"Cut Qty({m_slid_cutQty.Value})";
         }
 
         private void PartHotKeys(object sender, KeyEventArgs e)
@@ -492,7 +539,8 @@ namespace GUI
             if (matl.Count == 0)
                 return;
 
-            m_tbox_Film.Text = $"{matl[0].colorNum} - {matl[0].colorName}";
+            string hyphen = (matl[0].colorName.Length > 2) ? " - " : "";
+            m_tbox_Film.Text = $"{matl[0].colorNum}{hyphen}{matl[0].colorName}";
             PData.Film = m_tbox_Film.Text;
         }
 

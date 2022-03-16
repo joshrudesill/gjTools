@@ -348,16 +348,12 @@ public class DrawTools : IDrawTools
 
     public TextEntity AddText(string text, Point3d pt, double height = 1, bool bold = false, bool italic = false, TextHorizontalAlignment horiz = TextHorizontalAlignment.Left, TextVerticalAlignment vert = TextVerticalAlignment.Top)
     {
-        TextEntity txtEnt = new TextEntity
-        {
-            PlainText = text,
-            DimensionStyleId = doc.DimStyles.FindIndex(StandardDimstyle()).Id,
-            TextHorizontalAlignment = horiz,
-            TextVerticalAlignment = vert,
-            Plane = new Plane(pt, Vector3d.ZAxis),
-            TextHeight = height,
-            Font = Font.FromQuartetProperties("Consolas", bold, italic),
-        };
+        TextEntity txtEnt = TextEntity.Create(text, new Plane(pt, Vector3d.ZAxis), doc.DimStyles.FindIndex(StandardDimstyle()), false, 0, 0);
+
+        txtEnt.TextHorizontalAlignment = horiz;
+        txtEnt.TextVerticalAlignment = vert;
+        txtEnt.TextHeight = height;
+        txtEnt.Font = Font.FromQuartetProperties("Consolas", bold, italic);
 
         return txtEnt;
     }
