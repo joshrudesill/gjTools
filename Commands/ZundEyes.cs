@@ -125,7 +125,7 @@ namespace gjTools.Commands
             sideD = Math.Abs(corners[3].Y - corners[0].Y);
             numEyesS = Math.Floor((sideD - spacingFromSide) / spacingDivNumber);
             if (numEyesS < 1) { numEyesS = 1; }
-            if (numEyesS > 2) { numEyesS = 2; }
+            if (numEyesS > 2) { numEyesS = 1; }
             spacingS = (sideD - spacingFromSide) / (numEyesS);
         }
 
