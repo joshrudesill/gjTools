@@ -32,10 +32,11 @@ namespace gjTools.Commands
                     ParentLayers.Add(l);
 
             // get the desired layer
-            var chosenLayer = Dialogs.ShowListBox("Change Layer", "Choose a layer to move objects to", ParentLayers, ParentLayers[0]) as Layer;
-            if (chosenLayer == null)
+            var chosen = Dialogs.ShowListBox("Change Layer", "Choose a layer to move objects to", ParentLayers);
+            if (chosen == null)
                 return Result.Cancel;
 
+            Layer chosenLayer = chosen as Layer;
             var lt = new LayerTools(doc);
 
             foreach (ObjRef o in obj)

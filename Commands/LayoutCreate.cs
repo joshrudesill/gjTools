@@ -71,18 +71,18 @@ namespace gjTools.Commands
                 new Point2d(s_Width, s_Height), 
                 Rhino.Display.DefinedViewportProjection.Top);
 
-            layout.SetPageAsActive();               //activate the page
             doc.Views.ActiveView = layout;          //set the viewport to see the page
             layout.SetActiveDetail(detail.Id);      //set the detail to active viewport
-            detail.Viewport.ZoomBoundingBox(bb);    // make the zoomyzoom
-            layout.SetPageAsActive();               // make the page active again
-            doc.Views.ActiveView = layout;
 
-            detail.DetailGeometry.SetScale(1, doc.ModelUnitSystem, scale, doc.PageUnitSystem);
             detail.Attributes.LayerIndex = lay.Index;
-            detail.DetailGeometry.IsProjectionLocked = true;
+            detail.DetailGeometry.SetScale(1, doc.ModelUnitSystem, scale, doc.PageUnitSystem);
             detail.CommitChanges();
 
+            detail.Viewport.ZoomBoundingBox(bb);    // make the zoomyzoom
+
+            layout.SetPageAsActive();               // make the page active again
+            doc.Views.ActiveView = layout;
+            
             doc.Views.Redraw();
             return Result.Success;
         }

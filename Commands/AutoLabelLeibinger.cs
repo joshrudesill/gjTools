@@ -81,7 +81,7 @@ namespace gjTools.Commands
             // get a list of the parent layers
             var pLays = new List<Layer>();
             foreach (Layer l in doc.Layers)
-                if (l.ParentLayerId == Guid.Empty)
+                if (l.ParentLayerId == Guid.Empty && l.Name.Length > 1)
                     pLays.Add(l);
 
             // define user object
