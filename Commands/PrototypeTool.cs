@@ -265,8 +265,11 @@ namespace gjTools.Commands
 
                 // add a round box corner box around the doc number
                 BoundingBox BB = BoundingBox.Empty;
-                foreach (Curve c in DocCurves)
-                    BB.Union(c.GetBoundingBox(true));
+                for (int o = 0; o < DocCurves.Count; o++)
+                {
+                    DocCurves[o] = DocCurves[o].ToPolyline(0.2, 0.28, 0, 0);
+                    BB.Union(DocCurves[o].GetBoundingBox(true));
+                }
                 BB.Inflate(0.06);
                 BB.Min = new Point3d(BB.Min.X, BB.Min.Y, 0);
                 BB.Max = new Point3d(BB.Max.X, BB.Max.Y, 0);

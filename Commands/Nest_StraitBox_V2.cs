@@ -88,6 +88,8 @@ namespace gjTools.Commands
 
         private void DuplicateObjects(RhinoDoc doc, StraitBoxGrid grid, List<ObjRef> obj)
         {
+            // get the curves
+            var crv = new List<Curve>(obj.Count);
 
         }
     }
