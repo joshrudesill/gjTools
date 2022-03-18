@@ -29,13 +29,13 @@ namespace gjTools.Commands
     /// <summary>
     /// translates Rhino groups to new ones only while this object is still alive
     /// </summary>
-    public class StraightBoxGroupManager
+    public class StraitBoxGroupManager
     {
         private List<int> m_OrigGroups;
         private List<int> m_NewGroups;
         private RhinoDoc m_Doc;
 
-        public StraightBoxGroupManager(RhinoDoc document)
+        public StraitBoxGroupManager(RhinoDoc document)
         {
             m_OrigGroups = new List<int>();
             m_NewGroups = new List<int>();
@@ -46,7 +46,7 @@ namespace gjTools.Commands
         {
             if (m_OrigGroups.Contains(grp))
             {
-                return m_NewGroups[m_NewGroups.IndexOf(grp)];
+                return m_NewGroups[m_OrigGroups.IndexOf(grp)];
             }
             else
             {
@@ -86,11 +86,69 @@ namespace gjTools.Commands
             return Result.Success;
         }
 
+        /// <summary>
+        /// create the duplicate objects while respecting group structure
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="grid"></param>
+        /// <param name="obj"></param>
         private void DuplicateObjects(RhinoDoc doc, StraitBoxGrid grid, List<ObjRef> obj)
         {
-            // get the curves
-            var crv = new List<Curve>(obj.Count);
+            // setup the transforms
+            var xForm = Transform.Translation(grid.BB.GetEdges()[0].Length + grid.Spacing, 0, 0);
+            var yForm = Transform.Translation(0, grid.BB.GetEdges()[1].Length + grid.Spacing, 0);
 
+            // collect the Guids for duping
+            var RowGuid = new List<Guid>(obj.Count);
+            var ColGuid = new List<Guid>(obj.Count);
+            foreach (var objItem in obj)
+            {
+                RowGuid.Add(objItem.ObjectId);
+                ColGuid.Add(objItem.ObjectId);
+            }
+
+            var grpMan = new StraitBoxGroupManager(doc);
+            for (int x = 0; x < grid.Columns; x++)
+            {
+                for (int y = 0; y < grid.Rows - 1; y++)
+                {
+                    grpMan = new StraitBoxGroupManager(doc);
+
+                    for (int o = 0; o < RowGuid.Count; o++)
+                    {
+                        RowGuid[o] = doc.Objects.Transform(RowGuid[o], yForm, false);
+                        RhinoObject ro = doc.Objects.FindId(RowGuid[o]);
+
+                        if (ro.Attributes.GroupCount > 0)
+                        {
+                            int grp = grpMan.TranslateGroup(ro.Attributes.GetGroupList()[0]);
+                            ro.Attributes.RemoveFromAllGroups();
+                            ro.Attributes.AddToGroup(grp);
+                            ro.CommitChanges();
+                        }
+                    }
+                }
+
+                if (x != grid.Columns - 1)
+                {
+                    // continue and copy the base line objects again
+                    grpMan = new StraitBoxGroupManager(doc);
+
+                    for (int o = 0; o < ColGuid.Count; o++)
+                    {
+                        RowGuid[o] = ColGuid[o] = doc.Objects.Transform(ColGuid[o], xForm, false);
+                        RhinoObject ro = doc.Objects.FindId(RowGuid[o]);
+
+                        if (ro.Attributes.GroupCount > 0)
+                        {
+                            int grp = grpMan.TranslateGroup(ro.Attributes.GetGroupList()[0]);
+                            ro.Attributes.RemoveFromAllGroups();
+                            ro.Attributes.AddToGroup(grp);
+                            ro.CommitChanges();
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -104,6 +162,7 @@ namespace gjTools.Commands
         private double m_partWidth;
         private double m_partHeight;
         private System.Drawing.Color m_clrBox = System.Drawing.Color.Aquamarine;
+        private System.Drawing.Color m_clrTxt = System.Drawing.Color.DarkRed;
 
         /// <summary>
         /// The result of the command
@@ -186,6 +245,10 @@ namespace gjTools.Commands
                 xbb.Transform(xForm);
                 bb = xbb;
             }
+
+            // visual text readout
+            basePt.Y -= 1;
+            e.Display.Draw2dText($"{m_grid.Columns}w x {m_grid.Rows}h ({m_grid.Rows * m_grid.Columns})", m_clrTxt, basePt, false, 12, "Consolas");
 
             base.OnDynamicDraw(e);
         }
