@@ -250,6 +250,7 @@ namespace gjTools.Commands
                 if (RhinoGet.GetPoint($"Place Label for {partInfo.drawingNumber} - {partInfo.partName}", false, out Point3d pt) != Result.Success)
                     return;
 
+                pt.Z = 0;
                 Plane ptPlain = new Plane(pt, Vector3d.ZAxis);
                 bool sets = partInfo.partsPerUnit.Contains("Sets") || partInfo.partsPerUnit.Contains("Usage");
 
@@ -267,6 +268,8 @@ namespace gjTools.Commands
                 foreach (Curve c in DocCurves)
                     BB.Union(c.GetBoundingBox(true));
                 BB.Inflate(0.06);
+                BB.Min = new Point3d(BB.Min.X, BB.Min.Y, 0);
+                BB.Max = new Point3d(BB.Max.X, BB.Max.Y, 0);
                 
                 NurbsCurve box = NurbsCurve.Create(true, 1, new List<Point3d>(BB.GetCorners()).GetRange(0, 4));
                 DocCurves.Add(NurbsCurve.CreateFilletCornersCurve(box, 0.06, 0.01, 0.01));

@@ -156,6 +156,13 @@ namespace gjTools.Commands
             m_grid.Columns = (int)(xlength / (m_partWidth + m_grid.Spacing));
             m_grid.Rows = (int)(ylength / (m_partHeight + m_grid.Spacing));
 
+            // stop further calculation if the column and rows are 0 or 1
+            if (m_grid.Columns <= 1 && m_grid.Rows <= 1)
+            {
+                e.Display.DrawBox(bb, m_clrBox);
+                return;
+            }
+
             // create the transforms
             var xForm = Transform.Translation(m_partWidth + m_grid.Spacing, 0, 0);
             var yForm = Transform.Translation(0, m_partHeight + m_grid.Spacing, 0);
