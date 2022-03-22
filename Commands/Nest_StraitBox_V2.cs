@@ -59,17 +59,17 @@ namespace gjTools.Commands
     }
 
 
-    public class Nest_StraitBox_V2 : Command
+    public class Nest_StraitBox : Command
     {
-        public Nest_StraitBox_V2()
+        public Nest_StraitBox()
         {
             Instance = this;
         }
 
         ///<summary>The only instance of the MyCommand command.</summary>
-        public static Nest_StraitBox_V2 Instance { get; private set; }
+        public static Nest_StraitBox Instance { get; private set; }
 
-        public override string EnglishName => "Nest_StraitBox_V2";
+        public override string EnglishName => "Nest_StraitBox";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {

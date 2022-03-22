@@ -12,6 +12,18 @@ namespace gjTools.Commands
     {
         public List<string> UniqueDotNames;
         public List<TextDot> AllDots;
+        
+        /// <summary>
+        /// returns the rotation in the secondary text of the first found dot
+        /// </summary>
+        public double RotDot
+        {
+            get
+            {
+                // TODO: figure out rotation soon
+                return 1.0;
+            }
+        }
     }
 
     public class UserStrings
@@ -81,6 +93,7 @@ namespace gjTools.Commands
             // get a list of the parent layers
             var pLays = new List<Layer>();
             foreach (Layer l in doc.Layers)
+                if (!l.IsDeleted)
                 if (l.ParentLayerId == Guid.Empty && l.Name.Length > 1)
                     pLays.Add(l);
 

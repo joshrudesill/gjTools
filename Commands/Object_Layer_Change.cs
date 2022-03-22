@@ -28,6 +28,7 @@ namespace gjTools.Commands
             // get the layer list
             var ParentLayers = new List<Layer>();
             foreach (Layer l in doc.Layers)
+                if (!l.IsDeleted)
                 if (l.ParentLayerId == Guid.Empty && l.Name.Length > 0)
                     ParentLayers.Add(l);
 

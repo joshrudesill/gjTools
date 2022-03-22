@@ -53,7 +53,7 @@ namespace gjTools.Commands
                 return Result.Cancel;
 
             // Make detail Layer
-            var lay = lt.CreateLayer("Detail", System.Drawing.Color.White);
+            var lay = lt.CreateLayer("Detail", System.Drawing.Color.Black);
 
             // objects size
             BoundingBox bb = BoundingBox.Empty;
@@ -64,24 +64,39 @@ namespace gjTools.Commands
             double s_Width = bb.GetEdges()[0].Length * scale;
             double s_Height = bb.GetEdges()[1].Length * scale;
 
-            // make page
-            var layout = doc.Views.AddPageView(layoutName, s_Width, s_Height);
+            // make page slightly larger so the border goes with it
+            var layout = doc.Views.AddPageView(layoutName, s_Width + 0.02, s_Height + 0.02);
             var detail = layout.AddDetailView(layoutName, 
-                new Point2d(0,0), 
-                new Point2d(s_Width, s_Height), 
+                new Point2d(0.01,0.01), 
+                new Point2d(s_Width + 0.01, s_Height + 0.01), 
                 Rhino.Display.DefinedViewportProjection.Top);
 
-            doc.Views.ActiveView = layout;          //set the viewport to see the page
-            layout.SetActiveDetail(detail.Id);      //set the detail to active viewport
+            // set the page as active
+            doc.Views.ActiveView = layout;
 
+            // set the page as active
+            layout.SetActiveDetail(detail.Id);
+            doc.Views.ActiveView = detail.Viewport.ParentView;
+            detail.Viewport.ZoomBoundingBox(bb);
+            layout.SetPageAsActive();
+            doc.Views.ActiveView = layout;
+
+            // set the datail to have color for border reasons
             detail.Attributes.LayerIndex = lay.Index;
+            detail.Attributes.ColorSource = ObjectColorSource.ColorFromObject;
+            detail.Attributes.PlotColorSource = ObjectPlotColorSource.PlotColorFromObject;
+            detail.Attributes.ObjectColor = System.Drawing.Color.Black;
+            detail.Attributes.PlotColor = System.Drawing.Color.Black;
+            detail.Attributes.PlotWeightSource = ObjectPlotWeightSource.PlotWeightFromObject;
+            detail.Attributes.PlotWeight = 0.5;
+
+            // set the layer and scale info
             detail.DetailGeometry.SetScale(1, doc.ModelUnitSystem, scale, doc.PageUnitSystem);
             detail.CommitChanges();
 
-            detail.Viewport.ZoomBoundingBox(bb);    // make the zoomyzoom
-
-            layout.SetPageAsActive();               // make the page active again
-            doc.Views.ActiveView = layout;
+            // recommit the locked prjection 
+            detail.DetailGeometry.IsProjectionLocked = true;
+            detail.CommitChanges();
             
             doc.Views.Redraw();
             return Result.Success;
