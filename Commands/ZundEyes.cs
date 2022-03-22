@@ -112,7 +112,6 @@ namespace gjTools.Commands
                 pli = player;
             }
             l1index = lt.CreateLayer("C_EYES", pli.Name, System.Drawing.Color.Red).Index;
-            l2index = lt.CreateLayer("PRINT_REG", pli.Name, System.Drawing.Color.Black).Index;
         }
 
         void calcPlacement(Point3d[] corners)
@@ -162,11 +161,6 @@ namespace gjTools.Commands
             }
             Circle fc = new Circle(new Point3d(corners[1].X - 1 - (spacingFromSide / 2), corners[1].Y + (spacingFromSide / 2), 0), 0.125);
             cl.Add(fc.ToNurbsCurve());
-            if (doc.HatchPatterns.FindName("Solid") == null)
-            {
-                return false;
-            }
-            Hatch[] hl = Hatch.Create(cl, doc.HatchPatterns.FindName("Solid").Index, 0, 1.0, doc.ModelAbsoluteTolerance);
             
             foreach (var c in cl)
             {
@@ -175,13 +169,6 @@ namespace gjTools.Commands
                 Guid newob = doc.Objects.AddCircle(tc);
                 RhinoObject ro = doc.Objects.FindId(newob);
                 ro.Attributes.LayerIndex = l1index;
-                ro.CommitChanges();
-            }
-            foreach (var h in hl)
-            {
-                Guid newob = doc.Objects.AddHatch(h);
-                RhinoObject ro = doc.Objects.FindId(newob);
-                ro.Attributes.LayerIndex = l2index;
                 ro.CommitChanges();
             }
             return true;
