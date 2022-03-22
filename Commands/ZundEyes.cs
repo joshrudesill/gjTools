@@ -125,7 +125,7 @@ namespace gjTools.Commands
             sideD = Math.Abs(corners[3].Y - corners[0].Y);
             numEyesS = Math.Floor((sideD - spacingFromSide) / spacingDivNumber);
             if (numEyesS < 1) { numEyesS = 1; }
-            if (numEyesS > 2) { numEyesS = 1; }
+            if (numEyesS > 2) { numEyesS = 2; }
             spacingS = (sideD - spacingFromSide) / (numEyesS);
         }
 
@@ -134,13 +134,28 @@ namespace gjTools.Commands
             Point3d first = new Point3d((corners[3].X + (spacingFromSide / 2)), (corners[3].Y - (spacingFromSide / 2)), 0);
             for (int i = 0; i < numEyesT + 1; i++)
             {
+                RhinoApp.WriteLine("I:");
+                RhinoApp.WriteLine(i.ToString());
                 Circle c1 = new Circle(first, 0.125);
                 cl.Add(c1.ToNurbsCurve());
+
+                
                 for (int j = 0; j < numEyesS; j++)
                 {
+                    RhinoApp.WriteLine("J:");
+                    RhinoApp.WriteLine(j.ToString());
                     first.Y -= spacingS;
-                    Circle c2 = new Circle(first, 0.125);
-                    cl.Add(c2.ToNurbsCurve());
+                    if (j == 1)
+                    {
+                        RhinoApp.WriteLine("drawin circle");
+                        Circle c2 = new Circle(first, 0.125);
+                        cl.Add(c2.ToNurbsCurve());
+                    } else if (i == 0 || i == numEyesT)
+                    {
+                        Circle c2 = new Circle(first, 0.125);
+                        cl.Add(c2.ToNurbsCurve());
+                    }
+                    
                 }
                 first.Y = corners[3].Y - 0.65;
                 first.X += spacingT;
