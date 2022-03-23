@@ -53,7 +53,7 @@ namespace gjTools.Commands
                 return Result.Cancel;
 
             // Make detail Layer
-            var lay = lt.CreateLayer("Detail", System.Drawing.Color.Black);
+            var lay = lt.CreateLayer(layoutName, "Detail", System.Drawing.Color.Black);
 
             // objects size
             BoundingBox bb = BoundingBox.Empty;
@@ -66,20 +66,22 @@ namespace gjTools.Commands
 
             // make page slightly larger so the border goes with it
             var layout = doc.Views.AddPageView(layoutName, s_Width + 0.02, s_Height + 0.02);
+            doc.Views.ActiveView = layout;
+            doc.Views.Redraw();
+
             var detail = layout.AddDetailView(layoutName, 
                 new Point2d(0.01,0.01), 
                 new Point2d(s_Width + 0.01, s_Height + 0.01), 
                 Rhino.Display.DefinedViewportProjection.Top);
+            doc.Views.Redraw();
 
-            // set the page as active
-            doc.Views.ActiveView = layout;
 
             // set the page as active
             layout.SetActiveDetail(detail.Id);
             doc.Views.ActiveView = detail.Viewport.ParentView;
             detail.Viewport.ZoomBoundingBox(bb);
-            layout.SetPageAsActive();
-            doc.Views.ActiveView = layout;
+            detail.IsActive = false;
+            doc.Views.Redraw();
 
             // set the datail to have color for border reasons
             detail.Attributes.LayerIndex = lay.Index;
@@ -92,11 +94,11 @@ namespace gjTools.Commands
 
             // set the layer and scale info
             detail.DetailGeometry.SetScale(1, doc.ModelUnitSystem, scale, doc.PageUnitSystem);
-            detail.CommitChanges();
-
-            // recommit the locked prjection 
             detail.DetailGeometry.IsProjectionLocked = true;
             detail.CommitChanges();
+            
+            layout.SetPageAsActive();
+            doc.Views.ActiveView = layout;
             
             doc.Views.Redraw();
             return Result.Success;

@@ -247,8 +247,8 @@ namespace gjTools.Commands
             }
 
             // visual text readout
-            basePt.Y -= 1;
-            e.Display.Draw2dText($"{m_grid.Columns}w x {m_grid.Rows}h ({m_grid.Rows * m_grid.Columns})", m_clrTxt, basePt, false, 12, "Consolas");
+            mp.Y += 1;
+            e.Display.Draw2dText($"{m_grid.Columns}w x {m_grid.Rows}h ({m_grid.Rows * m_grid.Columns} Total)", m_clrTxt, mp, false, 16, "Consolas");
 
             base.OnDynamicDraw(e);
         }
