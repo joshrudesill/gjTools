@@ -62,6 +62,7 @@ namespace gjTools.Commands
                 attr1.SetUserString("Height", NestBox.Height.ToString());
                 attr1.SetUserString("QtyObj", NestBox.Geoms.ObjCount.ToString());
                 attr1.SetUserString("QtyGrp", NestBox.Geoms.GroupCount.ToString());
+                attr1.SetUserString("MatlUsage", NestBox.SheetUsage.ToString());
 
             foreach (var te in NestBox.Geoms.TxtEnt)
                 NestBox.doc.Objects.AddText(te, attr);
@@ -87,6 +88,7 @@ namespace gjTools.Commands
         public List<Cut_Layer> CutLayers { get; private set; }
         public double Height { get; private set; }
         public double Width { get; private set; }
+        public double SheetUsage { get; private set; }
         private Point3d Center = Point3d.Origin;
 
         /// <summary>
@@ -99,6 +101,7 @@ namespace gjTools.Commands
             doc = Document;
             N_Objs = objs;
             CutLayers = new List<Cut_Layer>(10);
+            SheetUsage = 0;
 
             var leftovers = objs;
             while (true)
@@ -238,6 +241,8 @@ namespace gjTools.Commands
             NestGeom.GroupCount = grps;
             if (grps > 0)
                 qty = grps;
+
+            SheetUsage = Width / qty;
 
             var strVals = new List<string>(5)
             {

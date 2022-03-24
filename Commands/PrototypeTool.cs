@@ -601,7 +601,10 @@ namespace GUI
         {
             var matl = SQL.SQLTool.queryOEMColors(m_tbox_Film.Text);
             if (matl.Count == 0)
+            {
+                PData.Film = m_tbox_Film.Text;
                 return;
+            }
 
             string hyphen = (matl[0].colorName.Length > 2) ? " - " : "";
             m_tbox_Film.Text = $"{matl[0].colorNum}{hyphen}{matl[0].colorName}";
