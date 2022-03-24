@@ -24,13 +24,12 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            var sql = new SQLTools();
-            var blurbs = sql.queryCustomBlurbs();
             var blurbString = new List<string>();
+            var blurbs = SQL.SQLTool.queryCustomBlurbs();
 
             foreach (var b in blurbs)
                 blurbString.Add(b.blurb);
-            blurbString.AddRange(new List<string> { "RH", "LH", "E&P Composite Mylar", "E&P Cut Name", "Manage Blurbs" });
+            blurbString.AddRange(new List<string> { "RH", "LH", "E&P Composite Mylar", "Add File Name", "Manage Blurbs" });
 
             var res = new List<string>( Dialogs.ShowMultiListBox("Text Blurbs", "Select Blurbs", blurbString) );
             if (res == null)
@@ -40,11 +39,11 @@ namespace gjTools.Commands
             if (res.Contains("RH") || res.Contains("LH"))
                 RHLHSwap(doc, res);
             else if (res.Contains("Manage Blurbs"))
-                ManageBlurbs(doc, sql);
+                ManageBlurbs(doc);
             else if (res.Contains("E&P Composite Mylar") && doc.Name != null)
                 EPDecoration(doc, "Composite Mylar", doc.Name.Substring(0, doc.Name.Length - 5) + "_MYLAR");
-            else if (res.Contains("E&P Cut Name") && doc.Name != null)
-                EPDecoration(doc, "Cut Name", doc.Name.Substring(0, doc.Name.Length - 5) + "_CUT");
+            else if (res.Contains("Add File Name") && doc.Name != null)
+                EPDecoration(doc, "Drawing", doc.Name);
             else
                 AddBlurb(doc, string.Join(", ", res));
 
@@ -88,9 +87,9 @@ namespace gjTools.Commands
         /// </summary>
         /// <param name="doc"></param>
         /// <param name="sql"></param>
-        public void ManageBlurbs(RhinoDoc doc, SQLTools sql)
+        public void ManageBlurbs(RhinoDoc doc)
         {
-            var blurbs = sql.queryCustomBlurbs();
+            var blurbs = SQL.SQLTool.queryCustomBlurbs();
             var ids = new List<int>();
             var strings = new List<string>();
 
@@ -106,7 +105,7 @@ namespace gjTools.Commands
             {
                 for (int i = 0; i < res.Length; i++)
                     if (blurbs[i].blurb != res[i])
-                        sql.updateCustomBlurb(new CustomBlurb(blurbs[i].id, res[i]));
+                        SQL.SQLTool.updateCustomBlurb(new SQL.CustomBlurb(blurbs[i].id, res[i]));
 
                 RhinoApp.WriteLine("Text Blurbs were updated");
             }

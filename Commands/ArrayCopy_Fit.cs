@@ -61,6 +61,9 @@ namespace gjTools.Commands
             var doc = CFit.obj[0].Object().Document;
             var lastItem = new List<Guid>(CFit.obj.Count);
 
+            // create a group manager object
+            var grpMan = new StraitBoxGroupManager(doc);
+
             // populate the guid list
             foreach (var item in CFit.obj)
                 lastItem.Add(item.ObjectId);
@@ -68,18 +71,16 @@ namespace gjTools.Commands
             // loop through the items and transform duplicate them
             for (var i = 1; i < CFit.CopyQty; i++)
             {
-                int grp = -1;
-
                 for (int ii = 0; ii < CFit.obj.Count; ii++)
                 {
                     lastItem[ii] = doc.Objects.Transform(lastItem[ii], CFit.xform, false);
                     var robj = doc.Objects.FindId(lastItem[ii]);
                     
-                    // gotta respect grouping, only supports single groups
+                    // gotta respect grouping
                     if (robj.Attributes.GroupCount > 0)
                     {
                         // create a group if its' unset
-                        grp = (grp == -1) ? doc.Groups.Add() : grp;
+                        int grp = grpMan.TranslateGroup(robj.Attributes.GetGroupList()[0]);
 
                         robj.Attributes.RemoveFromAllGroups();
                         robj.Attributes.AddToGroup(grp);
