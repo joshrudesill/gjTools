@@ -27,9 +27,7 @@ namespace gjTools.Commands
 
             Result cutobj = Rhino.Input.RhinoGet.GetMultipleObjects("Select only thru cut", false, ObjectType.AnyObject, out ObjRef[] cutref);
             if (cutobj != Result.Success) { return Result.Cancel; }
-
-            var i = objref.Length;
-            var w = cutref.Length;
+            
             return Result.Success;
         }
     }
