@@ -92,9 +92,24 @@ namespace gjTools.Commands
             }
 
             var r = Transform.Rotation(brl[index].rotation, bb.Center);
+            var objCheck = new List<RhinoObject>();
+            var idcheck = new List<ObjRef>();
             foreach (var i in ids)
             {
-                doc.Objects.Transform(i, r, true);
+                var nobj = doc.Objects.Transform(i, r, true);
+                objCheck.Add(doc.Objects.FindId(nobj));
+                idcheck.Add(new ObjRef(doc.Objects.FindId(nobj)));
+            }
+
+            RhinoObject.GetTightBoundingBox(objCheck, out bb);
+
+            if (bb.GetEdges()[0].Length < bb.GetEdges()[1].Length)
+            {
+                var trans = Transform.Rotation(0.5 * Math.PI, bb.Center);
+                foreach(var i in idcheck)
+                {
+                    doc.Objects.Transform(i, trans, true);
+                }
             }
 
             RhinoApp.WriteLine("Rotated " + brl[index].rotation.ToString() + " radians");

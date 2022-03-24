@@ -149,7 +149,8 @@ namespace gjTools.Commands
                         RhinoApp.WriteLine("drawin circle");
                         Circle c2 = new Circle(first, 0.125);
                         cl.Add(c2.ToNurbsCurve());
-                    } else if (i == 0 || i == numEyesT)
+                    } 
+                    else if (i == 0 || i == numEyesT)
                     {
                         Circle c2 = new Circle(first, 0.125);
                         cl.Add(c2.ToNurbsCurve());
@@ -175,3 +176,5 @@ namespace gjTools.Commands
         }
     }
 }
+
+
