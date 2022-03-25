@@ -47,6 +47,9 @@ namespace gjTools.Commands
             CutQTY = JobInfo.quantity;
             Film = JobInfo.material;
 
+            PartNumbers.Clear();
+            PartDescriptions.Clear();
+
             for (int i = 0; i < 10; i++)
             {
                 PartNumbers.Add(dStore[i].stringValue);
@@ -193,7 +196,7 @@ namespace gjTools.Commands
                 pt, ds, 1, 0, 0, 6);
 
             // include the parts in the block
-            for (int i = 0; i < PData.PartNumbers.Count; i++)
+            for (int i = 0; i < 10; i++)
             {
                 if (PData.PartNumbers[i].Length > 5)
                 {
@@ -543,8 +546,8 @@ namespace GUI
             {
                 m_tbox_partList[i].Text = "";
                 m_label_Partlist[i].Text = "";
-                PData.PartDescriptions[i] = "";
                 PData.PartNumbers[i] = "";
+                PData.PartDescriptions[i] = "";
             }
         }
 
@@ -588,6 +591,7 @@ namespace GUI
             var p = sender as TextBox;
             var pn = p.Text.Trim();
             int indx = int.Parse(p.ID);
+
             PData.PartNumbers[indx] = pn;
 
             if (p.Text.Length == 0)

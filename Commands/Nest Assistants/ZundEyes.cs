@@ -15,7 +15,6 @@ namespace gjTools.Commands
         int spacingDivNumber = 24;
         double spacingFromSide = (0.65 * 2);
 
-        int l2index;
         int l1index;
 
 
