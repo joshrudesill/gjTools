@@ -41,7 +41,6 @@ namespace gjTools.Commands
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             // Reset values for multiple uses within one session
-            l2index = 0;
             l1index = 0;
             topD = 0;
             numEyesT = 0;
