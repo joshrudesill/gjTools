@@ -25,17 +25,8 @@ namespace gjTools.Testing
             if (RhinoGet.GetMultipleObjects("Select Grid to unify", false, ObjectType.Curve, out ObjRef[] obj) != Result.Success)
                 return Result.Cancel;
 
-            // only allow for degree 1 curves
-            var lines = new List<Line>();
-            foreach(var o in obj)
-            {
-                var crv = o.Curve();
-                var segs = crv.DuplicateSegments();
-
-                // only lines can make the cut
-                foreach (var l in segs)
-                    lines.Add(new Line(l.PointAtStart, l.PointAtEnd));
-            }
+            // lets kill some segments
+            var lines = new LineUnifier(obj);
 
             return Result.Success;
         }
@@ -73,13 +64,55 @@ namespace gjTools.Testing
                     return;
                 }
 
-                foreach (Line oline in OutLines)
+                for (int i = 0; i < OutLines.Count; i++)
                 {
-                    if (l.Equals(oline))
+                    Line ol = OutLines[i];
+                    if (l.Equals(ol))
                         return;
 
+                    // collect the vectors
+                    Vector3d vec1 = ol.UnitTangent;
+                    Vector3d vec2 = l.UnitTangent;
+
+                    // not parallel, advance the loop
+                    if (vec1.IsParallelTo(vec2) != 1)
+                        continue;
                     
+                    // end point coincident
+                    if (EndPointsTouching(i, l))
+                        return;
+
+                    // see if the lines are overlapping
+                    if (OverlappingLine(i, l))
+                        return;
                 }
+
+                // didnt fit any of the other lines
+                OutLines.Add(l);
+            }
+
+            /// <summary>
+            /// if the end points are touching, update the outlines length at index
+            /// </summary>
+            /// <param name="l1"></param>
+            /// <param name="l2"></param>
+            /// <returns></returns>
+            private bool EndPointsTouching(int l1, Line l2)
+            {
+
+                return false;
+            }
+
+            /// <summary>
+            /// if the lines are overlapping, update the outlines length at index
+            /// </summary>
+            /// <param name="l1"></param>
+            /// <param name="l2"></param>
+            /// <returns></returns>
+            private bool OverlappingLine(int l1, Line l2)
+            {
+
+                return false;
             }
         }
     }
