@@ -467,9 +467,9 @@ namespace GUI
             // part number events
             foreach(var p in m_tbox_partList)
             {
+                p.KeyUp += PartHotKeys;
                 p.LostFocus += PartCheck;
                 p.GotFocus += PartFocus;
-                p.KeyUp += PartHotKeys;
             }
             
             // time to setup the form
