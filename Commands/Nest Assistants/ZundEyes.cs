@@ -152,6 +152,11 @@ namespace gjTools.Commands
                     {
                         Circle c2 = new Circle(first, 0.125);
                         cl.Add(c2.ToNurbsCurve());
+                    } 
+                    else if (j == 0 && numEyesS == 1)
+                    {
+                        Circle c2 = new Circle(first, 0.125);
+                        cl.Add(c2.ToNurbsCurve());
                     }
                     
                 }

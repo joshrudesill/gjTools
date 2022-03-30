@@ -32,6 +32,7 @@ namespace gjTools.Commands
             RhinoApp.Write($"Current Layer: {lay.Name}");
             
             return Result.Success;
+          
         }
     }
 }
