@@ -31,6 +31,12 @@ namespace gjTools.Commands
 
         public ProtoValues()
         {
+            CreateLabels = true;
+            GetFreshDataBaseValues();
+        }
+
+        public void GetFreshDataBaseValues()
+        {
             var SQL_Rows = new List<int> { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
             var dStore = SQL.SQLTool.queryDataStore(SQL_Rows);
             var JobInfo = SQL.SQLTool.queryJobSlots()[0];
@@ -40,7 +46,9 @@ namespace gjTools.Commands
             Description = JobInfo.description;
             CutQTY = JobInfo.quantity;
             Film = JobInfo.material;
-            CreateLabels = true;
+
+            PartNumbers.Clear();
+            PartDescriptions.Clear();
 
             for (int i = 0; i < 10; i++)
             {
@@ -138,6 +146,9 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
+            // pull fresh values
+            PData.GetFreshDataBaseValues();
+
             // assign the fresh document definition
             PData.document = doc;
 
@@ -185,7 +196,7 @@ namespace gjTools.Commands
                 pt, ds, 1, 0, 0, 6);
 
             // include the parts in the block
-            for (int i = 0; i < PData.PartNumbers.Count; i++)
+            for (int i = 0; i < 10; i++)
             {
                 if (PData.PartNumbers[i].Length > 5)
                 {
@@ -382,7 +393,7 @@ namespace GUI
         // buttons
         private CheckBox m_AddLabels = new CheckBox { Text = "Add Proto Labels too?", Checked = true };
         private Button m_butt_okButt = new Button { Text = "Place Block" };
-        private Button m_butt_clearParts = new Button { Text = "Clear Parts", ToolTip = "Not Implemented" };
+        private Button m_butt_clearParts = new Button { Text = "Clear Parts", ToolTip = "Double Click" };
         private Button m_butt_cancelButt = new Button { Text = "Cancel" };
 
 
@@ -456,9 +467,9 @@ namespace GUI
             // part number events
             foreach(var p in m_tbox_partList)
             {
+                p.KeyUp += PartHotKeys;
                 p.LostFocus += PartCheck;
                 p.GotFocus += PartFocus;
-                p.KeyUp += PartHotKeys;
             }
             
             // time to setup the form
@@ -531,8 +542,13 @@ namespace GUI
 
         private void clearParts_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            // TODO: decide if this is going to be a thing
-            return;
+            for (int i = 1; i < 10; i++)
+            {
+                m_tbox_partList[i].Text = "";
+                m_label_Partlist[i].Text = "";
+                PData.PartNumbers[i] = "";
+                PData.PartDescriptions[i] = "";
+            }
         }
 
         private void LostFocus_JobInfoUpdate(object sender, EventArgs e)
@@ -575,6 +591,7 @@ namespace GUI
             var p = sender as TextBox;
             var pn = p.Text.Trim();
             int indx = int.Parse(p.ID);
+
             PData.PartNumbers[indx] = pn;
 
             if (p.Text.Length == 0)
