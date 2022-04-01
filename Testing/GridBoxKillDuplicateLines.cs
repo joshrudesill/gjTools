@@ -28,6 +28,19 @@ namespace gjTools.Testing
             // lets kill some segments
             var lines = new LineUnifier(obj);
 
+            // lets draw some new lines
+            ObjectAttributes attr = new ObjectAttributes();
+            attr.LayerIndex = obj[0].Object().Attributes.LayerIndex;
+            attr.AddToGroup(doc.Groups.Add());
+            doc.Objects.UnselectAll();
+
+            foreach (Line l in lines.OutLines)
+            {
+                Guid ln = doc.Objects.AddLine(l, attr);
+                doc.Objects.Select(ln);
+            }
+
+            doc.Views.Redraw();
             return Result.Success;
         }
 
@@ -35,10 +48,12 @@ namespace gjTools.Testing
         public class LineUnifier
         {
             public List<Line> OutLines;
+            public List<Line> m_uniqueLines;
 
             public LineUnifier(ObjRef[] obj)
             {
                 OutLines = new List<Line>();
+                m_uniqueLines = new List<Line>();
 
                 // only allow for degree 1 curves
                 var lines = new List<Line>();
@@ -52,67 +67,101 @@ namespace gjTools.Testing
                         lines.Add(new Line(l.PointAtStart, l.PointAtEnd));
                 }
 
-                foreach (var l in lines)
-                    AddLine(l);
+                foreach(var l in lines)
+                    FilterUniqueLines(l);
+
+                // testing
+                OutLines = m_uniqueLines;
             }
 
-            private void AddLine(Line l)
+            /// <summary>
+            /// filter the input into only unique lines for further processing
+            /// </summary>
+            /// <param name="l"></param>
+            private void FilterUniqueLines (Line l)
             {
-                if (OutLines.Count == 0)
+                double Tol = 0.1;
+
+                if (m_uniqueLines.Count == 0)
                 {
-                    OutLines.Add(l);
+                    m_uniqueLines.Add(l);
                     return;
                 }
 
-                for (int i = 0; i < OutLines.Count; i++)
+                for (int i = 0; i < m_uniqueLines.Count; i++)
                 {
-                    Line ol = OutLines[i];
-                    if (l.Equals(ol))
-                        return;
+                    Line ul = m_uniqueLines[i];
+                    Line lFlip = l;
+                    lFlip.Flip();
 
-                    // collect the vectors
-                    Vector3d vec1 = ol.UnitTangent;
-                    Vector3d vec2 = l.UnitTangent;
-
-                    // not parallel, advance the loop
-                    if (vec1.IsParallelTo(vec2) != 1)
-                        continue;
-                    
-                    // end point coincident
-                    if (EndPointsTouching(i, l))
-                        return;
-
-                    // see if the lines are overlapping
-                    if (OverlappingLine(i, l))
+                    if (ul.EpsilonEquals(l, Tol) || ul.EpsilonEquals(lFlip, Tol))
                         return;
                 }
 
-                // didnt fit any of the other lines
-                OutLines.Add(l);
+                m_uniqueLines.Add(l);
             }
 
             /// <summary>
-            /// if the end points are touching, update the outlines length at index
+            /// remove segments that fall within others
+            /// </summary>
+            private void RemoveUnusedSegments()
+            {
+                // assign one item to the outlines
+                OutLines.Add(m_uniqueLines[0]);
+                m_uniqueLines.RemoveAt(0);
+                
+                while(true)
+                {
+                    bool foundJoin = false;
+                }
+            }
+
+            /// <summary>
+            /// test for colinearity
             /// </summary>
             /// <param name="l1"></param>
             /// <param name="l2"></param>
             /// <returns></returns>
-            private bool EndPointsTouching(int l1, Line l2)
+            public static bool IsLineColinear(Line l1, Line l2)
             {
+                Vector3d vec1 = l1.UnitTangent;
+                Vector3d vec2 = l2.UnitTangent;
+
+                if (vec1.IsParallelTo(vec2) == 0)
+                    return false;
+
+                // they are parrallel at this point, now see if they are on the same ray
+                // vertical check
+                if (vec1.Y == 1 && vec1.X == 0)
+                    if (l1.From.X == l2.From.X)
+                        return true;
+
+                // horizontal check
+                if (vec1.X == 1 && vec1.Y == 0)
+                    if (l1.From.Y == l2.From.Y)
+                        return true;
+
+                // Slope intercept check
+                if (Math.Round((l1.FromY - GetSlope(l1) * l1.FromX), 2) == Math.Round((l2.FromY - GetSlope(l2) * l2.FromX), 2))
+                    return true;
 
                 return false;
             }
 
             /// <summary>
-            /// if the lines are overlapping, update the outlines length at index
+            /// simple slope getter
             /// </summary>
-            /// <param name="l1"></param>
-            /// <param name="l2"></param>
+            /// <param name="l"></param>
             /// <returns></returns>
-            private bool OverlappingLine(int l1, Line l2)
+            public static double GetSlope(Line l)
             {
+                double rise = l.ToY - l.FromY;
+                double run = l.ToX - l.FromX;
 
-                return false;
+                // vertical line
+                if (run == 0)
+                    return double.NaN;
+                return rise / run;
             }
         }
     }

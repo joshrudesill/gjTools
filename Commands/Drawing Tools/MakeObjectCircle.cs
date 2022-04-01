@@ -54,11 +54,22 @@ namespace gjTools.Commands.Drawing_Tools
             foreach(ObjRef obj in oRef)
             {
                 var crv = obj.Curve();
+
                 if (crv.TryGetCircle(out Circle ConvCircle, m_Tolerance))
                 {
                     doc.Objects.Replace(obj, ConvCircle);
                     doc.Objects.Select(obj);
+                    continue;
                 }
+
+                // failed to create circle, this is brute force
+                BoundingBox bb = crv.GetBoundingBox(true);
+                double dia = (bb.GetEdges()[0].Length + bb.GetEdges()[1].Length) / 2;
+                Circle cir = new Circle(bb.Center, dia / 2);
+
+                // replace the object
+                doc.Objects.Replace(obj, cir);
+                doc.Objects.Select(obj);
             }
 
             doc.Views.Redraw();

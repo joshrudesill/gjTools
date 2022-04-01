@@ -43,6 +43,8 @@ namespace gjTools.Commands.Drawing_Tools
 
                 Disp.Enabled = false;
             }
+            else
+                RhinoApp.WriteLine("Your Selections are Polylines, nothing to show you here.");
 
             Disp.Dispose();
             doc.Views.Redraw();

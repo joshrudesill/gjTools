@@ -32,8 +32,8 @@ namespace gjTools.Commands.Drawing_Tools
                     continue;
 
                 // some exclusion layer names
-                if (docLays.Name == "VOMELA_TitleBlock" || docLays.Name == "NestBoxes")
-                    continue;
+                if (docLays.Name == "VOMELA_TitleBlock" || docLays.Name == "NestBoxes" || docLays.Name == "Temp")
+                    continue; 
 
                 var pcl = new ParentChildLayers(docLays);
                 BoundingBox bb = pcl.GetBoundry(doc);
