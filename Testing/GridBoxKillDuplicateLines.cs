@@ -44,7 +44,17 @@ namespace gjTools.Testing
             return Result.Success;
         }
 
-        
+
+
+
+
+
+
+
+
+
+
+
         public class LineUnifier
         {
             public List<Line> OutLines;
@@ -70,8 +80,8 @@ namespace gjTools.Testing
                 foreach(var l in lines)
                     FilterUniqueLines(l);
 
-                // testing
-                OutLines = m_uniqueLines;
+                // start the consolidation processes
+                RemoveUnusedSegments();
             }
 
             /// <summary>
@@ -106,13 +116,147 @@ namespace gjTools.Testing
             /// </summary>
             private void RemoveUnusedSegments()
             {
-                // assign one item to the outlines
-                OutLines.Add(m_uniqueLines[0]);
-                m_uniqueLines.RemoveAt(0);
-                
                 while(true)
                 {
-                    bool foundJoin = false;
+                    if (m_uniqueLines.Count == 0)
+                        return;
+
+                    var colinearLines = new List<Line>();
+                    colinearLines.Add(m_uniqueLines[0]);
+                    m_uniqueLines.RemoveAt(0);
+
+                    // get a collection of colinear lines
+                    for (int i = 1; i < m_uniqueLines.Count; i++)
+                    {
+                        if (!IsLineColinear(colinearLines[0], m_uniqueLines[i]))
+                            continue;
+
+                        colinearLines.Add(m_uniqueLines[i]);
+                        m_uniqueLines.RemoveAt(i);
+                        i--;
+                    }
+
+                    // if only one, move on
+                    if (colinearLines.Count == 1)
+                    {
+                        OutLines.Add(colinearLines[0]);
+                        continue;
+                    }
+
+                    // all lines are accounted for, stop doing things
+                    if (colinearLines.Count == 0)
+                        return;
+
+                    // we are here, so there are some lines to potentially join together
+                    // here we need to condense the lines
+                    JoinColinearLines(colinearLines);
+                }
+            }
+
+
+            /// <summary>
+            /// The input is assumed to all be colinear lines, anything past that will have unpredictable results
+            /// </summary>
+            /// <param name="l"></param>
+            private void JoinColinearLines(List<Line> l)
+            {
+                // horizontal lines have no soul
+                double slope = GetSlope(l[0]);
+                double yInt = l[0].FromY;
+                bool IsHorizontal = slope == double.NaN;
+
+                if (!IsHorizontal)
+                    yInt = l[0].FromY - slope * l[0].FromX;
+
+                var InterVals = new List<Interval>(l.Count);
+
+                // convert the lines to intervals
+                for (int i = 0; i < l.Count; i++)
+                {
+                    if (IsHorizontal)
+                        InterVals.Add(new Interval(l[i].FromX, l[i].ToX));
+                    else
+                        InterVals.Add(new Interval(l[i].FromY, l[i].ToY));
+                }
+
+                // combine intervals
+                // allow extra passes on the event no interval combinations are hit
+                int noHitPass = 0;
+                int c = 0;
+                while(noHitPass < 8)
+                {
+                    // check if a union was made
+                    bool hasUnion = false;
+
+                    for (int i = 0; i < InterVals.Count; i++)
+                    {
+                        // skip self or unset checking
+                        if (c == i || InterVals[i] == Interval.Unset)
+                            continue;
+
+                        if (InterVals[c].IncludesInterval(InterVals[i]))
+                        {
+                            InterVals[c] = Interval.FromUnion(InterVals[c], InterVals[i]);
+                            InterVals[i] = Interval.Unset;
+                            hasUnion = true;
+                            continue;
+                        }
+                    }
+
+                    // end loop if only one interval is present
+                    int SetCount = 0;
+                    foreach (var i in InterVals)
+                        if (i != Interval.Unset)
+                            SetCount++;
+
+                    if (SetCount > 1)
+                        break;
+
+                    // if union, try for another pass
+                    if (hasUnion)
+                    {
+                        noHitPass = 0;
+                        continue;
+                    }
+
+                    noHitPass++;
+                    c = (c + 1 == InterVals.Count) ? 0 : c + 1;
+
+                    // find next set interval
+                    for (int i = 0; i < InterVals.Count; i++)
+                    {
+                        // check counter limits
+                        if (InterVals[c] == Interval.Unset)
+                        {
+                            c = (c + 1 == InterVals.Count) ? 0 : c + 1;
+                            continue;
+                        }
+                        break;
+                    }
+                }
+
+                // reassemble the lines
+                foreach (var i  in InterVals)
+                {
+                    if (i != Interval.Unset)
+                    {
+                        if (IsHorizontal)
+                        {
+                            OutLines.Add(new Line(new Point3d(i.T0, yInt, 0), new Point3d(i.T1, yInt, 0)));
+                            continue;
+                        }
+                        if (slope == 0)
+                        {
+                            // vertical line
+                            OutLines.Add(new Line(new Point3d(l[0].FromX, i.T0, 0), new Point3d(l[0].FromX, i.T1, 0)));
+                            continue;
+                        }
+
+                        double x1 = (i.T0 - yInt) / slope;
+                        double x2 = (i.T1 - yInt) / slope;
+
+                        OutLines.Add(new Line(new Point3d(x1, i.T0, 0), new Point3d(x2, i.T1, 0)));
+                    }
                 }
             }
 
@@ -166,5 +310,109 @@ namespace gjTools.Testing
         }
     }
 
+    public class ConlinearLines
+    {
 
+    }
+
+    public struct SimpleLine
+    {
+        /// <summary>
+        /// Y value interval
+        /// </summary>
+        public SimpleInterval V_Interval;
+        /// <summary>
+        /// X value interval
+        /// </summary>
+        public SimpleInterval H_Interval;
+        public LineOrientation Orientation;
+        public readonly double slope;
+        public readonly double Y_Intercept;
+
+        public SimpleLine(Line line)
+        {
+            H_Interval = new SimpleInterval(line.FromX, line.ToX);
+            V_Interval = new SimpleInterval(line.FromY, line.ToY);
+            
+            // preset these to nan
+            slope = double.NaN;
+            Y_Intercept = double.NaN;
+            Orientation = LineOrientation.Sloped;
+
+            if (V_Interval.Min == V_Interval.Max)
+            {
+                Orientation = LineOrientation.Horizontal;
+                Y_Intercept = V_Interval.Min;
+                return;
+            }
+
+            if (H_Interval.Min == H_Interval.Max)
+            {
+                Orientation = LineOrientation.Vertical;
+                return;
+            }
+
+            // sloped line stuff now
+            slope = Math.Round(V_Interval.Length / H_Interval.Length, 3);
+            Y_Intercept = Math.Round(slope * H_Interval.Min + V_Interval.Min, 3);
+        }
+
+        public bool IsColinear(SimpleLine other)
+        {
+            return slope == other.slope && Y_Intercept == other.Y_Intercept;
+        }
+
+        public bool CheckOverlap(SimpleLine other)
+        {
+            return H_Interval.CheckOverlap(other.H_Interval) && V_Interval.CheckOverlap(other.V_Interval);
+        }
+
+        public void Union(SimpleLine other)
+        {
+            V_Interval.Union(other.V_Interval);
+            H_Interval.Union(other.H_Interval);
+        }
+
+        public Line GetLine
+        {
+            get
+            {
+                return new Line(new Point3d(H_Interval.Min, V_Interval.Min, 0), new Point3d(H_Interval.Max, V_Interval.Max, 0));
+            }
+        }
+    }
+
+    public enum LineOrientation
+    {
+        Vertical, Horizontal, Sloped
+    }
+
+    public struct SimpleInterval
+    {
+        public double Min;
+        public double Max;
+        public double Length;
+
+        public SimpleInterval(double start, double end)
+        {
+            // Round these to 3 digits
+            start = Math.Round(start, 3);
+            end = Math.Round(end, 3);
+            
+            Min = Math.Min(start, end);
+            Max = Math.Max(start, end);
+            Length = Max - Min;
+        }
+
+        public bool CheckOverlap(SimpleInterval other)
+        {
+            return (other.Min <= Max && other.Min >= Min) || (other.Max <= Max && other.Max >= Min);
+        }
+
+        public void Union(SimpleInterval other)
+        {
+            Min = Math.Min(other.Min, Min);
+            Max = Math.Max(other.Max, Max);
+        }
+    }
 }

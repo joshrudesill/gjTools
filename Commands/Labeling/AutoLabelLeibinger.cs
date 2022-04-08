@@ -29,11 +29,14 @@ namespace gjTools.Commands
     public class UserStrings
     {
         public string PartName;
-        public string DotName;
         public string LayerName;
         public string ParentLayer;
         public Eto.Drawing.Point windowPosition;
         public List<Layer> pLays;
+
+        // dots data
+        public string DotName;
+        public DotData DData;
 
         // for outputs
         public OEM_Label label;
@@ -71,7 +74,9 @@ namespace gjTools.Commands
         private string m_LayerName = "C_TEXT";
         private string m_TextBox1 = "";
         private string m_TextBox2 = "";
-        private Eto.Drawing.Point m_windowPosition;
+        private Eto.Drawing.Point m_windowPosition = new Eto.Drawing.Point(
+            (int)(Eto.Forms.Mouse.Position.X - 260), 
+            (int)(Eto.Forms.Mouse.Position.Y - 200));
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
@@ -88,7 +93,6 @@ namespace gjTools.Commands
                 RhinoApp.WriteLine("No TextDot objects Found in this document..");
                 return Result.Cancel;
             }
-            var DData = GetDotList(allDots);
 
             // get a list of the parent layers
             var pLays = new List<Layer>();
@@ -101,7 +105,6 @@ namespace gjTools.Commands
             var UData = new UserStrings()
             {
                 PartName = m_PartName,
-                DotName = DData.UniqueDotNames[0],
                 LayerName = "",
                 labelLayer = m_LayerName,
                 ParentLayer = pLays[0].Name,
@@ -110,9 +113,11 @@ namespace gjTools.Commands
                 textLine1 = m_TextBox1,
                 textLine2 = m_TextBox2
             };
+            UData.DData = GetDotList(allDots);
+            UData.DotName = UData.DData.UniqueDotNames[0];
 
             // create the gui
-            var GetInfo = new GUI.AutoLabelLeibingerGUI(UData, DData);
+            var GetInfo = new GUI.AutoLabelLeibingerGUI(UData);
             m_windowPosition = UData.windowPosition;
             m_PartName = UData.PartName;
             m_LayerName = UData.labelLayer;
@@ -122,13 +127,11 @@ namespace gjTools.Commands
                 return Result.Cancel;
 
             // place the labels
-            var pTool = new PrototypeTool();
             var lTool = new LayerTools(doc);
             var lay = lTool.CreateLayer(UData.labelLayer, pLays[UData.layerIndex].Name );
-            foreach(var d in DData.AllDots)
-                if (d.Text == DData.UniqueDotNames[UData.dotIndex])
-                    if (!pTool.PlaceProductionLabel(doc, UData.label, lay, d.Point))
-                        AddCustomText(UData, doc, d.Point, lay);
+            foreach(var d in UData.DData.AllDots)
+                if (d.Text == UData.DData.UniqueDotNames[UData.dotIndex])
+                    AddCustomText(UData, doc, lay, d);
 
             doc.Views.Redraw();
             return Result.Success;
@@ -142,20 +145,33 @@ namespace gjTools.Commands
         /// <param name="doc"></param>
         /// <param name="pt"></param>
         /// <param name="lay"></param>
-        private void AddCustomText(UserStrings UData, RhinoDoc doc, Point3d pt, Layer lay)
+        private void AddCustomText(UserStrings UData, RhinoDoc doc, Layer lay, TextDot dot)
         {
             var attr = new ObjectAttributes { LayerIndex = lay.Index };
             var dt = new DrawTools(doc);
             var ds = dt.StandardDimstyle();
+            
+            // get date from the dot object
+            Point3d dotPoint = dot.Point;
+            double rotPoint = 0.0;
+            if (dot.SecondaryText != null)
+                double.TryParse(dot.SecondaryText, out rotPoint);
+            rotPoint = RhinoMath.ToRadians(rotPoint);
 
             if (UData.textLine1.Length > 0)
             {
-                var tEntity = dt.AddText(UData.textLine1, pt, ds, 0.16, 0, 3, 6);
+                var tEntity = dt.AddText(UData.textLine1, dotPoint, ds, 0.16, 0, 3, 6);
+                if (rotPoint > 0)
+                    tEntity.Rotate(rotPoint, Vector3d.ZAxis, dotPoint);
+
                 doc.Objects.Add(tEntity, attr);
             }
             if (UData.textLine2.Length > 0)
             {
-                var tEntity = dt.AddText(UData.textLine2, new Point3d(pt.X, pt.Y - 0.25, 0), ds, 0.14, 0, 3, 0);
+                var tEntity = dt.AddText(UData.textLine2, new Point3d(dotPoint.X, dotPoint.Y - 0.25, 0), ds, 0.14, 0, 3, 0);
+                if (rotPoint > 0)
+                    tEntity.Rotate(rotPoint, Vector3d.ZAxis, dotPoint);
+
                 doc.Objects.Add(tEntity, attr);
             }
         }
@@ -197,7 +213,7 @@ namespace GUI
     public class AutoLabelLeibingerGUI
     {
         private Dialog<DialogResult> m_Dialog;
-        public Point windowPosition = new Point(400, 400);
+        public Point windowPosition;
         public gjTools.Commands.OEM_Label LabelInfo;
 
         private Button m_button_search = new Button { Text = "Search", Width = 80 };
@@ -219,14 +235,14 @@ namespace GUI
         /// </summary>
         /// <param name="UData"></param>
         /// <param name="DData"></param>
-        public AutoLabelLeibingerGUI(gjTools.Commands.UserStrings UData, gjTools.Commands.DotData DData)
+        public AutoLabelLeibingerGUI(gjTools.Commands.UserStrings UData)
         {
             windowPosition = UData.windowPosition;
 
             m_tbox_partNumber.Text = UData.PartName;
             m_tbox_layerName.Text = UData.LayerName;
 
-            m_drop_dots.DataStore = DData.UniqueDotNames;
+            m_drop_dots.DataStore = UData.DData.UniqueDotNames;
             m_drop_layers.DataStore = UData.parentLayerNames();
 
             m_tbox_partResult1.Text = UData.textLine1;

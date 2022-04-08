@@ -253,22 +253,27 @@ public class DrawTools : IDrawTools
     /// <returns>The STD Dimstyle index</returns>
     public int StandardDimstyle()
     {
-        if (doc.DimStyles.FindName("LabelMaker") == null)
-        {
-            // craete the dimstyle
-            int dimStyleIntex = doc.DimStyles.Add("LabelMaker");
-            var dimstyle = doc.DimStyles.FindIndex(dimStyleIntex);
+        DimensionStyle ds = doc.DimStyles.FindName("LabelMaker");
 
-            dimstyle.DimensionScale = 1;
-            dimstyle.TextHeight = 0.14;
-            dimstyle.Font = Font.FromQuartetProperties("Consolas", false, false);
-
-            return dimstyle.Index;
-        }
-        else
+        if (ds == null)
         {
-            return doc.DimStyles.FindName("LabelMaker").Index;
+            // create the dimstyle
+            ds = doc.DimStyles[doc.DimStyles.Add("LabelMaker")];
+
+            ds.Font = Font.FromQuartetProperties("Consolas", false, false);
+            ds.DimensionScale = 1;
+            ds.TextHeight = 0.14;
+            ds.DrawForward = false;
+
+            return ds.Index;
         }
+
+        if (ds.DrawForward)
+        {
+            ds.DrawForward = false;
+            doc.DimStyles.Modify(ds, ds.Index, true);
+        }
+        return ds.Index;
     }
 
     /// <summary>

@@ -45,6 +45,7 @@ namespace gjTools.Commands
 
                 gs.SetDefaultString(options[0]);
                 gs.SetCommandPromptDefault(options[0]);
+                gs.AcceptNothing(true);
             var gType = gs.Get();
 
             if (gs.CommandResult() != Result.Success)
@@ -55,6 +56,8 @@ namespace gjTools.Commands
                 offset = optiVal[gs.OptionIndex() - 1];
             else if (gType == Rhino.Input.GetResult.Number)
                 offset = gs.Number();
+            else if (gType == Rhino.Input.GetResult.Nothing)
+                offset = optiVal[0];
             else
                 return Result.Cancel;
 
