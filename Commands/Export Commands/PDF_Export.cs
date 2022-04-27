@@ -867,7 +867,8 @@ namespace PDF
             else
             {
                 // directory exists, see if the pdf does, then delete
-                if (System.IO.File.Exists(fullPath)) System.IO.File.Delete(fullPath);
+                if (System.IO.File.Exists(fullPath))
+                    System.IO.File.Delete(fullPath);
             }
         }
 

@@ -42,6 +42,7 @@ namespace gjTools.Commands.Drawing_Tools
                 {
                     var pts = new List<Point3d>(bb.GetCorners());
                     Disp.AddPolygon(pts.GetRange(0, 5), colorFill, colorStroke, true, true);
+                    Disp.AddText(pcl.Parent.Name, new Plane(pts[3], Vector3d.ZAxis), 5, colorStroke);
                 }
             }
             doc.Views.Redraw();

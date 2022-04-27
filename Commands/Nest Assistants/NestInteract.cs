@@ -96,7 +96,7 @@ namespace gjTools.Testing
 
             // apply some corrective rotation
             double correctiveRotation = Vector3d.VectorAngle(Vector3d.XAxis, vec_stk);
-            correctiveRotation *= (vec_stk.Y > vec_rh.Y) ? -1 : 1;
+            correctiveRotation *= (vec_stk.Y > 0) ? -1 : 1;
             vec_up.Rotate(correctiveRotation, Vector3d.ZAxis);
             vec_rh.Rotate(correctiveRotation, Vector3d.ZAxis);
             vec_stk.Rotate(correctiveRotation, Vector3d.ZAxis);
