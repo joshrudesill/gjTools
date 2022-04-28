@@ -19,8 +19,9 @@ namespace gjTools.Commands
         public double Spacing = 0.25;
         public readonly BoundingBox BB = BoundingBox.Empty;
 
-        public StraitBoxGrid(List<ObjRef> oRefs)
+        public StraitBoxGrid(List<ObjRef> oRefs, double spacing)
         {
+            Spacing = spacing;
             foreach (ObjRef obj in oRefs)
                 BB.Union(obj.Geometry().GetBoundingBox(true));
         }
@@ -70,6 +71,9 @@ namespace gjTools.Commands
         public static Nest_StraitBox Instance { get; private set; }
 
         public override string EnglishName => "Nest_StraitBox";
+        
+        // remember the last used spacing
+        public double Spacing = 0.25;
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
@@ -77,12 +81,13 @@ namespace gjTools.Commands
                 return Result.Cancel;
             var rObj = new List<ObjRef>(rGetObj);
 
-            var grid = new StraitBoxGrid(rObj);
+            var grid = new StraitBoxGrid(rObj, Spacing);
             var gp = new StraitBoxDisplay(grid);
 
             if (gp.res == GetResult.Point)
                 DuplicateObjects(doc, grid, rObj);
 
+            Spacing = grid.Spacing;
             return Result.Success;
         }
 

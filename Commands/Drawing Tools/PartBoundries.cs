@@ -41,12 +41,15 @@ namespace gjTools.Commands.Drawing_Tools
                 if (!bb.Equals(BoundingBox.Empty))
                 {
                     var pts = new List<Point3d>(bb.GetCorners());
+                    // add translucent box
                     Disp.AddPolygon(pts.GetRange(0, 5), colorFill, colorStroke, true, true);
-                    Disp.AddText(pcl.Parent.Name, new Plane(pts[3], Vector3d.ZAxis), 5, colorStroke);
+                    // add parent layer text at the top of the box
+                    Disp.AddText(pcl.Parent.Name, new Plane(pts[3], Vector3d.ZAxis), 1.25, colorStroke);
                 }
             }
             doc.Views.Redraw();
 
+            // keep the display alive until not needed anymore
             string Fuck = "";
             RhinoGet.GetString("Press Enter to Close..", true, ref Fuck);
             Disp.Enabled = false;
@@ -80,13 +83,12 @@ namespace gjTools.Commands.Drawing_Tools
                 if (pObj != null)
                     RhinoObject.GetTightBoundingBox(pObj, out bb);
 
-                BoundingBox childbb = BoundingBox.Empty;
                 foreach(Layer cl in ChildLayers)
                 {
                     var cObj = doc.Objects.FindByLayer(cl);
                     if (cObj != null)
                     {
-                        RhinoObject.GetTightBoundingBox(cObj, out childbb);
+                        RhinoObject.GetTightBoundingBox(cObj, out BoundingBox childbb);
                         bb.Union(childbb);
                     }
                 }

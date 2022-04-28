@@ -245,7 +245,7 @@ namespace CutFile
             {
                 PlaceholderText = "CutName",
                 Text = NextDefaultCutName,
-                ToolTip = "CTRL+J Adds the Job Number (If Any)",
+                ToolTip = "CTRL+J Adds the Job Number (If Any)\nCTRL+L Adds the Layer Name",
                 ID = "FileName",
                 TabIndex = 2,
                 Enabled = false
@@ -423,6 +423,15 @@ namespace CutFile
 
                 FileName.Text = FileName.Text.Insert(FileName.CaretIndex, JobNumber);
                 FileName.CaretIndex = JobNumber.Length + ind;
+                return;
+            }
+            if (e.Key == Keys.L && e.Modifiers == Keys.Control)
+            {
+                int ind = FileName.CaretIndex;
+                string lName = layers[CutItems.SelectedRow].Name;
+
+                FileName.Text = FileName.Text.Insert(FileName.CaretIndex, lName);
+                FileName.CaretIndex = lName.Length + ind;
             }
         }
 
