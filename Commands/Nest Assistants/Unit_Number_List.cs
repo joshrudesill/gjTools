@@ -77,23 +77,35 @@ namespace gjTools.Commands
                 height = (BB.GetEdges()[1].Length > height) ? BB.GetEdges()[1].Length : height;
             }
 
+            // Create the layer structure
+            var lt = new LayerTools(doc);
+            Layer Parent = lt.CreateLayer("UNIT#s");
+            Layer kissLay = lt.CreateLayer("C_KISS", Parent.Name, System.Drawing.Color.FromArgb(255, 200, 0, 200));
+            Layer thruLay = lt.CreateLayer("C_THRU", Parent.Name, System.Drawing.Color.Red);
+
             // Resize, stack and add to the document
-            var attr = example.Object().Attributes;
+            var attrThru = new ObjectAttributes { LayerIndex = thruLay.Index };
+            var attrkiss = new ObjectAttributes { LayerIndex = kissLay.Index };
             var plane = Plane.WorldXY;
             for (int i = 0; i < txtEntList.Count; i++)
             {
                 var te = txtEntList[i];
                 var Rec = new Rectangle3d(plane, width + 0.5, height + 0.5);
 
+                // create a group
+                int grp = doc.Groups.Add();
+                attrkiss.RemoveFromAllGroups();
+                attrkiss.AddToGroup(grp);
+
                 var crvs = te.Crvs;
                 for (int c = 0; c < crvs.Count; c++)
                 {
                     var crv = crvs[c];
                     crv.Translate(Rec.Center - te.BB.Center);
-                    doc.Objects.AddCurve(crv, attr);
+                    doc.Objects.AddCurve(crv, attrkiss);
                 }
 
-                doc.Objects.AddRectangle(Rec, attr);
+                doc.Objects.AddRectangle(Rec, attrThru);
 
                 plane.OriginY += height + 0.5;
             }

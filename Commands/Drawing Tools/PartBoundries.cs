@@ -54,7 +54,7 @@ namespace gjTools.Commands.Drawing_Tools
             RhinoGet.GetString("Press Enter to Close..", true, ref Fuck);
             Disp.Enabled = false;
             Disp.Dispose();
-
+            
             doc.Views.Redraw();
             return Result.Success;
         }
