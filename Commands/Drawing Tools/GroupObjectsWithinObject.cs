@@ -31,6 +31,9 @@ namespace gjTools.Commands.Drawing_Tools
             int grp = doc.Groups.Add();
             foreach(var obj in objs)
             {
+                if (GroupObj.ObjectId == obj.Id)
+                    continue;
+
                 obj.Attributes.RemoveFromAllGroups();
                 obj.Attributes.AddToGroup(grp);
                 obj.CommitChanges();

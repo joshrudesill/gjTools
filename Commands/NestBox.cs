@@ -5,6 +5,7 @@ using Rhino.Commands;
 using Rhino.Display;
 using Rhino.Geometry;
 using Rhino.Input;
+using Rhino.Input.Custom;
 using Rhino.DocObjects;
 
 namespace gjTools.Commands
@@ -21,29 +22,79 @@ namespace gjTools.Commands
 
         public override string EnglishName => "NestBox";
 
+        // stays around for the session
+        OptionDouble m_def_width = new OptionDouble(1.0);
+        OptionDouble m_def_height = new OptionDouble(1.0);
+
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            // Get some Objects
-            if (RhinoGet.GetMultipleObjects("Select Objects", false, ObjectType.Curve, out ObjRef[] sel) != Result.Success)
-                return Result.Cancel;
+            // reset this every time
+            OptionInteger custQty = new OptionInteger(-1);
+            OptionToggle reset = new OptionToggle(false, "All", "all");
+
+            // custom get command to handle alternate options
+            // only shows the options if no prior object were selected
+            GetObject go = new GetObject();
+            go.SetCommandPrompt("Select Objects");
+            go.AddOptionInteger("CustomQTY", ref custQty);
+            go.AddOptionDouble("HeightDefault", ref m_def_height);
+            go.AddOptionDouble("WidthDefault", ref m_def_width);
+            go.AddOptionToggle("Reset", ref reset);
+            go.GeometryFilter = ObjectType.Curve;
+
+            // loop to account for option changes
+            while (go.GetMultiple(1, 0) != GetResult.Object)
+            {
+                if (go.Result() == GetResult.Cancel)
+                    return Result.Cancel;
+
+                if (go.Result() == GetResult.Option)
+                {
+                    if (go.OptionIndex() != 4)
+                        continue;
+
+                    m_def_height.CurrentValue = 1.0;
+                    m_def_width.CurrentValue = 1.0;
+                    RhinoApp.WriteLine("Reset NestBox Defaults..");
+                    return Result.Success;
+                }
+            }
+
+            List<ObjRef> sel = new List<ObjRef>(go.Objects());
 
             // This crushes the data
-            var NestBox = new NestBoxMaker(doc, new List<ObjRef>(sel));
+            var NestBox = new NestBoxMaker(doc, sel);
             if (NestBox.CutLayers.Count == 0)
             {
                 RhinoApp.WriteLine("No Cut Layers Were in your Selection");
                 return Result.Cancel;
             }
 
-            double height = 1;
-            if (RhinoGet.GetNumber("Layout Height (Values Below 3 Shrinks to the Content)", false, ref height) != Result.Success)
-                return Result.Cancel;
-            NestBox.SetSheetDims(height, -1);
+            // ask for the sheet modifiers
+            go.ClearCommandOptions();
+            go.SetCommandPrompt($"Layout Height = {m_def_height.CurrentValue}");
+            go.AcceptNumber(true, true);
+            go.AcceptNothing(true);
+            RhinoApp.WriteLine("(Values Below 3 Shrinks to the Content)");
+            doc.Objects.UnselectAll();
+            go.Get();
 
-            double width = 1;
-            if (RhinoGet.GetNumber("Layout Width (Values Below 3 Shrinks to the Content)", false, ref width) != Result.Success)
+            // capture the height
+            if (go.Result() != GetResult.Number && go.Result() != GetResult.Nothing)
                 return Result.Cancel;
-            NestBox.SetSheetDims(-1, width);
+            double height = (go.Result() == GetResult.Number) ? go.Number() : m_def_height.CurrentValue;
+
+            go.SetCommandPrompt($"Layout Width = {m_def_width.CurrentValue}");
+            doc.Objects.UnselectAll();
+            go.Get();
+
+            // capture the width
+            if (go.Result() != GetResult.Number && go.Result() != GetResult.Nothing)
+                return Result.Cancel;
+            double width = (go.Result() == GetResult.Number) ? go.Number() : m_def_width.CurrentValue;
+
+            // set the dims
+            NestBox.SetSheetDims(height, width, custQty.CurrentValue);
 
             DrawNestBox(NestBox);
 
@@ -72,9 +123,6 @@ namespace gjTools.Commands
             NestBox.doc.Objects.AddLine(NestBox.Geoms.DividerLine, attr);
         }
     }
-
-
-
 
 
 
@@ -116,12 +164,11 @@ namespace gjTools.Commands
                 if (leftovers.Count == 0) break;
             }
 
-            if (CutLayers.Count > 0)
-            {
-                UpdateActualSizes();
-                GetParentLayer();
-                SetupGeometry();
-            }
+            if (CutLayers.Count <= 0)
+                return;
+            
+            UpdateActualSizes();
+            GetParentLayer();
         }
 
         /// <summary>
@@ -171,7 +218,7 @@ namespace gjTools.Commands
         /// </summary>
         /// <param name="height">-1 to skip</param>
         /// <param name="width">-1 to skip</param>
-        public void SetSheetDims(double height = -1, double width = -1)
+        public void SetSheetDims(double height = -1, double width = -1, int CustomQty = -1)
         {
             // larger than 3 Keep exact amount
             if (height != -1)
@@ -189,14 +236,14 @@ namespace gjTools.Commands
                     Width = RoundQuarter((width * 2) + Width);
             }
 
-            SetupGeometry();
+            SetupGeometry(CustomQty);
         }
 
         /// <summary>
         /// Rectangle representing the NestBox
         /// </summary>
         /// <returns></returns>
-        private void SetupGeometry()
+        private void SetupGeometry(int CustomQty = -1)
         {
             var NestGeom = new LabelGeometry();
             var DimStyle = doc.DimStyles[new DrawTools(doc).StandardDimstyle()];
@@ -204,7 +251,7 @@ namespace gjTools.Commands
             var boxPlane = new Plane(Center + new Point3d(-Width / 2, -Height / 2, 0), Vector3d.ZAxis);
 
             double BaseTxtHeight = Width * 0.0135;
-            var txtHeight = new List<double>(5)
+            var txtHeight = new List<double>(6)
             {
                 BaseTxtHeight * 1.5,
                 BaseTxtHeight * 0.90,
@@ -223,7 +270,7 @@ namespace gjTools.Commands
                 new Point3d(inset, -(inset + (txtHeight[0] + txtHeight[1] + txtHeight[3]) * 2), 0)
             };
 
-            var path = (doc.Path == null) ? "File Not Saved" : doc.Path;
+            var path = (doc.Path == null) ? "File Not Saved" : doc.Path.Replace("\\", "/");
             var name = new SQLTools().queryVariableData().userFirstName;
             int qty = 0;
             int grps = 0;
@@ -232,25 +279,28 @@ namespace gjTools.Commands
 
             foreach(var c in CutLayers)
             {
-                cutLengths += $"[{c.Name}: {(int)c.CutLength}] ";
                 tmpBB.Union(c.BB);
                 qty = (qty >= c.Obj.Count) ? qty : c.Obj.Count;
                 grps += c.GroupCount;
             }
             NestGeom.ObjCount = qty;
-            NestGeom.GroupCount = grps;
+            NestGeom.GroupCount = grps = (CustomQty > 0) ? CustomQty : grps;
             if (grps > 0)
                 qty = grps;
 
             SheetUsage = Width / qty;
+
+            // updating for the per part kerf
+            foreach (var c in CutLayers)
+                cutLengths += $"[{c.Name}: {(int)c.CutLength}┇{(int)(c.CutLength / qty)}] ";
 
             var strVals = new List<string>(5)
             {
                 $"PN: {ParentLayer.Name}",
                 $"Path: {path}",
                 $"{name}\n{DateTime.Now}",
-                $"Sheet Size: {Width}w x {Height}h    (Part Area: {Math.Round(tmpBB.GetEdges()[0].Length, 2)}w x {Math.Round(tmpBB.GetEdges()[1].Length, 2)}h)",
-                $"Items up: {qty}   Kerf: {cutLengths}"
+                $"Items up: {qty}    Sheet Size: {Width}w x {Height}h    (Part Area: {Math.Round(tmpBB.GetEdges()[0].Length, 2)}w x {Math.Round(tmpBB.GetEdges()[1].Length, 2)}h)",
+                $"Kerf┇PerItem: {cutLengths}"
             };
 
             var txtList = new List<TextEntity>(5)
@@ -309,8 +359,7 @@ namespace gjTools.Commands
             public Line DividerLine { get; set; }
 
             public int ObjCount { get; set; }
-            public int GroupCount { get; set; }
-
+            public int GroupCount { get ; set; }
             public List<TextEntity> TxtEnt { get; set; }
         }
     }
@@ -340,7 +389,6 @@ namespace gjTools.Commands
         {
             var doc = selection[0].Object().Document;
             Layer = doc.Layers[selection[0].Object().Attributes.LayerIndex];
-            IsCut = false;
             Name = Layer.Name;
 
             // object Setup
@@ -349,21 +397,22 @@ namespace gjTools.Commands
             CutLength = 0;
 
             // is this a cut object layer
-            if (Name.StartsWith("C_"))
-            {
-                IsCut = true;
-                Name = Name.Replace("C_", "");
+            IsCut = Name.StartsWith("C_");
+            if (!IsCut)
+                return;
+            
+            Name = Name.Replace("C_", "");
 
-                // Process all parts an count groups
-                ProcessParts(selection);
+            // Process all parts an count groups
+            ProcessParts(selection);
 
-                if (BB.IsValid)
-                {
-                    var edge = BB.GetEdges();
-                    Width = edge[0].Length;
-                    Height = edge[1].Length;
-                }
-            }
+            if (!BB.IsValid)
+                return;
+
+            // BB is valid, assign the dims
+            var edge = BB.GetEdges();
+            Width = edge[0].Length;
+            Height = edge[1].Length;
         }
 
         /// <summary>
@@ -386,24 +435,23 @@ namespace gjTools.Commands
                 if (o_attr.LayerIndex != Layer.Index)
                 {
                     Leftovers.Add(o);
+                    continue;
                 }
-                else
-                {
-                    // belongs to this object
-                    Obj.Add(o);
-                    var partBB = o.Geometry().GetBoundingBox(true);
-                    BBox.Union(partBB);
+                
+                // belongs to this object
+                Obj.Add(o);
+                var partBB = o.Geometry().GetBoundingBox(true);
+                BBox.Union(partBB);
 
-                    // Cut length
-                    var crv = o.Curve();
-                    if (crv != null)
-                        CutLength += crv.GetLength(0.1);
+                // Cut length
+                var crv = o.Curve();
+                if (crv != null)
+                    CutLength += crv.GetLength(0.1);
 
-                    // Group count
-                    if (o_attr.GroupCount > 0)
-                        if (!tmpGroupList.Contains(o_attr.GetGroupList()[0]))
-                            tmpGroupList.Add(o_attr.GetGroupList()[0]);
-                }
+                // Group count
+                if (o_attr.GroupCount > 0)
+                    if (!tmpGroupList.Contains(o_attr.GetGroupList()[0]))
+                        tmpGroupList.Add(o_attr.GetGroupList()[0]);
             }
 
             BB = BBox;
@@ -416,11 +464,12 @@ namespace gjTools.Commands
         public List<ObjRef> GetLeftovers()
         {
             var cpy = new List<ObjRef>(Leftovers.Count);
-            if (Leftovers.Count > 0)
-            {
-                cpy.AddRange(Leftovers);
-                Leftovers.Clear();
-            }
+            if (Leftovers.Count == 0)
+                return cpy;
+
+            // get what's left and return
+            cpy.AddRange(Leftovers);
+            Leftovers.Clear();
 
             return cpy;
         }

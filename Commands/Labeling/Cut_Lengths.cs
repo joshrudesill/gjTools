@@ -141,6 +141,20 @@ namespace gjTools.Commands
             if (pt == Point3d.Origin)
                 RhinoGet.GetPoint("Place CutLengths", false, out pt);
 
+            //RhinoGet.GetOneObject("select the thing", false, ObjectType.Annotation, out ObjRef o);
+            //TextEntity te = o.TextEntity();
+            //te = TextEntity.CreateWithRichText(
+            //    "{\\rtf1\\deff0{\\fonttbl{\\f0 Arial; } {\\f1 Consolas; } }\\f0 \\fs21{\\f1\\ul CUT LENGTHS:\\par} " +
+            //    "{\\f1 THRU: 647\\par} " +
+            //    "{\\f1 KISS: 163\\par} " +
+            //    "{\\f1 SCORE: 120\\par} " +
+            //    "{\\f1 GUILL: 358\\par} }",
+            //    new Plane(pt, Vector3d.ZAxis), obj.doc.DimStyles[ds], false, 0, 0);
+            //te.MaskFrame = DimensionStyle.MaskFrame.RectFrame;
+            //te.MaskOffset = 0.5;
+            //te.Justification = TextJustification.TopRight;
+            //obj.doc.Objects.AddText(te);
+
             foreach (var l in obj.GetCutLayers)
             {
                 var objId = obj.doc.Objects.AddText(dt.AddText(l.Substring(2) + ": " + obj.GetCutLength(l, out Layer lay), pt, ds, 1, 0, 2, 6));
