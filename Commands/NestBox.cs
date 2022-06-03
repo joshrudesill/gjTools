@@ -134,6 +134,7 @@ namespace gjTools.Commands
 
         public List<ObjRef> N_Objs { get; private set; }
         public List<Cut_Layer> CutLayers { get; private set; }
+        public List<int> GroupIndex { get; private set; }
         public double Height { get; private set; }
         public double Width { get; private set; }
         public double SheetUsage { get; private set; }
@@ -149,6 +150,7 @@ namespace gjTools.Commands
             doc = Document;
             N_Objs = objs;
             CutLayers = new List<Cut_Layer>(10);
+            GroupIndex = new List<int>();
             SheetUsage = 0;
 
             var leftovers = objs;
@@ -158,7 +160,26 @@ namespace gjTools.Commands
                 leftovers = cut.GetLeftovers();
 
                 if (cut.IsCut)
+                {
                     CutLayers.Add(cut);
+
+                    // check if the numbers of groups are clashing with others
+                    // TODO
+                    foreach(int grp in cut.GroupIndexes)
+                    {
+                        bool continu = false;
+                        for (int i = 0; i < GroupIndex.Count; i++)
+                        {
+                            if (GroupIndex[i] != grp)
+                                continue;
+
+                            continu = true;
+                            break;
+                        }
+
+                        if ()
+                    }
+                }
 
                 // No leftovers
                 if (leftovers.Count == 0) break;
@@ -375,6 +396,7 @@ namespace gjTools.Commands
         public List<ObjRef> Obj { get; private set; }
         public double CutLength { get; private set; }
         public int GroupCount { get; private set; }
+        public List<int> GroupIndexes { get; private set; }
 
         public double Width { get; private set; }
         public double Height { get; private set; }
@@ -401,6 +423,7 @@ namespace gjTools.Commands
             if (!IsCut)
                 return;
             
+            GroupIndexes = new List<int>();
             Name = Name.Replace("C_", "");
 
             // Process all parts an count groups
@@ -423,7 +446,6 @@ namespace gjTools.Commands
         private void ProcessParts(List<ObjRef> objects)
         {
             // Temp to count all unique group indexes
-            var tmpGroupList = new List<int>();
             var BBox = BoundingBox.Empty;
 
             // Process parts
@@ -450,12 +472,12 @@ namespace gjTools.Commands
 
                 // Group count
                 if (o_attr.GroupCount > 0)
-                    if (!tmpGroupList.Contains(o_attr.GetGroupList()[0]))
-                        tmpGroupList.Add(o_attr.GetGroupList()[0]);
+                    if (!GroupIndexes.Contains(o_attr.GetGroupList()[0]))
+                        GroupIndexes.Add(o_attr.GetGroupList()[0]);
             }
 
             BB = BBox;
-            GroupCount = tmpGroupList.Count;
+            GroupCount = GroupIndexes.Count;
         }
 
         /// <summary>

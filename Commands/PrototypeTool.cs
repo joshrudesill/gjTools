@@ -173,7 +173,10 @@ namespace gjTools.Commands
             }
 
             CreateProtoTitleBlock(nestBox);
-            CreateProtoLabels();
+
+            // See if the user wanted labels
+            if (pGui.PData.CreateLabels)
+                CreateProtoLabels();
 
             return Result.Success;
         }
@@ -537,6 +540,7 @@ namespace GUI
             };
 
             window.ShowModal(RhinoEtoApp.MainWindow);
+            PData.CreateLabels = (bool)m_AddLabels.Checked;
             PData.windowPosition = window.Location;
         }
 
