@@ -165,20 +165,20 @@ namespace gjTools.Commands
 
                     // check if the numbers of groups are clashing with others
                     // TODO
-                    foreach(int grp in cut.GroupIndexes)
-                    {
-                        bool continu = false;
-                        for (int i = 0; i < GroupIndex.Count; i++)
-                        {
-                            if (GroupIndex[i] != grp)
-                                continue;
-
-                            continu = true;
-                            break;
-                        }
-
-                        if ()
-                    }
+                    //foreach(int grp in cut.GroupIndexes)
+                    //{
+                    //    bool continu = false;
+                    //    for (int i = 0; i < GroupIndex.Count; i++)
+                    //    {
+                    //        if (GroupIndex[i] != grp)
+                    //            continue;
+                    //
+                    //        continu = true;
+                    //        break;
+                    //    }
+                    //
+                    //    if ()
+                    //}
                 }
 
                 // No leftovers
