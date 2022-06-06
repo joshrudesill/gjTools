@@ -57,7 +57,49 @@ namespace gjTools.Commands.EP_Things
         /// <param name="doc"></param>
         private void CreateTitleBlock(GUI.EPBlockInfo dat, RhinoDoc doc, Layer lay)
         {
-            // TODO
+            int ds = DrawTools.StandardDimstyle(doc);
+            Plane pln = new Plane(new Point3d(-42, 14, 0), Vector3d.ZAxis);
+
+            // Create the text objects
+            TextEntity printType = TextEntity.Create(dat.PrintType, pln, doc.DimStyles[ds], false, 0, RhinoMath.ToRadians(90));
+            AddTextFrame(printType, true, TextJustification.BottomRight);
+
+            pln.OriginX += 1.3;
+            pln.OriginY -= 1;
+            TextEntity version = TextEntity.Create(dat.Version, pln, doc.DimStyles[ds], false, 0, 0);
+            AddTextFrame(version, true, TextJustification.BottomLeft);
+
+            pln.OriginY -= 1.3;
+            string ptBlock = $"{dat.PartNumbers}\nDATE: %<Date(\"M/d/yyyy\", \"en-US\")>%\n";
+            for (int i = 0; i < dat.Colors.Length; i++)
+            {
+                if (dat.ColorDescription[i] == "Unused")
+                    break;
+
+                ptBlock += $"\n{dat.ColorDescription[i]}: {dat.Colors[i]}";
+            }
+            ptBlock += (dat.Coating == "None") ? "" : $"\n{dat.Coating}";
+            TextEntity partInfo = TextEntity.Create(ptBlock, pln, doc.DimStyles[ds], false, 0, 0);
+            AddTextFrame(partInfo, false, TextJustification.TopLeft);
+
+            // add them to the document
+            ObjectAttributes attr = new ObjectAttributes { LayerIndex = lay.Index };
+            attr.AddToGroup(doc.Groups.Add());
+            doc.Objects.AddText(printType, attr);
+            doc.Objects.AddText(version, attr);
+            doc.Objects.AddText(partInfo, attr);
+        }
+
+        private void AddTextFrame(TextEntity t, bool bold, TextJustification tj)
+        {
+            t.Font = Font.FromQuartetProperties("Consolas", bold, false);
+            t.SetBold(bold);
+            t.TextHeight = 1.0;
+            t.Justification = tj;
+            t.MaskEnabled = false;
+            t.DrawTextFrame = true;
+            t.MaskFrame = DimensionStyle.MaskFrame.RectFrame;
+            t.MaskOffset = 0.45;
         }
     }
 }
@@ -73,7 +115,8 @@ namespace GUI
         public Point WindowLocation = new Point(400, 400);
         public string PartNumbers = "";
         public string Version = "A";
-        public string PrintType = "Film";
+        public string PrintType = "FILM";
+        public string Coating = "";
         public string[] Colors = new string[8];
         public string[] ColorDescription = new string[8];
     }
@@ -85,8 +128,8 @@ namespace GUI
 
         // Version and print type
         private TextBox m_version = new TextBox { Text = "A" };
-        private string[] m_printTypeList = new string[3] { "Film", "Digital Print", "Screen Print" };
-        private string[] m_coatingTypeList = new string[3] { "None", "Scren Clear", "Laminate" };
+        private string[] m_printTypeList = new string[3] { "FILM", "DIGITAL PRINT", "SCREEN PRINT" };
+        private string[] m_coatingTypeList = new string[3] { "None", "SCREEN CLEAR COAT", "LAMINATE" };
         private DropDown m_printType = new DropDown();
         private DropDown m_coating = new DropDown();
 
@@ -220,7 +263,8 @@ namespace GUI
         private void UpdateInfoObject(EPBlockInfo dat)
         {
             dat.WindowLocation = window.Location;
-            dat.Version = "Version " + m_version.Text;
+            dat.Version = "VERSION: " + m_version.Text;
+            dat.Coating = m_coatingTypeList[m_coating.SelectedIndex];
             dat.PartNumbers = m_parts.Text;
             dat.PrintType = m_printTypeList[m_printType.SelectedIndex];
 
@@ -252,12 +296,12 @@ namespace GUI
         {
             if (m_printType.SelectedIndex == 0)
             {
-                m_colorLabels[0].Text = "Film";
+                m_colorLabels[0].Text = "FILM";
                 return;
             }
             
             // all other ones are the same
-            m_colorLabels[0].Text = "Base Film";
+            m_colorLabels[0].Text = "BASE FILM";
         }
 
         private void Ev_OnChange_Color(object sender, EventArgs e)

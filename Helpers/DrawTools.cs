@@ -277,6 +277,35 @@ public class DrawTools : IDrawTools
     }
 
     /// <summary>
+    /// creates the default label dimstyle used all over
+    /// </summary>
+    /// <returns>The STD Dimstyle index</returns>
+    public static int StandardDimstyle(RhinoDoc doc)
+    {
+        DimensionStyle ds = doc.DimStyles.FindName("LabelMaker");
+
+        if (ds == null)
+        {
+            // create the dimstyle
+            ds = doc.DimStyles[doc.DimStyles.Add("LabelMaker")];
+
+            ds.Font = Font.FromQuartetProperties("Consolas", false, false);
+            ds.DimensionScale = 1;
+            ds.TextHeight = 0.14;
+            ds.DrawForward = false;
+
+            return ds.Index;
+        }
+
+        if (ds.DrawForward)
+        {
+            ds.DrawForward = false;
+            doc.DimStyles.Modify(ds, ds.Index, true);
+        }
+        return ds.Index;
+    }
+
+    /// <summary>
     /// asks user to select layer or layers depending on multiSel val
     /// returns selected layers
     /// </summary>
