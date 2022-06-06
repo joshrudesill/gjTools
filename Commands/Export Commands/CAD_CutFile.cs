@@ -336,7 +336,8 @@ namespace CutFile
         /// <returns></returns>
         public DialogResult ShowForm()
         {
-            Window.ShowModal(RhinoEtoApp.MainWindow);
+            Window.ShowSemiModal(doc, RhinoEtoApp.MainWindow);
+            //Window.ShowModal(RhinoEtoApp.MainWindow);
             WindowPosition = Window.Location;
             return Window.Result;
         }

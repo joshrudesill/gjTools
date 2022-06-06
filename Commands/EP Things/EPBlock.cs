@@ -32,7 +32,7 @@ namespace gjTools.Commands.EP_Things
             Layer TitleLayer = null;
             foreach(Layer l in doc.Layers)
             {
-                if (l.FullPath == "TitleBlock")
+                if (l.FullPath == "Title Block")
                 {
                     TitleLayer = l;
                     break;
@@ -41,11 +41,12 @@ namespace gjTools.Commands.EP_Things
 
             // do we need to create the layer?
             if (TitleLayer == null)
-                TitleLayer = doc.Layers[doc.Layers.Add("TitleBlock", System.Drawing.Color.Black)];
+                TitleLayer = doc.Layers[doc.Layers.Add("Title Block", System.Drawing.Color.Black)];
 
             // if all is well, make the title block
             CreateTitleBlock(EPDat, doc, TitleLayer);
-
+            
+            doc.Views.Redraw();
             return Result.Success;
         }
 
@@ -165,13 +166,13 @@ namespace GUI
             for (int i = 0; i < m_colors.Length; i++)
             {
                 m_colors[i] = new TextBox { ID = i.ToString() };
-                m_colorLabels[i] = new Label { Text = (i == 0) ? "Film" : "Unused" };
+                m_colorLabels[i] = new Label { Text = (i == 0) ? "FILM" : "Unused" };
 
                 // event to check if the color is in the database
                 m_colors[i].LostFocus += Ev_OnChange_Color;
 
                 dat.Colors[i] = "";
-                dat.ColorDescription[i] = (i == 0) ? "Film" : "";
+                dat.ColorDescription[i] = (i == 0) ? "FILM" : "";
             }
 
             // start to make the form

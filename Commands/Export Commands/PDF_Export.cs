@@ -551,7 +551,8 @@ namespace PDF
             PDFItems.DataStore = ds_ParentLayers;
             PDFItems.SelectedRow = CurrentLayerIndex;
 
-            Window.ShowModal(RhinoEtoApp.MainWindow);
+            Window.ShowSemiModal(doc, RhinoEtoApp.MainWindow);
+            //Window.ShowModal(RhinoEtoApp.MainWindow);
             WinLocation = Window.Location;
             return Window.Result;
         }

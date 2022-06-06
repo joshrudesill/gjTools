@@ -539,7 +539,8 @@ namespace GUI
                 }
             };
 
-            window.ShowModal(RhinoEtoApp.MainWindow);
+            window.ShowSemiModal(PData.document, RhinoEtoApp.MainWindow);
+            //window.ShowModal(RhinoEtoApp.MainWindow);
             PData.CreateLabels = (bool)m_AddLabels.Checked;
             PData.windowPosition = window.Location;
         }
