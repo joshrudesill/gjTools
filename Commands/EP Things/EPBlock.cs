@@ -146,7 +146,7 @@ namespace GUI
             window = new Dialog<DialogResult>
             {
                 Padding = 10,
-                Title = "Prototype Utility",
+                Title = "E&P Title Block",
                 AutoSize = true,
                 Topmost = true,
                 Result = DialogResult.Cancel,
