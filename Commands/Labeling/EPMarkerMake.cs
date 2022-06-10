@@ -64,8 +64,7 @@ namespace gjTools.Commands.Labeling
             TextDot dot = new TextDot(gp.Name, pt) 
             { 
                 FontHeight = 8, 
-                SecondaryText = 
-                gp.Rotation.ToString() 
+                SecondaryText = gp.Rotation.ToString() 
             };
 
             // get rotation
@@ -74,12 +73,20 @@ namespace gjTools.Commands.Labeling
             double rot = Vector3d.VectorAngle(mapLine.UnitTangent, mapLinePt.UnitTangent);
             double len = mapLinePt.Length;
 
+            // is the rotation inverted?
+            Line testInvert = new Line(mapLine.From, mapLine.To);
+            testInvert.Transform(Transform.Rotation(rot, mapLine.From));
+            testInvert.Length = mapLinePt.Length;
+            rot *= (testInvert.EpsilonEquals(mapLinePt, 0.01)) ? 1 : -1;
+
             // roll through the other maplines
             for (int i = 0; i < mapLines.Count; i++)
             {
                 Line l = mapLines[i];
                 l.Length = len;
                 l.Transform(Transform.Rotation(rot, mapLines[i].From));
+
+                
 
                 dot.Point = l.To;
                 doc.Objects.AddTextDot(dot, attr);
