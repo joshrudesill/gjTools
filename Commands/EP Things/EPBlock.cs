@@ -140,6 +140,8 @@ namespace GUI
         // color textbox
         private TextBox[] m_colors = new TextBox[8];
         private Label[] m_colorLabels = new Label[8];
+        private CheckBox[] m_colorVS = new CheckBox[8];
+        private CheckBox[] m_colorHeight = new CheckBox[8];
 
         public EPBlockGUI(EPBlockInfo dat)
         {
@@ -167,6 +169,8 @@ namespace GUI
             {
                 m_colors[i] = new TextBox { ID = i.ToString() };
                 m_colorLabels[i] = new Label { Text = (i == 0) ? "FILM" : "Unused" };
+                m_colorHeight[i] = new CheckBox { ID = i.ToString(), ToolTip = "Add -48 to color", ThreeState = false, Checked = true };
+                m_colorVS[i] = new CheckBox { ID = i.ToString(), ToolTip = "Add VS to color", ThreeState = false, Checked = true };
 
                 // event to check if the color is in the database
                 m_colors[i].LostFocus += Ev_OnChange_Color;
@@ -218,14 +222,14 @@ namespace GUI
                     Spacing = new Size(5, 1),
                     Rows =
                     {
-                        new TableRow(m_colorLabels[0], m_colors[0]),
-                        new TableRow(m_colorLabels[1], m_colors[1]),
-                        new TableRow(m_colorLabels[2], m_colors[2]),
-                        new TableRow(m_colorLabels[3], m_colors[3]),
-                        new TableRow(m_colorLabels[4], m_colors[4]),
-                        new TableRow(m_colorLabels[5], m_colors[5]),
-                        new TableRow(m_colorLabels[6], m_colors[6]),
-                        new TableRow(m_colorLabels[7], m_colors[7])
+                        new TableRow(m_colorLabels[0], m_colorVS[0], m_colorHeight[0], m_colors[0]),
+                        new TableRow(m_colorLabels[1], m_colorVS[1], m_colorHeight[1], m_colors[1]),
+                        new TableRow(m_colorLabels[2], m_colorVS[2], m_colorHeight[2], m_colors[2]),
+                        new TableRow(m_colorLabels[3], m_colorVS[3], m_colorHeight[3], m_colors[3]),
+                        new TableRow(m_colorLabels[4], m_colorVS[4], m_colorHeight[4], m_colors[4]),
+                        new TableRow(m_colorLabels[5], m_colorVS[5], m_colorHeight[5], m_colors[5]),
+                        new TableRow(m_colorLabels[6], m_colorVS[6], m_colorHeight[6], m_colors[6]),
+                        new TableRow(m_colorLabels[7], m_colorVS[7], m_colorHeight[7], m_colors[7])
                     }
                 }
             };
@@ -261,6 +265,8 @@ namespace GUI
             UpdateInfoObject(dat);
         }
 
+        
+
         private void UpdateInfoObject(EPBlockInfo dat)
         {
             dat.WindowLocation = window.Location;
@@ -278,8 +284,6 @@ namespace GUI
 
         private void ColorLabelUpdate()
         {
-            int ColorCount = 1;
-
             for (int i = 1; i < m_colors.Length; i++)
             {
                 if (m_colors[i].Text.Length == 0)
@@ -288,8 +292,7 @@ namespace GUI
                     continue;
                 }
 
-                m_colorLabels[i].Text = $"Color {ColorCount}";
-                ColorCount++;
+                m_colorLabels[i].Text = "Color";
             }
         }
 
@@ -308,6 +311,7 @@ namespace GUI
         private void Ev_OnChange_Color(object sender, EventArgs e)
         {
             TextBox tb = (TextBox)sender;
+            int indx = int.Parse(tb.ID);
 
             // update the labels
             ColorLabelUpdate();
@@ -319,7 +323,7 @@ namespace GUI
             if (matl.Count == 0)
                 return;
 
-            tb.Text = matl[0].colorNum + " - " + matl[0].colorName;
+            tb.Text = matl[0].colorNum + (m_colorVS[indx].Checked == true ? "VS" : "") + (m_colorHeight[indx].Checked == true ? "-48" : "") + " - " + matl[0].colorName;
         }
 
         // result of the form
