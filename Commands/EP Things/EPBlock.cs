@@ -130,7 +130,7 @@ namespace GUI
         // Version and print type
         private TextBox m_version = new TextBox { Text = "A" };
         private string[] m_printTypeList = new string[3] { "FILM", "DIGITAL PRINT", "SCREEN PRINT" };
-        private string[] m_coatingTypeList = new string[3] { "None", "SCREEN CLEAR COAT", "LAMINATE" };
+        private string[] m_coatingTypeList = new string[4] { "None", "SCREEN CLEAR COAT", "LAMINATE", "8518 LAMINATE" };
         private DropDown m_printType = new DropDown();
         private DropDown m_coating = new DropDown();
 

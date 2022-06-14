@@ -328,7 +328,8 @@ namespace GUI
             m_tbox_partResult2.KeyUp += M_tbox_partResult_KeyUp;
 
             // show the window
-            m_Dialog.ShowModal(RhinoEtoApp.MainWindow);
+            //m_Dialog.ShowModal(RhinoEtoApp.MainWindow);
+            m_Dialog.ShowSemiModal(RhinoDoc.ActiveDoc, RhinoEtoApp.MainWindow);
 
             // set the values to the current
             windowPosition = m_Dialog.Location;
