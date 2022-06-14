@@ -113,7 +113,7 @@ namespace GUI
 
     public class EPBlockInfo
     {
-        public Point WindowLocation = new Point(400, 400);
+        public Point WindowLocation = new Point(400, 200);
         public string PartNumbers = "";
         public string Version = "A";
         public string PrintType = "FILM";
@@ -145,6 +145,9 @@ namespace GUI
 
         public EPBlockGUI(EPBlockInfo dat)
         {
+            // initial window position
+            dat.WindowLocation.X = (int)Mouse.Position.X - 175;
+
             window = new Dialog<DialogResult>
             {
                 Padding = 10,
@@ -169,8 +172,8 @@ namespace GUI
             {
                 m_colors[i] = new TextBox { ID = i.ToString() };
                 m_colorLabels[i] = new Label { Text = (i == 0) ? "FILM" : "Unused" };
-                m_colorHeight[i] = new CheckBox { ID = i.ToString(), ToolTip = "Add -48 to color", ThreeState = false, Checked = true };
-                m_colorVS[i] = new CheckBox { ID = i.ToString(), ToolTip = "Add VS to color", ThreeState = false, Checked = true };
+                m_colorHeight[i] = new CheckBox { ID = i.ToString(), ToolTip = "Add -48 to color", ThreeState = false, Checked = (i == 0) };
+                m_colorVS[i] = new CheckBox { ID = i.ToString(), ToolTip = "Add VS to color", ThreeState = false, Checked = (i == 0) };
 
                 // event to check if the color is in the database
                 m_colors[i].LostFocus += Ev_OnChange_Color;
