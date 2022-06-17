@@ -125,6 +125,32 @@ namespace gjTools.Commands
     }
 
 
+    public class GroupCounter
+    {
+        private List<int> m_UniqueGroups = new List<int>();
+        public int Count = 0;
+
+        public void AddGroup (int groupIndex)
+        {
+            if (m_UniqueGroups.Contains(groupIndex))
+                return;
+
+            m_UniqueGroups.Add(groupIndex);
+            Count++;
+        }
+
+        public void AddGroup(List<int> groupIndex)
+        {
+            foreach (int g in groupIndex)
+            {
+                if (m_UniqueGroups.Contains(g))
+                    continue;
+                
+                m_UniqueGroups.Add(g);
+                Count++;
+            }
+        }
+    }
 
     public class NestBoxMaker
     {
@@ -134,7 +160,7 @@ namespace gjTools.Commands
 
         public List<ObjRef> N_Objs { get; private set; }
         public List<Cut_Layer> CutLayers { get; private set; }
-        public List<int> GroupIndex { get; private set; }
+        public GroupCounter GroupIndex { get; private set; }
         public double Height { get; private set; }
         public double Width { get; private set; }
         public double SheetUsage { get; private set; }
@@ -150,7 +176,7 @@ namespace gjTools.Commands
             doc = Document;
             N_Objs = objs;
             CutLayers = new List<Cut_Layer>(10);
-            GroupIndex = new List<int>();
+            GroupIndex = new GroupCounter();
             SheetUsage = 0;
 
             var leftovers = objs;
@@ -163,22 +189,8 @@ namespace gjTools.Commands
                 {
                     CutLayers.Add(cut);
 
-                    // check if the numbers of groups are clashing with others
-                    // TODO
-                    //foreach(int grp in cut.GroupIndexes)
-                    //{
-                    //    bool continu = false;
-                    //    for (int i = 0; i < GroupIndex.Count; i++)
-                    //    {
-                    //        if (GroupIndex[i] != grp)
-                    //            continue;
-                    //
-                    //        continu = true;
-                    //        break;
-                    //    }
-                    //
-                    //    if ()
-                    //}
+                    // process groups
+                    GroupIndex.AddGroup(cut.GroupIndexes);
                 }
 
                 // No leftovers
@@ -294,7 +306,7 @@ namespace gjTools.Commands
             var path = (doc.Path == null) ? "File Not Saved" : doc.Path.Replace("\\", "/");
             var name = new SQLTools().queryVariableData().userFirstName;
             int qty = 0;
-            int grps = 0;
+            int grps = GroupIndex.Count;
             string cutLengths = "";
             var tmpBB = BoundingBox.Empty;
 
@@ -302,7 +314,6 @@ namespace gjTools.Commands
             {
                 tmpBB.Union(c.BB);
                 qty = (qty >= c.Obj.Count) ? qty : c.Obj.Count;
-                grps += c.GroupCount;
             }
             NestGeom.ObjCount = qty;
             NestGeom.GroupCount = grps = (CustomQty > 0) ? CustomQty : grps;
