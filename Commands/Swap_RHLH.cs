@@ -31,25 +31,30 @@ namespace gjTools.Commands
                 var rObj = o.Object();
                 var lay = doc.Layers[rObj.Attributes.LayerIndex];
 
-                // Check if a cut object
-                if (lay.Name != "C_THRU")
-                    continue;
-
-                // Swap the color
-                if (rObj.Attributes.ColorSource == ObjectColorSource.ColorFromLayer)
-                {
-                    rObj.Attributes.ColorSource = ObjectColorSource.ColorFromObject;
-                    rObj.Attributes.ObjectColor = System.Drawing.Color.DarkGreen;
-                }
-                else
-                    rObj.Attributes.ColorSource = ObjectColorSource.ColorFromLayer;
-
-                // set new vals
-                rObj.CommitChanges();
+                FlipColorRHLH(lay, rObj);
             }
 
             doc.Views.Redraw();
             return Result.Success;
+        }
+
+        public static void FlipColorRHLH(Layer lay, RhinoObject rObj)
+        {
+            // Check if a cut object
+            if (lay.Name != "C_THRU")
+                return;
+
+            // Swap the color
+            if (rObj.Attributes.ColorSource == ObjectColorSource.ColorFromLayer)
+            {
+                rObj.Attributes.ColorSource = ObjectColorSource.ColorFromObject;
+                rObj.Attributes.ObjectColor = System.Drawing.Color.DarkGreen;
+            }
+            else
+                rObj.Attributes.ColorSource = ObjectColorSource.ColorFromLayer;
+
+            // set new vals
+            rObj.CommitChanges();
         }
     }
 }

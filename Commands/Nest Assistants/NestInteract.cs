@@ -273,6 +273,8 @@ namespace gjTools.Testing
             {
                 get { return WidgetLocation - BasePoint; }
             }
+
+            public Point3d GetCenter {  get { return DrawObjects[0].GetBoundingBox(true).Center; } }
         }
 
         /// <summary>
@@ -331,15 +333,24 @@ namespace gjTools.Testing
             protected override void OnMouseDown(GetPointMouseEventArgs e)
             {
                 if (ballUp.IsMoveClick(e.Point))
+                {
                     sel1 = true;
+                    SetBasePoint(ballUp.GetCenter, true);
+                }
                 else if (ballUp.IsRelocateClick(e.Point))
                     rel1 = true;
                 else if (ballRh.IsMoveClick(e.Point))
+                {
                     sel2 = true;
+                    SetBasePoint(ballRh.GetCenter, true);
+                }
                 else if (ballRh.IsRelocateClick(e.Point))
                     rel2 = true;
                 else if (ballStk2.IsMoveClick(e.Point))
+                {
                     sel3 = true;
+                    SetBasePoint(ballStk2.GetCenter, true);
+                }
                 else if (ballStk2.IsRelocateClick(e.Point))
                     rel3 = true;
 

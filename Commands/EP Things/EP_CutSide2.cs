@@ -23,39 +23,52 @@ namespace gjTools.Commands
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            var lt = new LayerTools(doc);
-
-            string cutName = (string)Dialogs.ShowListBox("Make CutSid 2", "Choose a Cut Layer to Flip", lt.getAllParentLayersStrings());
-            if (cutName == null)
+            // get a list of the parent layers to choose from
+            var parentLayers = new List<Layer>();
+            foreach (Layer l in doc.Layers)
+                if (l.ParentLayerId == Guid.Empty)
+                    parentLayers.Add(l);
+            
+            // ask for layer selection
+            Layer cutLayer = (Layer)Dialogs.ShowListBox("Make a CUT2", "Select Cut Layer to Flip", parentLayers);
+            if (cutLayer == null)
                 return Result.Cancel;
 
-            var parentLay = lt.CreateLayer(cutName);
-            var parentChildren = parentLay.GetChildren();
-            var cutSide2Lay = lt.CreateLayer(cutName + "SIDE2");
-            var childLays = new List<Layer>();
-            var nestBoxBB = BoundingBox.Empty;
+            // select objects
+            var cutObj = new List<RhinoObject>();
+            var childLayers = cutLayer.GetChildren();
             
-            // create new layer and children
-            foreach(var l in parentChildren)
+            // grab the markers
+            int markLayerIndex = doc.Layers.FindByFullPath("MARKERS", -1);
+            if (markLayerIndex != -1)
             {
-                childLays.Add(lt.CreateLayer(l.Name, cutSide2Lay.Name, l.Color));
-
-                if (l.Name == "NestBox")
-                    nestBoxBB = doc.Objects.FindByLayer(l)[0].Geometry.GetBoundingBox(true);
+                var sett = new ObjectEnumeratorSettings { LayerIndexFilter = markLayerIndex, ObjectTypeFilter = ObjectType.TextDot };
+                cutObj.AddRange(doc.Objects.FindByFilter(sett));
             }
 
-            // copy and mirror objects
-            var mirror = Transform.Mirror(new Plane(nestBoxBB.Center, Vector3d.YAxis));
-            for(var i = 0; i < childLays.Count; i++)
+            // Get only the cut lines
+            foreach (Layer l in childLayers)
+                if (l.Name.StartsWith("C_") && l.Name != "C_TEXT")
+                    cutObj.AddRange( doc.Objects.FindByLayer(l) );
+
+            // new Cut layer
+            var lt = new LayerTools(doc);
+            Layer newParentLayer = lt.CreateLayer("CUT2");
+
+            // Cycle the layers and duplicate the Objects
+            foreach (RhinoObject o in cutObj)
             {
-                var obj = doc.Objects.FindByLayer(parentChildren[i]);
-                foreach (var o in obj)
-                {
-                    var id = doc.Objects.Transform(o, mirror, false);
-                    var copy = doc.Objects.FindId(id);
-                        copy.Attributes.LayerIndex = childLays[i].Index;
-                        copy.CommitChanges();
-                }
+                Guid id = doc.Objects.Duplicate(o);
+                var newObj = doc.Objects.FindId(id);
+                Layer clay = doc.Layers[newObj.Attributes.LayerIndex];
+                clay = lt.CreateLayer(clay.Name, newParentLayer.Name, clay.Color);
+
+                // swap the color if on the thru layer
+                Swap_RHLH.FlipColorRHLH(clay, newObj);
+
+                newObj.Geometry.Transform(Transform.Mirror(new Point3d(0, 150, 0), Vector3d.YAxis));
+                newObj.Attributes.LayerIndex = clay.Index;
+                newObj.CommitChanges();
             }
 
             doc.Views.Redraw();
