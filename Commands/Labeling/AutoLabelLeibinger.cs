@@ -50,12 +50,35 @@ namespace gjTools.Commands
 
         public List<string> parentLayerNames()
         {
+            SortLayersByCut();
             var lnames = new List<string>(pLays.Count);
-
+            
             foreach(Layer layer in pLays)
                 lnames.Add(layer.Name);
 
             return lnames;
+        }
+
+        private void SortLayersByCut()
+        {
+            Layer sw2 = pLays[0];
+            int x = -1;
+
+            for (int i = 0; i < pLays.Count; i++)
+            {
+                if (pLays[i].Name != "CUT")
+                    continue;
+
+                sw2 = pLays[i];
+                x = i;
+                break;
+            }
+
+            if (x == -1)
+                return;
+
+            pLays[x] = pLays[0];
+            pLays[0] = sw2;
         }
     }
 
@@ -223,7 +246,7 @@ namespace GUI
         private DropDown m_drop_dots = new DropDown { SelectedIndex = 0, Width = 180 };
         private DropDown m_drop_layers = new DropDown { SelectedIndex = 0, Width = 180 };
 
-        private TextBox m_tbox_partNumber = new TextBox { ID = "PN", Width = 250 };
+        private TextBox m_tbox_partNumber = new TextBox { ID = "PN", Width = 250, ToolTip = "CTRL+D to add Current FileName" };
         private TextBox m_tbox_layerName = new TextBox { ID = "LAYNAME" };
 
         private TextBox m_tbox_partResult1 = new TextBox { Text = "", ToolTip = "ctrl+P: Add selected text to standard datamatrix" };
@@ -326,6 +349,7 @@ namespace GUI
             m_tbox_partNumber.KeyDown += M_tbox_partNumber_KeyDown;
             m_tbox_partResult1.KeyUp += M_tbox_partResult_KeyUp;
             m_tbox_partResult2.KeyUp += M_tbox_partResult_KeyUp;
+            m_tbox_partNumber.KeyDown += M_tbox_partNumber_AddFileName;
 
             // show the window
             //m_Dialog.ShowModal(RhinoEtoApp.MainWindow);
@@ -341,6 +365,20 @@ namespace GUI
             UData.label = LabelInfo;
             UData.dotIndex = m_drop_dots.SelectedIndex;
             UData.layerIndex = m_drop_layers.SelectedIndex;
+        }
+
+        private void M_tbox_partNumber_AddFileName(object sender, KeyEventArgs e)
+        {
+            string name = Rhino.RhinoDoc.ActiveDoc.Name;
+
+            if (name == "")
+                return;
+
+            var tbox = sender as TextBox;
+            name = name.Replace(".3dm", "");
+
+            if (e.Key == Keys.D && e.Modifiers == Keys.Control)
+                tbox.Text = name;
         }
 
         private void M_tbox_partResult_KeyUp(object sender, KeyEventArgs e)

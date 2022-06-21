@@ -19,18 +19,23 @@ namespace gjTools.Commands
         ///<summary>The only instance of the MyCommand command.</summary>
         public static EP_CutSide2 Instance { get; private set; }
 
-        public override string EnglishName => "EPMakeCutSideTwo";
+        public override string EnglishName => "EPCutSideTwo";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             // get a list of the parent layers to choose from
             var parentLayers = new List<Layer>();
+            var cutIndex = 0;
             foreach (Layer l in doc.Layers)
-                if (l.ParentLayerId == Guid.Empty)
+                if (l.ParentLayerId == Guid.Empty && !l.IsDeleted)
+                {
                     parentLayers.Add(l);
+                    if (l.Name == "CUT")
+                        cutIndex = parentLayers.Count - 1;
+                }
             
             // ask for layer selection
-            Layer cutLayer = (Layer)Dialogs.ShowListBox("Make a CUT2", "Select Cut Layer to Flip", parentLayers);
+            Layer cutLayer = (Layer)Dialogs.ShowListBox("Make a CUT2", "Select Cut Layer to Flip", parentLayers, parentLayers[cutIndex]);
             if (cutLayer == null)
                 return Result.Cancel;
 
@@ -61,7 +66,8 @@ namespace gjTools.Commands
                 Guid id = doc.Objects.Duplicate(o);
                 var newObj = doc.Objects.FindId(id);
                 Layer clay = doc.Layers[newObj.Attributes.LayerIndex];
-                clay = lt.CreateLayer(clay.Name, newParentLayer.Name, clay.Color);
+                if (clay.Index != markLayerIndex)
+                    clay = lt.CreateLayer(clay.Name, newParentLayer.Name, clay.Color);
 
                 // swap the color if on the thru layer
                 Swap_RHLH.FlipColorRHLH(clay, newObj);
