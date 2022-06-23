@@ -647,6 +647,8 @@ namespace CutFile
         {
             Show = new Rhino.Display.CustomDisplay(true);
             var c_red = System.Drawing.Color.OrangeRed;
+            var c_blue = System.Drawing.Color.Blue;
+            var c_brn = System.Drawing.Color.MediumPurple;
             var BadPart = false;
 
             for (int i = 0; i < RObj.Count; i++)
@@ -657,6 +659,19 @@ namespace CutFile
                 {
                     var crv = RObj[i].Geometry as Curve;
                     var segs = crv.DuplicateSegments();
+
+                    // polylines are supposed to be rational, so lets test that
+                    {
+                        var nrb = crv.ToNurbsCurve();
+
+                        // if rational the pointsize cant equal dimension
+                        if (nrb.Points.PointSize == nrb.Dimension && nrb.Degree != 1)
+                        {
+                            RhinoApp.WriteLine("Blue Curves are Irrational, and need to be Converted");
+                            Show.AddCurve(nrb, c_blue, 5);
+                            BadPart = true;
+                        }
+                    }
 
                     // Replace Circle
                     if (crv.IsCircle())
@@ -681,9 +696,10 @@ namespace CutFile
                     }
 
                     // Testing to see if the Curve is planar
-                    if (!crv.IsPlanar(0.001))
+                    if (!crv.IsInPlane(Plane.WorldXY))
                     {
-                        RhinoApp.WriteLine("Curve is not Planar, and that's real bad cowboy...");
+                        RhinoApp.WriteLine("Purple Curves are not Planar");
+                        Show.AddCurve(crv, c_brn, 5);
                     }
                 }
                 else if (typ == ObjectType.Annotation)
