@@ -58,6 +58,11 @@ namespace gjTools.Commands
             System.IO.File.WriteAllText(path , XMLDoc);
 
             RhinoApp.WriteLine($"Wrote XML: {path}");
+
+            // user wants the location opened
+            if (xmlDialog.OpenLocation)
+                System.Diagnostics.Process.Start("explorer.exe", folderPath);
+
             return Result.Success;
         }
     }
@@ -102,9 +107,12 @@ namespace GUI
         private Dialog<DialogResult> m_Dialog;
         private XML_Info XMLInfo;
 
+        public bool OpenLocation { get; private set; }
+
         public XML_Gui(XML_Info xml)
         {
             XMLInfo = xml;
+            OpenLocation = false;
 
             m_Dialog = new Dialog<DialogResult>
             {
@@ -121,6 +129,7 @@ namespace GUI
             CheckBox sets = new CheckBox { Text = "Yes ", Checked = false };
             Button but_ok = new Button { Text = "Ok" };
             Button but_cancel = new Button { Text = "Cancel" };
+            Button but_open = new Button { Text = "Ok/Open" };
 
             var infobox = new TableLayout
             {
@@ -146,13 +155,14 @@ namespace GUI
                     new TableLayout
                     {
                         Spacing = new Size(5, 5),
-                        Rows = { new TableRow(null, but_ok, but_cancel) }
+                        Rows = { new TableRow(null, but_ok, but_open, but_cancel) }
                     }
                 }
             };
 
             // Events
             but_ok.Click += (s, e) => m_Dialog.Close(DialogResult.Ok);
+            but_open.Click += (s, e) => { m_Dialog.Close(DialogResult.Ok); OpenLocation = true; };
             but_cancel.Click += (s, e) => m_Dialog.Close(DialogResult.Cancel);
             sets.CheckedChanged += (s, e) => Sets_CheckedChanged(sets, qty);
 
