@@ -59,7 +59,7 @@ namespace gjTools.Commands.Drawing_Tools
         /// </summary>
         /// <param name="RObj"></param>
         /// <returns></returns>
-        public bool CheckPolyLines(List<RhinoObject> RObj, RhinoDoc doc, Rhino.Display.CustomDisplay Disp)
+        public static bool CheckPolyLines(List<RhinoObject> RObj, RhinoDoc doc, Rhino.Display.CustomDisplay Disp)
         {
             var c_red = System.Drawing.Color.OrangeRed;
             var c_blue = System.Drawing.Color.Blue;

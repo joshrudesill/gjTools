@@ -20,6 +20,7 @@ namespace gjTools.Commands
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             RhinoApp.WriteLine("Create the E&P XML File (Made for Automation ReportMaker)");
+            RhinoApp.WriteLine("This will create the folder if it's not already");
 
             var CutLayer = doc.Layers.FindByFullPath("CUT::NestBox", -1);
             if (CutLayer == -1)
@@ -44,9 +45,17 @@ namespace gjTools.Commands
                 $"<CADSheetHeight>{xmlInfo.SheetHeight}</CADSheetHeight>\n  " +
                 $"<CADNumberUp>{xmlInfo.GetPartQty}</CADNumberUp>\n</JDF>";
 
+            // create the directory if not already
+            string folderPath = FileLocations.PathDict["EP"] + doc.Name.Replace(".3dm", "");
+            if (!System.IO.Directory.Exists(folderPath))
+            {
+                System.IO.Directory.CreateDirectory(folderPath);
+                RhinoApp.Write("Folder Created and ");
+            }
+
             // write the xml file to the EP location
-            var path = FileLocations.PathDict["EP"] + doc.Name.Replace(".3dm", "\\") + doc.Name.Replace(".3dm", ".xml");
-            System.IO.File.WriteAllText(path, XMLDoc);
+            var path = folderPath + "\\" + doc.Name.Replace(".3dm", ".xml");
+            System.IO.File.WriteAllText(path , XMLDoc);
 
             RhinoApp.WriteLine($"Wrote XML: {path}");
             return Result.Success;
