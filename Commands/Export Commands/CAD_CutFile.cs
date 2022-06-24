@@ -700,6 +700,7 @@ namespace CutFile
                     {
                         RhinoApp.WriteLine("Purple Curves are not Planar");
                         Show.AddCurve(crv, c_brn, 5);
+                        BadPart = true;
                     }
                 }
                 else if (typ == ObjectType.Annotation)
