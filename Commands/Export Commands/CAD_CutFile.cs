@@ -77,10 +77,16 @@ namespace gjTools.Commands
                     doc.Views.Redraw();
 
                     // We are here so the part is good
-                    //ct.WritePDF_CutFile(RObj, cg.GetCutName[cg.GetLayers.IndexOf(i)]);
-                    ct.WriteDXF(RObj, cg.GetCutName[cg.GetLayers.IndexOf(i)]);
+                    string cutname;
+                    if (cg.BatchCut)
+                        cutname = cg.GetCutName[0];
+                    else
+                        cutname = cg.GetCutName[cg.GetLayers.IndexOf(i)];
+
+                    ct.WriteDXF(RObj, cutname);
+                    RhinoApp.WriteLine($"Layer Name: {i.Name} -> Cut Name: {cutname}");
                     cg.IncrementTempCut();
-                    ct.CreateCutText(SelectedBox.Object(), i, cg.GetCutName[cg.GetLayers.IndexOf(i)]);
+                    ct.CreateCutText(SelectedBox.Object(), i, cutname);
                 }
                 else
                     continue;
@@ -230,7 +236,7 @@ namespace CutFile
 
             R_CutType = new RadioButtonList
             {
-                Items = { "Working Location", "Router", "Default", "Default Custom", "E&P" },
+                Items = { "Working Location", "Router", "Default", "Default Custom", "E&P", "Batch Default" },
                 Orientation = Orientation.Vertical,
                 SelectedIndex = 2,
                 Spacing = new Size(5, 5),
@@ -371,40 +377,40 @@ namespace CutFile
             }
 
             // Preset the filename field per cuttype
-            if (sel == 0)
+            switch(sel)
             {
-                // Working Location
-                FileName.Text = layers[CutItems.SelectedRow].Name;
-            }
-            else if (sel == 1)
-            {
-                // Router
-                FileName.Text = layers[CutItems.SelectedRow].Name + "-ROUTE";
-                return;
-            }
-            else if (sel == 2)
-            {
-                // Default Next up cut number
-                FileName.Text = NextDefaultCutName;
-                return;
-            }
-            else if (sel == 3)
-            {
-                // Custom Default
-                FileName.Text = NextDefaultCutName.Substring(0, 2);
-                return;
-            }
-            else if (sel == 4 && ds_EPCutItems.Count != 0)
-            {
-                // E&P Output
-                CutItems.AllowMultipleSelection = true;
-                CutItems.SelectedRows = ds_EPCutItems;
-                CutItems.Enabled = false;
-                FileName.Text = "";
-            }
-            else
-            {
-                R_CutType.SelectedIndex = 2;
+                case 0:
+                    // Working Location
+                    FileName.Text = layers[CutItems.SelectedRow].Name;
+                    break;
+                case 1:
+                    // Router
+                    FileName.Text = layers[CutItems.SelectedRow].Name + "-ROUTE";
+                    break;
+                case 2:
+                    // Default Next up cut number
+                    FileName.Text = NextDefaultCutName;
+                    break;
+                case 3:
+                    // Custom Default
+                    FileName.Text = NextDefaultCutName.Substring(0, 2);
+                    break;
+                case 4:
+                    if (ds_EPCutItems.Count == 0) break;
+                    // E&P Output
+                    CutItems.AllowMultipleSelection = true;
+                    CutItems.SelectedRows = ds_EPCutItems;
+                    CutItems.Enabled = false;
+                    FileName.Text = "";
+                    break;
+                case 5:
+                    // Batch Default Output
+                    FileName.Text = NextDefaultCutName;
+                    CutItems.AllowMultipleSelection = true;
+                    break;
+                default:
+                    R_CutType.SelectedIndex = 2;
+                    break;
             }
         }
 
@@ -478,15 +484,23 @@ namespace CutFile
                 {
                     foreach (var i in ds_EPCutItems)
                         l.Add(layers[i]);
-                }
-                else
-                {
-                    l.Add(layers[CutItems.SelectedRow]);
+                    return l;
                 }
 
+                // batch output
+                if (R_CutType.SelectedIndex == 5)
+                {
+                    foreach (int indx in CutItems.SelectedRows)
+                        l.Add(layers[indx]);
+                    return l;
+                }
+
+                l.Add(layers[CutItems.SelectedRow]);
                 return l;
             }
         }
+
+        public bool BatchCut { get { return R_CutType.SelectedIndex == 5; } }
 
         /// <summary>
         /// Chosen Name or names if E&P and more than one cut
@@ -501,12 +515,10 @@ namespace CutFile
                 {
                     foreach (var i in ds_EPCutItems)
                         cNames.Add(doc.Name.Replace("A.3dm", $"_{layers[i].Name}"));
-                }
-                else
-                {
-                    cNames.Add(FileName.Text);
+                    return cNames;
                 }
 
+                cNames.Add(FileName.Text);
                 return cNames;
             }
         }
@@ -519,7 +531,7 @@ namespace CutFile
         {
             get
             {
-                var list = new List<string> { "Working Location", "Router", "Default", "Default Custom", "E&P" };
+                var list = new List<string> { "Working Location", "Router", "Default", "Default Custom", "E&P", "Batch Default" };
                 return list[R_CutType.SelectedIndex];
             }
         }
@@ -534,13 +546,16 @@ namespace CutFile
         /// </summary>
         public void IncrementTempCut()
         {
-            if (R_CutType.SelectedIndex != 2)
+            if (R_CutType.SelectedIndex != 2 && R_CutType.SelectedIndex != 5)
                 return;
 
             var vd = sql.queryVariableData();
                 vd.cutNumber++;
 
             sql.updateVariableData(vd);
+
+            // update the file name in case the option is for batch default
+            FileName.Text = $"{NextDefaultCutName.Substring(0, 2)}{vd.cutNumber}";
         }
     }
 

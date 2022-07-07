@@ -637,7 +637,7 @@ namespace gjTools.Commands
 
             public string PartNumber;
         }
-
+        
         // Make structure
         public BannerInfo BData = new BannerInfo();
 
@@ -879,7 +879,7 @@ namespace gjTools.Commands
             var tryH = double.TryParse(Width.Text, out BData.Height);
             var tryV = int.TryParse(box.Text, out int num);
             var g_offset = double.Parse(GromEdgeOffset.Text);
-
+            
             double dist;
             if (num <= 1 || !tryV)
             {
@@ -962,7 +962,7 @@ namespace gjTools.Commands
 
             TopSize.Text = (snip[2] + snip[7]).ToString();
             BottSize.Text = (snip[3] + snip[8]).ToString();
-            SideSize.Text = (snip[9] / 2).ToString();
+            SideSize.Text = (snip[9] * 0.5).ToString();
 
             TopGromSpace.Text = snip[10].ToString();
             BottGromSpace.Text = snip[11].ToString();
@@ -1023,7 +1023,7 @@ namespace gjTools.Commands
                 TopGromQty.Text = ((int)((w - (g_offset * 2)) / t_space + 1)).ToString();
             if (b_space > 0)
                 BottGromQty.Text = ((int)((w - (g_offset * 2)) / b_space + 1)).ToString();
-            if (t_space > 0)
+            if (s_space > 0)
                 SideGromQty.Text = ((int)((h - (g_offset * 2)) / s_space + 1)).ToString();
         }
 

@@ -23,7 +23,7 @@ namespace gjTools.Commands
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             var lt = new LayerTools(doc);
-            string layoutName = "LAYOUT";
+            string layoutName = "MYLAR";
             double scale = 1;
 
             // get the name of the new layout

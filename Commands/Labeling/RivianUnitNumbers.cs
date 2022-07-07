@@ -36,6 +36,12 @@ namespace gjTools.Commands.Labeling
             if (RhinoGet.GetMultipleObjects("Select the original Unit number layout", false, ObjectType.AnyObject, out ObjRef[] unitNest) != Result.Success)
                 return Result.Cancel;
 
+            // Ask what version layout is being used
+            int blockSize = 4;
+            if (RhinoGet.GetInteger("8 or 4 Set Layout being used?", true, ref blockSize, 4, 8) != Result.Success)
+                return Result.Cancel;
+            blockSize = (blockSize != 4 && blockSize != 8) ? 4 : blockSize;
+
             // get the list of parts
             if (!Dialogs.ShowEditBox("List Import", "Paste Here", "Each Line will be a new part...", true, out string rawInput))
                 return Result.Cancel;
@@ -57,18 +63,20 @@ namespace gjTools.Commands.Labeling
 
             // layertools needed
             var lt = new LayerTools(doc);
-            StatusBar.ShowProgressMeter(0, total, "Progress", false, true);
 
             // start making the new layouts
-            for (int i = 0, ii = 0; i < total; i += 4, ii++)
+            for (int i = 0, ii = 0; i < total; i += blockSize, ii++)
             {
                 string u1 = unitNumbers[i];
                 string u2 = (i + 1 < total) ? unitNumbers[i + 1] : u1;
                 string u3 = (i + 2 < total) ? unitNumbers[i + 2] : u2;
                 string u4 = (i + 3 < total) ? unitNumbers[i + 3] : u3;
+                string u5 = (i + 4 < total) ? unitNumbers[i + 4] : u4;
+                string u6 = (i + 5 < total) ? unitNumbers[i + 5] : u5;
+                string u7 = (i + 6 < total) ? unitNumbers[i + 6] : u6;
+                string u8 = (i + 7 < total) ? unitNumbers[i + 7] : u7;
 
                 var newParent = lt.CreateLayer($"{parent.Name}_L{ii}");
-                StatusBar.UpdateProgressMeter(i, true);
 
                 // should only be one group
                 int group = doc.Groups.Add();
@@ -112,6 +120,22 @@ namespace gjTools.Commands.Labeling
                             num.RichText = num.RichText.Replace("UNIT", u4);
                             doc.Objects.AddText(num, attr);
                             break;
+                        case "UNIT5":
+                            num.RichText = num.RichText.Replace("UNIT", u5);
+                            doc.Objects.AddText(num, attr);
+                            break;
+                        case "UNIT6":
+                            num.RichText = num.RichText.Replace("UNIT", u6);
+                            doc.Objects.AddText(num, attr);
+                            break;
+                        case "UNIT7":
+                            num.RichText = num.RichText.Replace("UNIT", u7);
+                            doc.Objects.AddText(num, attr);
+                            break;
+                        case "UNIT8":
+                            num.RichText = num.RichText.Replace("UNIT", u8);
+                            doc.Objects.AddText(num, attr);
+                            break;
                         case "LABEL1":
                             num.RichText = num.RichText.Replace("RIVPART", RivianPartNumber);
                             num.RichText = num.RichText.Replace("UNIT", u1);
@@ -132,6 +156,26 @@ namespace gjTools.Commands.Labeling
                             num.RichText = num.RichText.Replace("UNIT", u4);
                             doc.Objects.AddText(num, attr);
                             break;
+                        case "LABEL5":
+                            num.RichText = num.RichText.Replace("RIVPART", RivianPartNumber);
+                            num.RichText = num.RichText.Replace("UNIT", u5);
+                            doc.Objects.AddText(num, attr);
+                            break;
+                        case "LABEL6":
+                            num.RichText = num.RichText.Replace("RIVPART", RivianPartNumber);
+                            num.RichText = num.RichText.Replace("UNIT", u6);
+                            doc.Objects.AddText(num, attr);
+                            break;
+                        case "LABEL7":
+                            num.RichText = num.RichText.Replace("RIVPART", RivianPartNumber);
+                            num.RichText = num.RichText.Replace("UNIT", u7);
+                            doc.Objects.AddText(num, attr);
+                            break;
+                        case "LABEL8":
+                            num.RichText = num.RichText.Replace("RIVPART", RivianPartNumber);
+                            num.RichText = num.RichText.Replace("UNIT", u8);
+                            doc.Objects.AddText(num, attr);
+                            break;
                         case "LAYERNAME":
                             num.RichText = num.RichText.Replace(parent.Name, newParent.Name);
                             doc.Objects.AddText(num, attr);
@@ -143,7 +187,6 @@ namespace gjTools.Commands.Labeling
                     }
                 }
             }
-            StatusBar.HideProgressMeter();
 
             doc.Views.Redraw();
             return Result.Success;
