@@ -60,6 +60,9 @@ namespace gjTools.Commands
             var lt = new LayerTools(doc);
             Layer newParentLayer = lt.CreateLayer("CUT2");
 
+            // mind the groups if there are any
+            var GroupManager = new StraitBoxGroupManager(doc);
+
             // Cycle the layers and duplicate the Objects
             foreach (RhinoObject o in cutObj)
             {
@@ -71,6 +74,14 @@ namespace gjTools.Commands
 
                 // swap the color if on the thru layer
                 Swap_RHLH.FlipColorRHLH(clay, newObj);
+
+                // see if groups are present
+                if (newObj.Attributes.GroupCount > 0)
+                {
+                    int newGroup = GroupManager.TranslateGroup(newObj.Attributes.GetGroupList()[0]);
+                    newObj.Attributes.RemoveFromAllGroups();
+                    newObj.Attributes.AddToGroup(newGroup);
+                }
 
                 newObj.Geometry.Transform(Transform.Mirror(new Point3d(0, 150, 0), Vector3d.YAxis));
                 newObj.Attributes.LayerIndex = clay.Index;

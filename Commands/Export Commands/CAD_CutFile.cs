@@ -77,16 +77,12 @@ namespace gjTools.Commands
                     doc.Views.Redraw();
 
                     // We are here so the part is good
-                    string cutname;
-                    if (cg.BatchCut)
-                        cutname = cg.GetCutName[0];
-                    else
-                        cutname = cg.GetCutName[cg.GetLayers.IndexOf(i)];
+                    string cutname = (cg.BatchCut) ? cg.GetCutName[0] : cg.GetCutName[cg.GetLayers.IndexOf(i)];
 
                     ct.WriteDXF(RObj, cutname);
                     RhinoApp.WriteLine($"Layer Name: {i.Name} -> Cut Name: {cutname}");
-                    cg.IncrementTempCut();
                     ct.CreateCutText(SelectedBox.Object(), i, cutname);
+                    cg.IncrementTempCut();
                 }
                 else
                     continue;
