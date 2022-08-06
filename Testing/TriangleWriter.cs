@@ -38,7 +38,7 @@ namespace gjTools.Testing
             //    )
             // }
             using (BinaryWriter binWriter =
-              new BinaryWriter(File.Open("D:\\AutoNest_CPP\\AutoNest_IMGUI\\ShapeLibrary.shlib", FileMode.Create), System.Text.Encoding.UTF8))
+              new BinaryWriter(File.Open("C:\\Users\\mrfla\\Documents\\AutoNest\\AutoNest_IMGUI\\ShapeLibrary.shlib", FileMode.Create), System.Text.Encoding.UTF8))
             {
                 // byte counter
                 long byt = 0;
